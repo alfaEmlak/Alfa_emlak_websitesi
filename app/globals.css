@@ -1,0 +1,232 @@
+@import "tailwindcss";
+
+/* The Mediterranean Authority — design tokens */
+:root {
+  --primary: #041546;
+  --primary-soft: #0c2a6e;
+  --primary-glass: rgba(4, 21, 70, 0.6);
+  --secondary: #fd9827;
+  --secondary-dark: #8d4f00;
+  --surface: #fcf8fb;
+  --surface-container-low: #f3eef2;
+  --surface-container-lowest: #ffffff;
+  --surface-container-high: #e8e2e7;
+  --surface-container-highest: #ddd6dc;
+  --on-surface: #1c1b1d;
+  --shadow-ambient: 0 12px 40px rgba(7, 23, 72, 0.06);
+  --shadow-float: 0 20px 50px rgba(7, 23, 72, 0.1);
+  --shadow: var(--shadow-ambient);
+  --ghost-outline: rgba(4, 21, 70, 0.15);
+  --header-h: 5rem;
+  --header-offset: 5rem;
+
+  /* Geriye dönük isimler */
+  --ink: var(--primary);
+  --navy: var(--primary);
+  --paper: var(--surface);
+  --accent: var(--secondary);
+  --brand: var(--secondary);
+  --brand-hover: #ea8b1f;
+  --background: var(--surface);
+  --foreground: var(--on-surface);
+  --radius: 12px;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-secondary-dark: var(--secondary-dark);
+  --color-surface: var(--surface);
+  --color-surface-low: var(--surface-container-low);
+  --color-surface-lowest: var(--surface-container-lowest);
+  --color-surface-high: var(--surface-container-high);
+  --color-surface-highest: var(--surface-container-highest);
+  --color-on-surface: var(--on-surface);
+  --color-ink: var(--primary);
+  --color-navy: var(--primary);
+  --color-paper: var(--surface);
+  --color-accent: var(--secondary);
+  --color-brand: var(--secondary);
+  --color-brand-hover: var(--brand-hover);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-headline: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--surface);
+  color: var(--on-surface);
+  font-family: var(--font-sans);
+}
+
+/* “prestijli” — Cormorant Garamond: ince, editoryal lüks serif (el yazısı değil) */
+.font-prestijli-word {
+  font-family: var(--font-prestijli), "Cormorant Garamond", serif;
+  font-synthesis: none;
+  font-weight: 500;
+  font-style: italic;
+  letter-spacing: 0.03em;
+}
+
+.hero-prestijli {
+  font-size: clamp(3.6rem, 11vw, 6.6rem);
+  line-height: 1;
+  background: linear-gradient(180deg, #ffd2a0 0%, #fdb56a 34%, #fd9827 68%, #d97a17 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow:
+    0 0 12px rgba(253, 152, 39, 0.35),
+    0 0 28px rgba(253, 152, 39, 0.2);
+}
+
+/* Etiket / curator caption — 0.05em tracking */
+.label-sm {
+  font-family: var(--font-headline);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-style: normal;
+  font-weight: 400;
+  display: inline-block;
+  white-space: nowrap;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings:
+    "FILL" 0,
+    "wght" 300,
+    "GRAD" 0,
+    "opsz" 24;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.tight-tracking {
+  letter-spacing: -0.04em;
+}
+
+/* Hero cam: primary @ 60% + 20px blur */
+.glass-hero {
+  background: var(--primary-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-float);
+}
+
+/* Yüzer arama / ince cam */
+.glass-float {
+  background: color-mix(in srgb, var(--surface) 40%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.glass-premium {
+  background: var(--primary-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: var(--shadow-float);
+}
+
+/* Birincil CTA — 135° gradient */
+.btn-primary-gradient {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-soft) 100%);
+  color: #fff;
+  transition:
+    filter 0.2s ease,
+    transform 0.15s ease;
+}
+
+.btn-primary-gradient:hover {
+  filter: brightness(1.08);
+}
+
+.btn-tactile:active {
+  transform: translateY(1px);
+}
+
+/* Hayalet çizgi — %15 */
+.ring-ghost {
+  box-shadow: 0 0 0 1px var(--ghost-outline);
+}
+
+.bg-text-faded {
+  color: rgba(4, 21, 70, 0.035);
+  pointer-events: none;
+  user-select: none;
+}
+
+.property-card-premium {
+  transition:
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.35s ease;
+}
+
+.property-card-premium:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-float);
+}
+
+/* Sticky nav / mega */
+.menu-panel {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  transition:
+    opacity 0.2s ease,
+    visibility 0.2s ease,
+    transform 0.2s ease;
+}
+
+.group:hover .menu-panel,
+.group:focus-within .menu-panel {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.admin-scroll::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+.admin-scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--primary) 22%, #c4c0c8);
+  border-radius: 8px;
+}
+.admin-scroll::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--primary) 35%, #a8a4ac);
+}
+
+/* Yönetim paneli — site token’larıyla uyumlu arka plan ve kart */
+.admin-shell {
+  background: linear-gradient(
+    165deg,
+    var(--surface) 0%,
+    var(--surface-container-low) 42%,
+    color-mix(in srgb, var(--secondary) 5%, var(--surface)) 100%
+  );
+}
+
+.admin-card {
+  border-radius: var(--radius);
+  background: var(--surface-container-lowest);
+  box-shadow:
+    var(--shadow-ambient),
+    0 0 0 1px var(--ghost-outline);
+}
+
+.admin-page-title {
+  font-family: var(--font-headline), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.03em;
+  color: var(--primary);
+}
