@@ -9,6 +9,9 @@ import { getTcmbDailyRates } from "@/lib/tcmb-rates";
 
 const heroImage = "/pexels-tolgaaslanturk-10785667.jpg";
 
+const defaultHeroSubtitle =
+  "ALFA EMLAK ile hayalinizdeki konutu, arsayı veya yatırımı keşfedin. Şeffaf süreç, güçlü portföy.";
+
 const whyMain =
   "https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=900&q=80";
 const whySide =
@@ -36,40 +39,39 @@ export default async function HomePage() {
           />
         </div>
 
-        <section className="relative z-10 flex h-full min-h-0 flex-col px-6 pb-8 pt-28 md:px-12 md:pb-10 lg:px-16">
+        <section className="relative z-10 flex h-full min-h-0 flex-col px-6 pb-8 pt-28 md:px-12 md:pb-10 lg:pl-24 lg:pr-32">
           <div className="mx-auto flex w-full min-h-0 max-w-[1440px] flex-1 flex-col justify-center">
-            <div className="mx-auto flex w-full max-w-4xl flex-col items-center space-y-4 text-center md:max-w-5xl md:space-y-5">
-              <div className="flex flex-col items-center gap-0">
-                <div className="pointer-events-none flex w-full justify-center leading-none">
-                  <Image
-                    src="/alfaemlak3dlogo.png"
-                    alt="Alfa Emlak"
-                    width={689}
-                    height={653}
-                    sizes="(max-width: 768px) calc(100vw - 2rem), 18rem"
-                    className="block h-auto w-[min(16rem,calc(100vw-2rem))] object-contain align-top drop-shadow-[0_12px_32px_rgba(0,0,0,0.4)] sm:w-[min(17rem,calc(100vw-2.5rem))] md:w-[min(18rem,calc(100vw-3rem))]"
-                    priority
-                  />
-                </div>
-                <h1 className="mt-1.5 text-white md:mt-2">
+            <div className="mt-5 flex w-full flex-col items-center gap-10 lg:flex-row lg:items-center lg:justify-between lg:gap-12 xl:gap-16">
+              <div className="pointer-events-none flex shrink-0 translate-y-10 justify-center sm:translate-y-12 lg:translate-y-18 lg:justify-start">
+                <Image
+                  src="/alfaemlak3dlogo.png"
+                  alt="Alfa Emlak"
+                  width={689}
+                  height={653}
+                  sizes="(max-width: 1024px) min(90vw, 28rem), 28rem"
+                  className="h-auto w-[min(26rem,calc(100vw-2.5rem))] object-contain drop-shadow-[0_14px_38px_rgba(0,0,0,0.45)] sm:w-[min(28rem,calc(100vw-3rem))] lg:w-[min(30rem,38vw)]"
+                  priority
+                />
+              </div>
+              <div className="w-full max-w-3xl space-y-7 text-center lg:ml-auto lg:w-auto lg:max-w-4xl lg:text-right">
+                <span className="inline-block rounded-full border border-white/25 bg-white/10 px-4 py-1.5 font-headline text-[11px] tracking-[0.35em] text-white">
+                  ALFA EMLAK
+                </span>
+                <h1 className="text-white">
                   <span className="block font-headline text-5xl font-extrabold leading-[1.02] tracking-[-0.03em] md:text-7xl lg:text-8xl">
                     Kıbrıs&apos;ın En
                   </span>
-                  <span className="mt-1 flex flex-col items-center gap-0 leading-[1.05] sm:flex-row sm:flex-wrap sm:justify-center sm:gap-x-3 md:mt-0.5">
+                  <span className="mt-2 flex flex-col items-center gap-0 leading-[1.05] sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-center sm:gap-x-3 md:mt-1 lg:justify-end">
                     <span className="font-prestijli-word hero-prestijli">Prestijli</span>
                     <span className="font-headline text-5xl font-extrabold tracking-[-0.03em] text-white sm:inline md:text-7xl lg:text-8xl">
                       portföyü
                     </span>
                   </span>
                 </h1>
+                <p className="mx-auto max-w-lg font-sans text-base leading-relaxed text-white/85 md:max-w-xl md:text-lg md:leading-relaxed lg:ml-auto lg:mr-0">
+                  {settings.heroSubtitle || settings.heroTitle || defaultHeroSubtitle}
+                </p>
               </div>
-              <span className="inline-block rounded-full border border-white/25 bg-white/10 px-4 py-1.5 font-headline text-[11px] tracking-[0.35em] text-white">
-                ALFA EMLAK
-              </span>
-              <p className="max-w-2xl font-sans text-base leading-relaxed text-white/85 md:max-w-3xl md:text-lg md:leading-relaxed">
-                {settings.heroSubtitle ||
-                  "Alfa Emlak ile hayalinizdeki konutu, arsayı veya yatırımı keşfedin. Şeffaf süreç, güçlü portföy."}
-              </p>
             </div>
           </div>
           <div className="mx-auto mt-8 w-full max-w-[1440px] shrink-0 md:mt-10">
