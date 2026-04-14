@@ -8,124 +8,148 @@ datasource db {
 }
 
 model Listing {
-  id        String @id @default(cuid())
-  listingId String @unique
-
-  title        String
+  id                      String         @id @default(cuid())
+  listingId               String         @unique
+  title                   String
   /// SATILIK | KIRALIK | GUNLUK_KIRALIK | PROJE
-  kind         String
-  propertyType String
-
-  city         String
-  region       String
-  neighborhood String?
-  fullAddress  String?
-
-  price    Float
-  currency String @default("EUR")
-
-  shortDescription String?
-  longDescription  String?
-
-  coverImage String?
-
-  bedrooms    Int?
-  bathrooms   Int?
-  areaM2      Float?
-  plotAreaM2  Float?
-  floor       String?
-  buildingAge Int?
-  livingRooms Int?
-
-  hasPool      Boolean?
-  hasGarden    Boolean?
-  hasFireplace Boolean?
-  hasParking   Boolean?
-  furnished    Boolean?
-  seaView      Boolean?
-
+  kind                    String
+  propertyType            String
+  city                    String
+  region                  String
+  neighborhood            String?
+  fullAddress             String?
+  price                   Float
+  currency                String         @default("EUR")
+  shortDescription        String?
+  longDescription         String?
+  coverImage              String?
+  bedrooms                Int?
+  bathrooms               Int?
+  areaM2                  Float?
+  plotAreaM2              Float?
+  floor                   String?
+  buildingAge             Int?
+  livingRooms             Int?
+  hasPool                 Boolean?
+  hasGarden               Boolean?
+  hasFireplace            Boolean?
+  hasParking              Boolean?
+  furnished               Boolean?
+  seaView                 Boolean?
   /// JSON string: { [key: string]: { value: string; visible: boolean } }
-  detailFields String?
-
-  badgeFeatured    Boolean @default(false)
-  badgeExclusive   Boolean @default(false)
-  badgeVirtualTour Boolean @default(false)
-  badgeVideo       Boolean @default(false)
-  badgeNew         Boolean @default(false)
-  badgePriceDrop   Boolean @default(false)
-
+  detailFields            String?
+  badgeFeatured           Boolean        @default(false)
+  badgeExclusive          Boolean        @default(false)
+  badgeVirtualTour        Boolean        @default(false)
+  badgeVideo              Boolean        @default(false)
+  badgeNew                Boolean        @default(false)
+  badgePriceDrop          Boolean        @default(false)
   /// JSON string: string[]
-  features String?
-
-  virtualTourUrl     String?
-  virtualTourEnabled Boolean @default(false)
-  videoUrl           String?
-  videoEnabled       Boolean @default(false)
-
-  lat        Float?
-  lng        Float?
-  mapEnabled Boolean @default(false)
-
+  features                String?
+  virtualTourUrl          String?
+  virtualTourEnabled      Boolean        @default(false)
+  videoUrl                String?
+  videoEnabled            Boolean        @default(false)
+  lat                     Float?
+  lng                     Float?
+  mapEnabled              Boolean        @default(false)
   /// JSON string: { name: string; distance: string }[]
-  nearbyPlaces  String?
-  nearbyEnabled Boolean @default(false)
+  nearbyPlaces            String?
+  nearbyEnabled           Boolean        @default(false)
+  consultantName          String?
+  consultantPhoto         String?
+  consultantWhatsapp      String?
+  consultantPhone         String?
+  consultantEmail         String?
+  consultantOffice        String?
+  consultantOfficeLogo    String?
+  /// DRAFT | PUBLISHED | HIDDEN
+  publishStatus           String         @default("DRAFT")
+  views                   Int            @default(0)
+  favoritesCount          Int            @default(0)
+  rating                  Float?
+  statsShowViews          Boolean        @default(true)
+  statsShowFavs           Boolean        @default(true)
+  statsShowRating         Boolean        @default(false)
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
   /// JSON: Record<categoryId, boolean> — yakındaki POI kategorileri (varsayılan hepsi açık = null)
   nearbyPoiCategoriesJson String?
-
-  consultantName       String?
-  consultantPhoto      String?
-  consultantWhatsapp   String?
-  consultantPhone      String?
-  consultantEmail      String?
-  consultantOffice     String?
-  consultantOfficeLogo String?
-
-  /// DRAFT | PUBLISHED | HIDDEN
-  publishStatus String @default("DRAFT")
-
-  views           Int     @default(0)
-  favoritesCount  Int     @default(0)
-  rating          Float?
-  statsShowViews  Boolean @default(true)
-  statsShowFavs   Boolean @default(true)
-  statsShowRating Boolean @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  images ListingImage[]
+  /// JSON string: { "en": { "title": "...", "shortDescription": "..." }, "ru": { ... } }
+  translations            String?
+  images                  ListingImage[]
 }
 
 model ListingImage {
   id        String  @id @default(cuid())
   listingId String
-  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
   url       String
   sortOrder Int     @default(0)
   isPrimary Boolean @default(false)
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
 }
 
 model SiteSettings {
-  id Int @id @default(1)
-
-  siteName   String  @default("ALFA EMLAK")
-  logoUrl    String?
-  phone      String?
-  whatsapp   String?
-  email      String?
-  address    String?
-
-  socialJson String?
-
-  footerAbout    String?
-  seoTitle       String?
-  seoDescription String?
-
-  heroTitle    String?
-  heroSubtitle String?
-
+  id                    Int      @id @default(autoincrement())
+  siteName              String   @default("ALFA EMLAK")
+  logoUrl               String?
+  phone                 String?
+  whatsapp              String?
+  email                 String?
+  address               String?
+  socialJson            String?
+  footerAbout           String?
+  seoTitle              String?
+  seoDescription        String?
+  heroTitle             String?
+  heroSubtitle          String?
   defaultConsultantJson String?
   menuJson              String?
+  updatedAt             DateTime @updatedAt
+  /// JSON string: { "en": { "siteName": "...", "heroTitle": "..." }, "ru": { ... } }
+  translations          String?
+}
 
-  updatedAt DateTime @updatedAt
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  subject   String?
+  message   String
+  listingId String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model BlogPost {
+  id           String    @id @default(cuid())
+  slug         String    @unique
+  title        String
+  excerpt      String?
+  content      String
+  coverImage   String?
+  authorName   String?
+  /// DRAFT | PUBLISHED
+  status       String    @default("DRAFT")
+  /// JSON string: { "en": { "title": "...", "excerpt": "...", "content": "..." }, "ru": { ... } }
+  translations String?
+  publishedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Agent {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  phone        String?
+  photo        String?
+  title        String?  @default("Emlak Danışmanı")
+  /// ADMIN | AGENT
+  role         String   @default("AGENT")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

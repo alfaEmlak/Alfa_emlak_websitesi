@@ -1,40 +1,97 @@
-<<<<<<< HEAD
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Alfa Emlak Web
 
-## Getting Started
+Kuzey Kıbrıs odaklı emlak vitrin sitesi ve yönetim paneli. **Next.js 16** (App Router), **React 19**, **Tailwind CSS 4**, **Prisma** ve **SQLite** (geliştirme) kullanır.
 
-First, run the development server:
+## Gereksinimler
+
+- Node.js 20+
+- npm (veya uyumlu paket yöneticisi)
+
+## Kurulum
+
+```bash
+npm install
+```
+
+Kök dizinde `.env` oluşturun — örnek için [`.env.example`](.env.example) dosyasını kopyalayın:
+
+```bash
+# macOS / Linux
+cp .env.example .env
+
+# Windows (PowerShell veya CMD)
+copy .env.example .env
+```
+
+`.env` içinde özellikle şunları doldurun:
+
+| Değişken | Açıklama |
+|----------|----------|
+| `DATABASE_URL` | Geliştirme: `file:./prisma/dev.db` (`.env.example` ile uyumlu) |
+| `ADMIN_PASSWORD` | Yönetim paneli giriş şifresi |
+| `SESSION_SECRET` | **En az 32 karakter**; oturum şifrelemesi için zorunlu |
+
+Veritabanını migration ile oluşturun:
+
+```bash
+npx prisma migrate dev
+```
+
+İsteğe bağlı örnek veri:
+
+```bash
+npm run db:seed
+```
+
+Geliştirme sunucusu (varsayılan port **3000**):
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Site: [http://localhost:3000](http://localhost:3000)  
+Yönetim paneli girişi: [http://localhost:3000/admin](http://localhost:3000/admin)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Diğer komutlar:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build   # üretim derlemesi
+npm run start   # üretim sunucusu (önce build)
+npm run lint    # ESLint
+```
 
-## Learn More
+İlk kurulumda Prisma istemcisi sorun çıkarırsa: `npx prisma generate`
 
-To learn more about Next.js, take a look at the following resources:
+## Özellik özeti
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Ziyaretçi: ana sayfa, ilan listesi ve filtreler, ilan detayı, hakkımızda, iletişim (iletişim bilgileri; sunucu tarafı form yok).
+- Yönetim: ilan CRUD, site ayarları, menü; görseller `POST /api/upload` ile `public/uploads` altına yazılır (yalnızca giriş yapmış admin).
+- Yakındaki yerler: OpenStreetMap / Overpass tabanlı API (`/api/nearby-pois`); ek API anahtarı gerekmez.
+- TCMB günlük kurları ana sayfada şerit olarak kullanılır (ağ erişimi gerekir).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Barındırma, veritabanı ve dosya yükleme
 
-## Deploy on Vercel
+**Önerilen çerçeve (karar özeti):**
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Ortam | Veritabanı | Dosya yüklemeleri |
+|-------|------------|-------------------|
+| **Geliştirme** | SQLite (`prisma/dev.db`) | `public/uploads` — uygundur |
+| **Üretim (tek VPS / kalıcı disk)** | SQLite mümkün; eşzamanlı yazım yüksekse **PostgreSQL** tercih edin | Aynı sunucuda `public/uploads` veya ayrı disk; yedekleme planlayın |
+| **Üretim (sunucusuz: Vercel vb.)** | **PostgreSQL** (yönetilen DB) | SQLite dosyası kalıcı olmaz; yükleme için **S3, R2, Supabase Storage** vb. nesne depolama gerekir — mevcut `public/uploads` yolu bu ortamda güvenilir değildir |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-=======
-# AlfaEmlak_Web
->>>>>>> 0f67ad856a3a0ace1adcfcaed9ec44bb97b1ec26
+Prisma şeması şu an `provider = "sqlite"`. PostgreSQL’e geçiş için `schema.prisma` içinde `provider` ve `url` güncellenir, migration’lar hedef DB için yeniden üretilir veya veri taşıma stratejisi uygulanır.
+
+## Önerilen geliştirme öncelikleri (backlog)
+
+İş hedefine göre sırayı siz netleştirin; tipik önerilen sıra:
+
+1. **README / dokümantasyon** — kurulum ve env (bu dosya); üretim checklist’i ekip içi paylaşımı.
+2. **Üretim altyapısı** — hedef platforma göre Postgres + kalıcı veya nesne depolamalı upload; `DATABASE_URL` ve deploy pipeline.
+3. **Yönetim güvenliği** — güçlü şifre politikası, giriş denemesi sınırlama, gerekirse IP kısıtı veya ileri düzey kimlik (çoklu kullanıcı).
+4. **İletişim** — ihtiyaç halinde iletişim formu ve e-posta / CRM entegrasyonu (KVKK ve saklama politikası ile birlikte).
+5. **SEO ve ölçüm** — site haritası, yapılandırılmış veri; isteğe bağlı analitik.
+6. **Kalite** — kritik akışlar için test (ilan filtreleri, admin CRUD); regresyon riskini azaltır.
+
+## Next.js notu
+
+Bu depo Next.js 16 kullanır; API ve dosya yapısı önceki sürümlerden farklılık gösterebilir. Resmi dokümantasyon: [Next.js Docs](https://nextjs.org/docs).

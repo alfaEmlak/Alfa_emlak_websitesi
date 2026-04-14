@@ -1,10 +1,6 @@
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin-auth";
-import { customAlphabet } from "nanoid";
-
-const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 12);
+import { uploadFile } from "@/lib/supabase/storage";
 
 export async function POST(request: Request) {
   try {
@@ -29,17 +25,12 @@ export async function POST(request: Request) {
     }
 
     const blob = entry as Blob;
-    const buf = Buffer.from(await blob.arrayBuffer());
-    const originalName =
-      "name" in entry && typeof (entry as File).name === "string" ? (entry as File).name : "";
-    const ext = path.extname(originalName) || ".jpg";
-    const name = `${Date.now()}-${nanoid()}${ext}`;
-    const dir = path.join(process.cwd(), "public", "uploads");
-    await mkdir(dir, { recursive: true });
-    const fsPath = path.join(dir, name);
-    await writeFile(fsPath, buf);
+    const file = new File([blob], blob.name || "upload", { type: blob.type });
+    
+    // Upload to Supabase Storage
+    const { path: filePath, url } = await uploadFile(file, "uploads");
 
-    return NextResponse.json({ url: `/uploads/${name}` });
+    return NextResponse.json({ url, path: filePath });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Yükleme başarısız";
     return NextResponse.json({ error: msg }, { status: 500 });

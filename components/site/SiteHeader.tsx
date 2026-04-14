@@ -1,21 +1,26 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { Link, usePathname } from "@/i18n/routing";
+import { useSearchParams } from "next/navigation";
 import { Suspense, useRef, useState } from "react";
 import type { MenuTopItem } from "@/lib/default-menu";
+import { LanguageSwitcher } from "@/components/site/LanguageSwitcher";
+import { useTranslations } from "next-intl";
 
-type ActiveNav = "satilik" | "proje" | "kiralik" | "hakkimizda" | null;
+type ActiveNav = "satilik" | "proje" | "kiralik" | "hakkimizda" | "ilanlar" | null;
 
 function computeActive(pathname: string, tur: string | null): ActiveNav {
+  // next-intl usePathname returns path WITHOUT locale prefix
   if (pathname === "/hakkimizda") return "hakkimizda";
   if (pathname === "/ilanlar" || pathname.startsWith("/ilan/")) {
+    if (!tur) return "ilanlar";
     if (tur === "proje") return "proje";
     if (tur === "kiralik" || tur === "gunluk") return "kiralik";
-    return "satilik";
+    if (tur === "satilik") return "satilik";
+    return "ilanlar";
   }
-  if (pathname === "/") return "satilik";
+  if (pathname === "/") return null;
   return null;
 }
 
@@ -70,6 +75,9 @@ function MegaPanel({
 function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: string }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const t = useTranslations("Common");
+  const th = useTranslations("HomePage");
+  
   const tur = searchParams.get("tur");
   const active = computeActive(pathname, tur);
   const [open, setOpen] = useState(false);
@@ -97,13 +105,13 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
     <>
       <header
         className="fixed left-0 right-0 top-0 z-[200] border-b border-slate-100 bg-white shadow-sm"
-        aria-label={`${siteName} — Ana navigasyon`}
+        aria-label={`${siteName} — ${t("home")}`}
       >
         <nav className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-6 py-4 md:px-8 md:py-5">
           <Link href="/" className="shrink-0">
             <Image
               src="/alfaemlaklogo.png"
-              alt={siteName}
+              alt={siteName || "Alfa Emlak"}
               width={200}
               height={48}
               className="h-9 w-auto max-w-[200px] object-contain md:h-10"
@@ -120,7 +128,7 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
                   setDesktopOpenId("satilik");
                 }}>
                   <Link href="/ilanlar?tur=satilik" className={navItemClass(active === "satilik")}>
-                    Satılık
+                    {t("forSale")}
                   </Link>
                 </div>
               ) : null}
@@ -130,7 +138,7 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
                   setDesktopOpenId("projeler");
                 }}>
                   <Link href="/ilanlar?tur=proje" className={navItemClass(active === "proje")}>
-                    Projeler
+                    {t("project")}
                   </Link>
                 </div>
               ) : null}
@@ -140,7 +148,7 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
                   setDesktopOpenId("kiralik");
                 }}>
                   <Link href="/ilanlar?tur=kiralik" className={navItemClass(active === "kiralik")}>
-                    Kiralık
+                    {t("forRent")}
                   </Link>
                 </div>
               ) : null}
@@ -150,15 +158,21 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
                   setDesktopOpenId("daha-fazla");
                 }}>
                   <button type="button" className={`${navItemClass(false)} cursor-default bg-transparent`}>
-                    Daha fazla
+                    {t("more")}
                   </button>
                 </div>
               ) : null}
+              <Link href="/ilanlar" className={navItemClass(active === "ilanlar")} onMouseEnter={() => {
+                cancelDesktopClose();
+                setDesktopOpenId(null);
+              }}>
+                {t("allListings")}
+              </Link>
               <Link href="/hakkimizda" className={navItemClass(active === "hakkimizda")} onMouseEnter={() => {
                 cancelDesktopClose();
                 setDesktopOpenId(null);
               }}>
-                Hakkımızda
+                {t("aboutUs")}
               </Link>
               </div>
               {desktopActiveMega ? (
@@ -168,17 +182,18 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
           </div>
 
           <div className="flex shrink-0 items-center gap-3">
+            <LanguageSwitcher />
             <Link
               href="/iletisim"
               className="btn-tactile hidden rounded-lg bg-secondary px-6 py-3 font-headline text-xs font-bold uppercase tracking-wider text-white shadow-lg shadow-secondary/20 transition-all duration-300 hover:opacity-80 active:scale-95 sm:px-8 md:inline-flex"
             >
-              İlan Ver
+              {t("listProperty")}
             </Link>
             <button
               type="button"
               className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-primary/15 bg-white/95 text-primary shadow-[0_8px_20px_rgba(4,21,70,0.12)] transition hover:border-primary/30 hover:bg-white md:hidden"
               aria-expanded={open}
-              aria-label="Menü"
+              aria-label={t("menu")}
               onClick={() => setOpen((v) => !v)}
             >
               <span className="material-symbols-outlined text-[22px]">{open ? "close" : "menu"}</span>
@@ -196,7 +211,7 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
                   className="flex items-center justify-between rounded-xl border border-transparent px-3 py-3 text-primary transition hover:border-slate-200 hover:bg-slate-50"
                   onClick={() => setOpen(false)}
                 >
-                  <span>Satılık</span>
+                  <span>{t("forSale")}</span>
                   <span className="material-symbols-outlined text-base text-primary/35">chevron_right</span>
                 </Link>
               </li>
@@ -206,7 +221,7 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
                   className="flex items-center justify-between rounded-xl border border-transparent px-3 py-3 text-primary transition hover:border-slate-200 hover:bg-slate-50"
                   onClick={() => setOpen(false)}
                 >
-                  <span>Projeler</span>
+                  <span>{t("project")}</span>
                   <span className="material-symbols-outlined text-base text-primary/35">chevron_right</span>
                 </Link>
               </li>
@@ -216,7 +231,17 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
                   className="flex items-center justify-between rounded-xl border border-transparent px-3 py-3 text-primary transition hover:border-slate-200 hover:bg-slate-50"
                   onClick={() => setOpen(false)}
                 >
-                  <span>Kiralık</span>
+                  <span>{t("forRent")}</span>
+                  <span className="material-symbols-outlined text-base text-primary/35">chevron_right</span>
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/ilanlar"
+                  className="flex items-center justify-between rounded-xl border border-transparent px-3 py-3 text-primary transition hover:border-slate-200 hover:bg-slate-50"
+                  onClick={() => setOpen(false)}
+                >
+                  <span>{t("allListings")}</span>
                   <span className="material-symbols-outlined text-base text-primary/35">chevron_right</span>
                 </Link>
               </li>
@@ -226,7 +251,7 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
                   className="flex items-center justify-between rounded-xl border border-transparent px-3 py-3 text-primary transition hover:border-slate-200 hover:bg-slate-50"
                   onClick={() => setOpen(false)}
                 >
-                  <span>Hakkımızda</span>
+                  <span>{t("aboutUs")}</span>
                   <span className="material-symbols-outlined text-base text-primary/35">chevron_right</span>
                 </Link>
               </li>
@@ -236,7 +261,7 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
                   className="mt-1 block rounded-xl bg-secondary px-4 py-3 text-center font-headline text-xs font-extrabold uppercase tracking-[0.16em] text-white shadow-lg shadow-secondary/25"
                   onClick={() => setOpen(false)}
                 >
-                  İlan Ver
+                  {t("listProperty")}
                 </Link>
               </li>
               {menu.map((item) => (
@@ -296,13 +321,13 @@ function SiteHeaderFallback({ menu, siteName }: { menu: MenuTopItem[]; siteName:
     <>
       <header
         className="fixed left-0 right-0 top-0 z-[200] border-b border-slate-100 bg-white shadow-sm"
-        aria-label={`${siteName} — Ana navigasyon`}
+        aria-label={`${siteName} — Navigasyon`}
       >
         <nav className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-6 py-4 md:px-8 md:py-5">
           <Link href="/" className="shrink-0">
             <Image
               src="/alfaemlaklogo.png"
-              alt={siteName}
+              alt={siteName || "Alfa Emlak"}
               width={200}
               height={48}
               className="h-9 w-auto max-w-[200px] object-contain md:h-10"
@@ -352,6 +377,12 @@ function SiteHeaderFallback({ menu, siteName }: { menu: MenuTopItem[]; siteName:
                   </button>
                 </div>
               ) : null}
+              <Link href="/ilanlar" className={navItemClass(false)} onMouseEnter={() => {
+                cancelDesktopClose();
+                setDesktopOpenId(null);
+              }}>
+                Tüm İlanlar
+              </Link>
               <Link href="/hakkimizda" className={navItemClass(false)} onMouseEnter={() => {
                 cancelDesktopClose();
                 setDesktopOpenId(null);
@@ -365,6 +396,7 @@ function SiteHeaderFallback({ menu, siteName }: { menu: MenuTopItem[]; siteName:
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-3">
+            <LanguageSwitcher />
             <Link
               href="/iletisim"
               className="btn-tactile hidden rounded-lg bg-secondary px-6 py-3 font-headline text-xs font-bold uppercase tracking-wider text-white shadow-lg shadow-secondary/20 transition-all duration-300 hover:opacity-80 active:scale-95 sm:px-8 md:inline-flex"
@@ -413,6 +445,16 @@ function SiteHeaderFallback({ menu, siteName }: { menu: MenuTopItem[]; siteName:
                   onClick={() => setOpen(false)}
                 >
                   <span>Kiralık</span>
+                  <span className="material-symbols-outlined text-base text-primary/35">chevron_right</span>
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/ilanlar"
+                  className="flex items-center justify-between rounded-xl border border-transparent px-3 py-3 text-primary transition hover:border-slate-200 hover:bg-slate-50"
+                  onClick={() => setOpen(false)}
+                >
+                  <span>Tüm İlanlar</span>
                   <span className="material-symbols-outlined text-base text-primary/35">chevron_right</span>
                 </Link>
               </li>

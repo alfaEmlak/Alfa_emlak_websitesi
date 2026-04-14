@@ -11,6 +11,22 @@ export const PUBLISH_STATUSES = ["DRAFT", "PUBLISHED", "HIDDEN"] as const;
 
 export type PublishStatus = (typeof PUBLISH_STATUSES)[number];
 
+/**
+ * Returns the translation key for listing kind.
+ * Usage: tc(`listingKinds.${listing.kind}`)
+ */
+export function getListingKindKey(k: string): string {
+  return `listingKinds.${k}`;
+}
+
+/**
+ * Returns the translation key for publish status.
+ * Usage: tw(`status.${status.toLowerCase()}`)
+ */
+export function getPublishStatusKey(s: string): string {
+  return `status.${s.toLowerCase()}`;
+}
+
 export function listingKindLabel(k: string): string {
   switch (k) {
     case "SATILIK":

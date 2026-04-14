@@ -1,26 +1,25 @@
-import type { SiteSettings } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { defaultMegaMenu, parseMenuJson, type MenuTopItem } from "@/lib/default-menu";
 
-function offlineSiteSettings(): SiteSettings {
+function offlineSiteSettings(): any {
   const now = new Date();
   return {
     id: 1,
-    siteName: "ALFA EMLAK",
-    logoUrl: null,
-    phone: null,
-    whatsapp: null,
-    email: null,
-    address: null,
-    socialJson: null,
-    footerAbout: null,
-    seoTitle: null,
-    seoDescription: null,
-    heroTitle: null,
-    heroSubtitle: null,
-    defaultConsultantJson: null,
-    menuJson: JSON.stringify(defaultMegaMenu),
-    updatedAt: now,
+    site_name: "ALFA EMLAK",
+    logo_url: null,
+    contact_phone: null,
+    contact_email: null,
+    contact_address: null,
+    social_json: null,
+    footer_about: null,
+    seo_meta_title: null,
+    seo_meta_description: null,
+    hero_title: null,
+    hero_subtitle: null,
+    default_consultant_json: null,
+    menu_json: JSON.stringify(defaultMegaMenu),
+    translations: null,
+    updated_at: now.toISOString(),
   };
 }
 
@@ -52,20 +51,28 @@ function parseJson<T>(raw: string | null | undefined, fallback: T): T {
 }
 
 export async function getSiteSettings() {
-  let row = await prisma.siteSettings.findUnique({ where: { id: 1 } });
-  if (!row) {
-    row = await prisma.siteSettings.create({
-      data: {
-        id: 1,
-        menuJson: JSON.stringify(defaultMegaMenu),
-      },
-    });
+  const { data: row, error } = await supabaseAdmin
+    .from("site_settings")
+    .select("*")
+    .eq("id", 1)
+    .single();
+  
+  if (error || !row) {
+    // Create if doesn't exist
+    const { data: newRow } = await supabaseAdmin
+      .from("site_settings")
+      .insert({ id: 1, menu_json: JSON.stringify(defaultMegaMenu) })
+      .select()
+      .single();
+    
+    return newRow || offlineSiteSettings();
   }
+  
   return row;
 }
 
 /** Veritabanı kapalı / yol hatalı olsa bile sayfa 500 vermesin (yerel geliştirme). */
-export async function getSiteSettingsOrFallback(): Promise<SiteSettings> {
+export async function getSiteSettingsOrFallback(): Promise<any> {
   try {
     return await getSiteSettings();
   } catch (e) {
@@ -76,15 +83,15 @@ export async function getSiteSettingsOrFallback(): Promise<SiteSettings> {
 
 export async function getMegaMenu(): Promise<MenuTopItem[]> {
   const row = await getSiteSettingsOrFallback();
-  return parseMenuJson(row.menuJson);
+  return parseMenuJson(row.menu_json);
 }
 
-export function getSocialLinks(row: { socialJson: string | null }): SocialLinks {
-  return parseJson<SocialLinks>(row.socialJson, {});
+export function getSocialLinks(row: { social_json: string | null }): SocialLinks {
+  return parseJson<SocialLinks>(row.social_json, {});
 }
 
 export function getDefaultConsultant(
-  row: { defaultConsultantJson: string | null },
+  row: { default_consultant_json: string | null },
 ): ConsultantDefault {
-  return parseJson<ConsultantDefault>(row.defaultConsultantJson, {});
+  return parseJson<ConsultantDefault>(row.default_consultant_json, {});
 }

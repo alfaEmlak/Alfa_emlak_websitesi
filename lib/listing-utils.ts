@@ -80,15 +80,23 @@ export function visibleDetailRows(raw: string | null | undefined) {
 
 export type ListingWithImages = Listing & { images: ListingImage[] };
 
-export function sortImages(listing: ListingWithImages) {
-  return [...listing.images].sort((a, b) => a.sortOrder - b.sortOrder || a.url.localeCompare(b.url));
+export function sortImages(listing: any) {
+  const imgs = listing.images ?? listing.listing_images ?? [];
+  if (!Array.isArray(imgs)) return [];
+  return [...imgs].sort((a: any, b: any) => {
+    const aOrder = a.sortOrder ?? a.sort_order ?? 0;
+    const bOrder = b.sortOrder ?? b.sort_order ?? 0;
+    return aOrder - bOrder || (a.url ?? "").localeCompare(b.url ?? "");
+  });
 }
 
-export function primaryImageUrl(listing: ListingWithImages) {
-  if (listing.coverImage) return listing.coverImage;
+export function primaryImageUrl(listing: any) {
+  const cover = listing.coverImage ?? listing.cover_image;
+  if (cover && typeof cover === "string" && cover.trim()) return cover.trim();
   const sorted = sortImages(listing);
-  const primary = sorted.find((i) => i.isPrimary) ?? sorted[0];
-  return primary?.url ?? "/placeholder-property.svg";
+  const primary = sorted.find((i: any) => i.isPrimary ?? i.is_primary) ?? sorted[0];
+  if (primary?.url && typeof primary.url === "string" && primary.url.trim()) return primary.url.trim();
+  return "/placeholder-property.svg";
 }
 
 export function formatMoney(price: number, currency: string) {
@@ -104,7 +112,10 @@ export function formatMoney(price: number, currency: string) {
   }
 }
 
-export function daysAgo(from: Date) {
-  const ms = Date.now() - from.getTime();
+export function daysAgo(from: Date | string | undefined | null) {
+  if (!from) return 0;
+  const date = typeof from === "string" ? new Date(from) : from;
+  if (isNaN(date.getTime())) return 0;
+  const ms = Date.now() - date.getTime();
   return Math.max(0, Math.floor(ms / (1000 * 60 * 60 * 24)));
 }

@@ -1,16 +1,8 @@
-import { prisma } from "@/lib/prisma";
-import type { Prisma } from "@prisma/client";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { ListingKind } from "@/lib/listing-kinds";
+import { normalizeListings } from "@/lib/listing-normalize";
 
-export const listingPublicInclude = { images: true } as const;
-
-export type ListingPublic = Prisma.ListingGetPayload<{
-  include: typeof listingPublicInclude;
-}>;
-
-const publishedWhere: Prisma.ListingWhereInput = {
-  publishStatus: "PUBLISHED",
-};
+export type ListingPublic = any;
 
 function normalizeCity(raw: string | undefined) {
   if (!raw) return undefined;
@@ -32,7 +24,7 @@ export function buildListingFilters(sp: Record<string, string | string[] | undef
     return v ?? undefined;
   };
 
-  const where: Prisma.ListingWhereInput = { ...publishedWhere };
+  const where: Record<string, any> = {};
 
   const tur = get("tur");
   if (tur === "satilik") where.kind = "SATILIK";
@@ -45,12 +37,12 @@ export function buildListingFilters(sp: Record<string, string | string[] | undef
 
   const bolge = get("bolge");
   if (bolge && bolge !== "tum-kibris") {
-    where.region = { contains: bolge };
+    where.region = bolge;
   }
 
   const q = get("q");
 
-  const priceFilter: Prisma.FloatFilter = {};
+  const priceFilter: Record<string, number> = {};
   const minPrice = get("minFiyat");
   const maxPrice = get("maxFiyat");
   if (minPrice) priceFilter.gte = Number(minPrice);
@@ -58,74 +50,64 @@ export function buildListingFilters(sp: Record<string, string | string[] | undef
   if (Object.keys(priceFilter).length > 0) where.price = priceFilter;
 
   const minRooms = get("minOda");
-  if (minRooms) where.bedrooms = { gte: Number(minRooms) };
-
-  const extraAnd: Prisma.ListingWhereInput[] = [];
-  if (q) {
-    extraAnd.push({
-      OR: [
-        { title: { contains: q } },
-        { listingId: { contains: q } },
-        { region: { contains: q } },
-      ],
-    });
-  }
+  if (minRooms) where.bedrooms = Number(minRooms);
 
   const emlak = get("emlak");
-  if (emlak === "arsa") where.propertyType = { contains: "arsa" };
-  else if (emlak === "ticari") where.propertyType = { contains: "ticari" };
-  else if (emlak === "konut") {
-    extraAnd.push({
-      OR: [
-        { propertyType: { contains: "Daire" } },
-        { propertyType: { contains: "Villa" } },
-        { propertyType: { contains: "Konut" } },
-        { propertyType: { contains: "Müstakil" } },
-      ],
-    });
-  }
+  if (emlak === "arsa") where.propertyType = "arsa";
+  else if (emlak === "ticari") where.propertyType = "ticari";
+  else if (emlak === "konut") where.propertyType = "konut";
 
-  if (extraAnd.length) {
-    where.AND = Array.isArray(where.AND)
-      ? [...where.AND, ...extraAnd]
-      : where.AND
-        ? [where.AND, ...extraAnd]
-        : extraAnd;
-  }
-
-  return where;
+  return { where, q };
 }
 
 export async function findPublishedListings(
-  where: Prisma.ListingWhereInput,
+  where: Record<string, any>,
   take = 12,
   skip = 0,
 ) {
-  return prisma.listing.findMany({
-    where: { AND: [publishedWhere, where] },
-    include: listingPublicInclude,
-    orderBy: [{ badgeFeatured: "desc" }, { createdAt: "desc" }],
-    take,
-    skip,
-  });
+  let query = supabaseAdmin
+    .from("listings")
+    .select("*, listing_images(*)")
+    .eq("publish_status", "PUBLISHED")
+    .order("created_at", { ascending: false })
+    .range(skip, skip + take - 1);
+
+  // Apply where filters
+  if (where.kind) query = query.eq("kind", where.kind);
+  if (where.city) query = query.eq("city", where.city);
+  if (where.region) query = query.ilike("region", `%${where.region}%`);
+  if (where.price) {
+    if (where.price.gte) query = query.gte("price", where.price.gte);
+    if (where.price.lte) query = query.lte("price", where.price.lte);
+  }
+
+  const { data } = await query;
+  return normalizeListings(data || []);
 }
 
-export async function countPublished(where: Prisma.ListingWhereInput) {
-  return prisma.listing.count({
-    where: { AND: [publishedWhere, where] },
-  });
+export async function countPublished(where: Record<string, any>) {
+  let query = supabaseAdmin
+    .from("listings")
+    .select("*", { count: "exact", head: true })
+    .eq("publish_status", "PUBLISHED");
+
+  if (where.kind) query = query.eq("kind", where.kind);
+  if (where.city) query = query.eq("city", where.city);
+
+  const { count } = await query;
+  return count || 0;
 }
 
 export async function getFeaturedListings(limit = 8) {
-  return prisma.listing.findMany({
-    where: {
-      ...publishedWhere,
-      badgeFeatured: true,
-    },
-    include: listingPublicInclude,
-    orderBy: { createdAt: "desc" },
-    take: limit,
-  });
+  const { data } = await supabaseAdmin
+    .from("listings")
+    .select("*, listing_images(*)")
+    .eq("publish_status", "PUBLISHED")
+    .filter("badges", "like", '%"featured":true%')
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  
+  return normalizeListings(data || []);
 }
 
 /** DB kapalı / yol hatalı / sunucusuz ortamda ana sayfa 500 vermesin. */
@@ -139,7 +121,7 @@ export async function getFeaturedListingsSafe(limit = 8): Promise<ListingPublic[
 }
 
 export async function findPublishedListingsSafe(
-  where: Prisma.ListingWhereInput,
+  where: Record<string, any>,
   take = 12,
   skip = 0,
 ): Promise<ListingPublic[]> {
@@ -151,7 +133,7 @@ export async function findPublishedListingsSafe(
   }
 }
 
-export async function countPublishedSafe(where: Prisma.ListingWhereInput): Promise<number> {
+export async function countPublishedSafe(where: Record<string, any>): Promise<number> {
   try {
     return await countPublished(where);
   } catch (e) {
@@ -161,24 +143,27 @@ export async function countPublishedSafe(where: Prisma.ListingWhereInput): Promi
 }
 
 export async function getLatestByKind(kind: ListingKind, limit = 4) {
-  return prisma.listing.findMany({
-    where: { ...publishedWhere, kind },
-    include: listingPublicInclude,
-    orderBy: { createdAt: "desc" },
-    take: limit,
-  });
+  const { data } = await supabaseAdmin
+    .from("listings")
+    .select("*, listing_images(*)")
+    .eq("publish_status", "PUBLISHED")
+    .eq("kind", kind)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  
+  return normalizeListings(data || []);
 }
 
 export async function getListingByPublicId(listingId: string, allowDraftForAdmin: boolean) {
-  const base = await prisma.listing.findFirst({
-    where: { listingId },
-    include: {
-      images: { orderBy: { sortOrder: "asc" } },
-    },
-  });
+  const { data: base } = await supabaseAdmin
+    .from("listings")
+    .select("*, listing_images(*)")
+    .eq("listing_id", listingId)
+    .single();
+  
   if (!base) return null;
-  if (base.publishStatus !== "PUBLISHED" && !allowDraftForAdmin) return null;
-  return base;
+  if (base.publish_status !== "PUBLISHED" && !allowDraftForAdmin) return null;
+  return normalizeListings([base])[0];
 }
 
 export async function getListingByPublicIdSafe(listingId: string, allowDraftForAdmin: boolean) {
@@ -196,17 +181,17 @@ export async function getSimilarListings(
   kind: string,
   limit = 4,
 ) {
-  return prisma.listing.findMany({
-    where: {
-      ...publishedWhere,
-      NOT: { id: excludeId },
-      city,
-      kind,
-    },
-    include: listingPublicInclude,
-    take: limit,
-    orderBy: { createdAt: "desc" },
-  });
+  const { data } = await supabaseAdmin
+    .from("listings")
+    .select("*, listing_images(*)")
+    .eq("publish_status", "PUBLISHED")
+    .neq("id", excludeId)
+    .eq("city", city)
+    .eq("kind", kind)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  
+  return normalizeListings(data || []);
 }
 
 export async function getSimilarListingsSafe(

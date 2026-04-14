@@ -73,7 +73,7 @@ function DropdownField({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className={`flex w-full items-center justify-between gap-3 text-left font-headline text-base font-semibold ${
+        className={`flex w-full items-center justify-between gap-3 rounded text-left font-headline text-base font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/50 ${
           isOverlay ? "text-white" : "text-primary"
         }`}
       >
@@ -157,8 +157,8 @@ export function HeroSearch({ variant = "light" }: { variant?: "light" | "overlay
   /** Büyük sekmeler; seçili olmayanlar buzlu cam */
   const tabBtn = (active: boolean) =>
     active
-      ? "rounded-xl bg-secondary px-6 py-3 font-headline text-sm font-bold uppercase tracking-[0.12em] text-white shadow-lg shadow-black/30 transition hover:brightness-105"
-      : "rounded-xl border border-white/30 bg-white/15 px-6 py-3 font-headline text-sm font-bold uppercase tracking-[0.12em] text-white shadow-sm backdrop-blur-md transition hover:bg-white/25";
+      ? "rounded-xl bg-secondary px-6 py-3 font-headline text-sm font-bold uppercase tracking-[0.12em] text-white shadow-lg shadow-black/30 transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+      : "rounded-xl border border-white/30 bg-white/15 px-6 py-3 font-headline text-sm font-bold uppercase tracking-[0.12em] text-white shadow-sm backdrop-blur-md transition hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50";
 
   return (
     <div className="mx-auto w-full max-w-5xl">
@@ -195,6 +195,9 @@ export function HeroSearch({ variant = "light" }: { variant?: "light" | "overlay
               Bütçe (max)
             </span>
             <input
+              type="number"
+              inputMode="numeric"
+              name="budget"
               className={textInputCls}
               placeholder="Örn. 1500000"
               value={budgetMax}
@@ -204,7 +207,7 @@ export function HeroSearch({ variant = "light" }: { variant?: "light" | "overlay
           <button
             type="button"
             onClick={onSearch}
-            className="btn-tactile min-h-[58px] rounded-xl bg-secondary py-5 font-headline text-sm font-bold uppercase tracking-[0.12em] text-white shadow-lg shadow-secondary/25 transition hover:opacity-90 md:min-h-0 md:self-stretch md:px-8"
+            className="btn-tactile min-h-[58px] rounded-xl bg-secondary py-5 font-headline text-sm font-bold uppercase tracking-[0.12em] text-white shadow-lg shadow-secondary/25 transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-secondary/40 md:min-h-0 md:self-stretch md:px-8"
           >
             İLANLARI GÖR
           </button>
