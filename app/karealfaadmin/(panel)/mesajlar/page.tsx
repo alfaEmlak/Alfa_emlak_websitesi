@@ -34,7 +34,20 @@ export default async function MessagesPage() {
           </p>
         </div>
       ) : (
-        <MessageList messages={messagesList} />
+        <MessageList messages={messagesList.map(m => ({
+          id: m.id,
+          name: m.name,
+          email: m.email,
+          phone: m.phone,
+          subject: m.subject,
+          message: m.message,
+          listingId: m.listing_id,
+          isRead: m.is_read,
+          createdAt: m.created_at,
+          status: m.status || "NEW",
+          notes: m.notes || "",
+          agentId: m.agent_id || null
+        }))} />
       )}
     </div>
   );

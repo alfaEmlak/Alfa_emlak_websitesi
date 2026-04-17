@@ -60,6 +60,26 @@ export async function deleteMessage(id: string) {
   return { ok: true as const };
 }
 
+export async function updateMessageCrmData(id: string, data: { status?: string; notes?: string; agentId?: string }) {
+  const session = await getAdminSession();
+  if (!session.isAdmin) throw new Error("Yetkisiz");
+
+  const updatePayload: Record<string, unknown> = {};
+  if (data.status !== undefined) updatePayload.status = data.status;
+  if (data.notes !== undefined) updatePayload.notes = data.notes;
+  if (data.agentId !== undefined) updatePayload.agent_id = data.agentId;
+  
+  const { error } = await supabaseAdmin
+    .from("contact_messages")
+    .update(updatePayload)
+    .eq("id", id);
+    
+  if (error) throw new Error(`Update CRM data failed: ${error.message}`);
+  
+  revalidatePath("/karealfaadmin/mesajlar");
+  return { ok: true as const };
+}
+
 /* ────────── Blog Posts ────────── */
 
 export async function saveBlogPost(data: {

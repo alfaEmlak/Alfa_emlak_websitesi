@@ -13,8 +13,7 @@ export type PublishStatus = (typeof PUBLISH_STATUSES)[number];
 
 /**
  * Returns the translation key for listing kind.
- * Usage: tc(`listingKinds.${listing.kind}`)
- */
+ * Usage: tc(`listingKinds.${listing.kind}`)  
 export function getListingKindKey(k: string): string {
   return `listingKinds.${k}`;
 }

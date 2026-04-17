@@ -18,7 +18,7 @@ export default async function AdminDashboardPage() {
     supabaseAdmin.from("listings").select("*", { count: "exact", head: true }),
     supabaseAdmin.from("listings").select("*", { count: "exact", head: true }).eq("publish_status", "PUBLISHED"),
     supabaseAdmin.from("listings").select("*", { count: "exact", head: true }).eq("publish_status", "DRAFT"),
-    supabaseAdmin.from("listings").select("*", { count: "exact", head: true }).filter("badges", "like", '%"featured":true%'),
+    supabaseAdmin.from("listings").select("*", { count: "exact", head: true }).contains("badges", { featured: true }),
     supabaseAdmin
       .from("listings")
       .select("id, listing_id, title, publish_status, created_at, price, currency")

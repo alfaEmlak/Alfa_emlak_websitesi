@@ -1,21 +1,9 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { ListingKind } from "@/lib/listing-kinds";
 import { normalizeListings } from "@/lib/listing-normalize";
+import { kktcCities, kktcRegions } from "@/lib/kktc-regions";
 
 export type ListingPublic = any;
-
-function normalizeCity(raw: string | undefined) {
-  if (!raw) return undefined;
-  const m: Record<string, string> = {
-    girne: "Girne",
-    magusa: "Mağusa",
-    lefkosa: "Lefkoşa",
-    iskele: "İskele",
-    lefke: "Lefke",
-    guzelyurt: "Güzelyurt",
-  };
-  return m[raw.toLowerCase()] ?? raw;
-}
 
 export function buildListingFilters(sp: Record<string, string | string[] | undefined>) {
   const get = (k: string) => {
@@ -32,7 +20,7 @@ export function buildListingFilters(sp: Record<string, string | string[] | undef
   else if (tur === "gunluk") where.kind = "GUNLUK_KIRALIK";
   else if (tur === "proje") where.kind = "PROJE";
 
-  const sehir = normalizeCity(get("sehir"));
+  const sehir = get("sehir");
   if (sehir) where.city = sehir;
 
   const bolge = get("bolge");
@@ -49,8 +37,30 @@ export function buildListingFilters(sp: Record<string, string | string[] | undef
   if (maxPrice) priceFilter.lte = Number(maxPrice);
   if (Object.keys(priceFilter).length > 0) where.price = priceFilter;
 
-  const minRooms = get("minOda");
-  if (minRooms) where.bedrooms = Number(minRooms);
+  const m2Filter: Record<string, number> = {};
+  const minM2 = get("minM2");
+  const maxM2 = get("maxM2");
+  if (minM2) m2Filter.gte = Number(minM2);
+  if (maxM2) m2Filter.lte = Number(maxM2);
+  if (Object.keys(m2Filter).length > 0) where.areaM2 = m2Filter;
+
+  const isitma = get("isitma");
+  if (isitma) {
+    if (!where.featuresArr) where.featuresArr = [];
+    where.featuresArr.push(isitma);
+  }
+
+  const esyali = get("esyali");
+  if (esyali === "1" || esyali === "true") where.furnished = true;
+
+  const ozellikler = get("ozellikler");
+  if (ozellikler) {
+    if (!where.featuresArr) where.featuresArr = [];
+    where.featuresArr.push(...ozellikler.split(',').map(s => s.trim()).filter(Boolean));
+  }
+
+  const oda = get("oda");
+  if (oda) where.bedrooms = parseInt(oda, 10);
 
   const emlak = get("emlak");
   if (emlak === "arsa") where.propertyType = "arsa";
@@ -58,6 +68,53 @@ export function buildListingFilters(sp: Record<string, string | string[] | undef
   else if (emlak === "konut") where.propertyType = "konut";
 
   return { where, q };
+}
+
+function getCityLabel(v: string) {
+  return kktcCities.find((c) => c.v === v)?.l || v;
+}
+
+function getRegionLabel(cityV: string, bolgeV: string) {
+  const rs = kktcRegions[cityV] || [];
+  return rs.find((r) => r.v === bolgeV)?.l || bolgeV;
+}
+
+function applyListingFilters(query: any, where: Record<string, any>) {
+  if (where.kind) query = query.eq("kind", where.kind);
+  if (where.propertyType) query = query.ilike("property_type", `%${where.propertyType}%`);
+  if (where.bedrooms) query = query.gte("bedrooms", where.bedrooms);
+  
+  if (where.city) {
+    const l = getCityLabel(where.city);
+    query = query.in("city", Array.from(new Set([where.city, l])));
+  }
+  
+  if (where.region) {
+    const l = where.city ? getRegionLabel(where.city, where.region) : where.region;
+    query = query.in("region", Array.from(new Set([where.region, l])));
+  }
+  
+  if (where.price) {
+    if (where.price.gte) query = query.gte("price", where.price.gte);
+    if (where.price.lte) query = query.lte("price", where.price.lte);
+  }
+
+  if (where.areaM2) {
+    if (where.areaM2.gte) query = query.gte("area_m2", where.areaM2.gte);
+    if (where.areaM2.lte) query = query.lte("area_m2", where.areaM2.lte);
+  }
+
+  if (where.furnished !== undefined) {
+    query = query.eq("furnished", where.furnished);
+  }
+
+  if (where.featuresArr && where.featuresArr.length > 0) {
+    where.featuresArr.forEach((feat: string) => {
+      query = query.ilike("features", `%${feat}%`);
+    });
+  }
+
+  return query;
 }
 
 export async function findPublishedListings(
@@ -72,14 +129,7 @@ export async function findPublishedListings(
     .order("created_at", { ascending: false })
     .range(skip, skip + take - 1);
 
-  // Apply where filters
-  if (where.kind) query = query.eq("kind", where.kind);
-  if (where.city) query = query.eq("city", where.city);
-  if (where.region) query = query.ilike("region", `%${where.region}%`);
-  if (where.price) {
-    if (where.price.gte) query = query.gte("price", where.price.gte);
-    if (where.price.lte) query = query.lte("price", where.price.lte);
-  }
+  query = applyListingFilters(query, where);
 
   const { data } = await query;
   return normalizeListings(data || []);
@@ -91,21 +141,33 @@ export async function countPublished(where: Record<string, any>) {
     .select("*", { count: "exact", head: true })
     .eq("publish_status", "PUBLISHED");
 
-  if (where.kind) query = query.eq("kind", where.kind);
-  if (where.city) query = query.eq("city", where.city);
+  query = applyListingFilters(query, where);
 
   const { count } = await query;
   return count || 0;
 }
 
 export async function getFeaturedListings(limit = 8) {
-  const { data } = await supabaseAdmin
+  // Try JSONB containment first, fall back to text LIKE for string columns
+  const { data, error } = await supabaseAdmin
     .from("listings")
     .select("*, listing_images(*)")
     .eq("publish_status", "PUBLISHED")
-    .filter("badges", "like", '%"featured":true%')
+    .contains("badges", { featured: true })
     .order("created_at", { ascending: false })
     .limit(limit);
+
+  // If JSONB containment fails (badges stored as text), try LIKE fallback
+  if (error || !data) {
+    const { data: fallback } = await supabaseAdmin
+      .from("listings")
+      .select("*, listing_images(*)")
+      .eq("publish_status", "PUBLISHED")
+      .like("badges", '%"featured":true%')
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    return normalizeListings(fallback || []);
+  }
   
   return normalizeListings(data || []);
 }
@@ -181,13 +243,19 @@ export async function getSimilarListings(
   kind: string,
   limit = 4,
 ) {
-  const { data } = await supabaseAdmin
+  let query = supabaseAdmin
     .from("listings")
     .select("*, listing_images(*)")
     .eq("publish_status", "PUBLISHED")
     .neq("id", excludeId)
-    .eq("city", city)
-    .eq("kind", kind)
+    .eq("kind", kind);
+
+  if (city) {
+    const l = getCityLabel(city);
+    query = query.in("city", Array.from(new Set([city, l])));
+  }
+
+  const { data } = await query
     .order("created_at", { ascending: false })
     .limit(limit);
   

@@ -27,6 +27,9 @@ interface LocationPickerProps {
   onLocationSelect: (lat: number, lng: number, address?: AddressData) => void;
   initialLat?: number;
   initialLng?: number;
+  focusLat?: number;
+  focusLng?: number;
+  focusZoom?: number;
 }
 
 async function reverseGeocode(lat: number, lng: number): Promise<AddressData | null> {
@@ -81,15 +84,19 @@ function DraggableMarker({ position, onDragEnd }: { position: [number, number]; 
   );
 }
 
-function MapController({ center }: { center: [number, number] }) {
+function MapController({ center, zoom }: { center: [number, number]; zoom?: number }) {
   const map = useMap();
   useEffect(() => {
-    map.setView(center);
-  }, [center, map]);
+    if (zoom) {
+      map.flyTo(center, zoom, { duration: 1.2 });
+    } else {
+      map.setView(center);
+    }
+  }, [center, zoom, map]);
   return null;
 }
 
-export default function LocationPicker({ onLocationSelect, initialLat, initialLng }: LocationPickerProps) {
+export default function LocationPicker({ onLocationSelect, initialLat, initialLng, focusLat, focusLng, focusZoom }: LocationPickerProps) {
   const [mounted, setMounted] = useState(false);
   const [markerPosition, setMarkerPosition] = useState<[number, number] | null>(
     initialLat && initialLng ? [initialLat, initialLng] : null
@@ -138,7 +145,7 @@ export default function LocationPicker({ onLocationSelect, initialLat, initialLn
           className="z-0"
           style={{ height: "400px", width: "100%" }}
         >
-          <MapController center={center} />
+          <MapController center={focusLat && focusLng ? [focusLat, focusLng] : center} zoom={focusZoom} />
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

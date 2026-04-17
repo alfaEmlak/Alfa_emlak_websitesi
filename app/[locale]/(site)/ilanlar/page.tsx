@@ -39,7 +39,7 @@ export default async function ListingsPage({ params, searchParams }: Props) {
   const tc = await getTranslations("Common");
   const th = await getTranslations("HomePage");
 
-  const where = buildListingFilters(sp);
+  const { where } = buildListingFilters(sp);
   const page = Math.max(1, Number(first(sp.page)) || 1);
   const pageSize = 12;
   const [itemsRaw, total] = await Promise.all([

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import type { Listing, ListingImage } from "@prisma/client";
 import { saveListing, suggestListingId, type ListingSavePayload } from "@/app/karealfaadmin/actions";
-import { KKTC_ILCE_ADLARI } from "@/lib/kktc-locations";
+import { kktcCities, kktcRegions, kktcCityCoords, kktcRegionCoords } from "@/lib/kktc-regions";
 import {
   NEARBY_POI_CATEGORIES,
   parseNearbyPoiCategoriesJson,
@@ -65,6 +65,19 @@ type Props = {
   agents?: { id: string; name: string; email: string; phone: string | null; photo: string | null; title: string | null }[];
 };
 
+function getInitialCity(val?: string | null) {
+  if (!val) return "";
+  const match = kktcCities.find(c => c.v === val || c.l === val || c.l.toLowerCase() === val.toLowerCase() || c.v.toLowerCase() === val.toLowerCase());
+  return match ? match.v : val;
+}
+
+function getInitialRegion(cityVal: string, val?: string | null) {
+  if (!val || !cityVal) return "";
+  const regions = kktcRegions[cityVal] || [];
+  const match = regions.find(r => r.v === val || r.l === val || r.l.toLowerCase() === val.toLowerCase() || r.v.toLowerCase() === val.toLowerCase());
+  return match ? match.v : val;
+}
+
 export function ListingEditor({ listing, suggestedId, agents }: Props) {
   const t = useTranslations("Wizard");
   const router = useRouter();
@@ -105,6 +118,9 @@ export function ListingEditor({ listing, suggestedId, agents }: Props) {
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadHint, setUploadHint] = useState("");
 
+  const initialCity = getInitialCity(listing?.city);
+  const initialRegion = getInitialRegion(initialCity, listing?.region);
+
   const [form, setForm] = useState({
     listingId: listing?.listingId ?? suggestedId,
     title: listing?.title ?? "",
@@ -113,8 +129,8 @@ export function ListingEditor({ listing, suggestedId, agents }: Props) {
     price: listing != null ? String(listing.price) : "",
     currency: listing?.currency ?? "EUR",
     shortDescription: listing?.shortDescription ?? "",
-    city: listing?.city ?? "",
-    region: listing?.region ?? "",
+    city: initialCity,
+    region: initialRegion,
     neighborhood: "",
     fullAddress: listing?.fullAddress ?? "",
     longDescription: listing?.longDescription ?? "",
@@ -196,6 +212,20 @@ export function ListingEditor({ listing, suggestedId, agents }: Props) {
     return { lat: la, lng: ln };
   }, [form.coordinates]);
 
+  const focusCoords = useMemo(() => {
+    if (form.region && kktcRegionCoords[form.region]) {
+      return kktcRegionCoords[form.region];
+    }
+    if (form.city && kktcCityCoords[form.city]) {
+      // Bölge seçili ama koordinatı yoksa bile, biraz daha fazla zoom yap ama şehir merkezine in
+      return {
+        ...kktcCityCoords[form.city],
+        zoom: form.region ? 14 : kktcCityCoords[form.city].zoom
+      };
+    }
+    return null;
+  }, [form.city, form.region]);
+
   function togglePoiCategory(id: NearbyPoiCategoryId) {
     setForm((f) => ({
       ...f,
@@ -232,8 +262,8 @@ export function ListingEditor({ listing, suggestedId, agents }: Props) {
       if (address) {
         updates.fullAddress = address.fullAddress;
         if (address.city) {
-          const cityMatch = KKTC_ILCE_ADLARI.find(c => c.toLowerCase() === address.city.toLowerCase());
-          updates.city = cityMatch || address.city;
+          const match = kktcCities.find(c => c.l.toLowerCase() === address.city.toLowerCase() || c.v.toLowerCase() === address.city.toLowerCase());
+          updates.city = match ? match.v : address.city;
         }
         const regionParts = [address.region, address.neighborhood].filter(Boolean).join(", ");
         if (regionParts && !f.region) {
@@ -605,7 +635,11 @@ export function ListingEditor({ listing, suggestedId, agents }: Props) {
             </label>
             <label className="block text-sm font-medium text-zinc-700">
               Emlak Tipi
-              <input className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" placeholder="Villa, Daire, Arsa..." value={form.propertyType} onChange={(e) => set("propertyType", e.target.value)} />
+              <select className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" value={form.propertyType.toLowerCase()} onChange={(e) => set("propertyType", e.target.value)}>
+                <option value="konut">Konut / Daire</option>
+                <option value="ticari">Ticari</option>
+                <option value="arsa">Arsa / Arazi</option>
+              </select>
             </label>
             <label className="block text-sm font-medium text-zinc-700">
               Fiyat
@@ -640,23 +674,38 @@ export function ListingEditor({ listing, suggestedId, agents }: Props) {
                 <select
                   className={LOCATION_SELECT_CLASS}
                   value={form.city}
-                  onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+                  onChange={(e) => {
+                    const newCity = e.target.value;
+                    setForm((f) => ({ ...f, city: newCity, region: "" }));
+                  }}
                 >
-                  <option value="">Seçiniz</option>
-                  {KKTC_ILCE_ADLARI.map((ad) => (
-                    <option key={ad} value={ad}>{ad}</option>
+                  {kktcCities.map((c) => (
+                    <option key={c.v} value={c.v}>{c.l}</option>
                   ))}
                 </select>
               </label>
               <label className="block text-sm font-medium text-zinc-700">
                 Bölge / Mahalle
-                <input
-                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                  placeholder="Örn: Esentepe, Koru Mevkii"
-                  value={form.region}
-                  onChange={(e) => set("region", e.target.value)}
-                />
-                <span className="mt-1 block text-xs text-zinc-400">Bölge ve mahalle bilgisini buraya yazın</span>
+                {form.city && kktcRegions[form.city]?.length > 0 ? (
+                  <select
+                    className={LOCATION_SELECT_CLASS}
+                    value={form.region}
+                    onChange={(e) => set("region", e.target.value)}
+                  >
+                    <option value="">Seçiniz</option>
+                    {kktcRegions[form.city].map((r) => (
+                      <option key={r.v} value={r.v}>{r.l}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                    placeholder="Örn: Esentepe, Koru Mevkii"
+                    value={form.region}
+                    onChange={(e) => set("region", e.target.value)}
+                  />
+                )}
+                <span className="mt-1 block text-xs text-zinc-400">Şehir şeçtikten sonra bölgeyi listeden seçin veya yazın</span>
               </label>
               <label className="block text-sm font-medium text-zinc-700 sm:col-span-2">
                 Açık Adres
@@ -678,6 +727,9 @@ export function ListingEditor({ listing, suggestedId, agents }: Props) {
                 onLocationSelect={handleMapLocationSelect}
                 initialLat={previewCoords.lat ?? undefined}
                 initialLng={previewCoords.lng ?? undefined}
+                focusLat={focusCoords?.lat}
+                focusLng={focusCoords?.lng}
+                focusZoom={focusCoords?.zoom}
               />
             </div>
             <div className="mt-4">

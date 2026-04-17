@@ -119,6 +119,13 @@ model ContactMessage {
   message   String
   listingId String?
   isRead    Boolean  @default(false)
+  
+  /// "NEW" | "CONTACTED" | "PRESENTED" | "CLOSED_WON" | "CLOSED_LOST"
+  status    String   @default("NEW")
+  notes     String?
+  agentId   String?
+  agent     Agent?   @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  
   createdAt DateTime @default(now())
 }
 
@@ -152,4 +159,5 @@ model Agent {
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  messages     ContactMessage[]
 }

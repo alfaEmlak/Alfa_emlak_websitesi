@@ -3,11 +3,12 @@ import { getTranslations } from "next-intl/server";
 import { getTranslatedListing, getTranslatedSiteSettings } from "@/lib/i18n-utils";
 import { getSiteSettingsOrFallback } from "@/lib/site-settings";
 import { getFeaturedListingsSafe } from "@/lib/listings-query";
-import { getTcmbDailyRates } from "@/lib/tcmb-rates";
+import { getSundovizRates } from "@/lib/sundoviz-rates";
 import { HeroSearch } from "@/components/site/HeroSearch";
+import { HeroSlider } from "@/components/site/HeroSlider";
 import { PropertyCard } from "@/components/site/PropertyCard";
 import { Link } from "@/i18n/routing";
-import { TcmbRatesStrip } from "@/components/site/TcmbRatesStrip";
+import { SundovizRatesStrip } from "@/components/site/SundovizRatesStrip";
 
 const heroImage = "/pexels-tolgaaslanturk-10785667.jpg";
 
@@ -24,10 +25,10 @@ export default async function HomePage({ params }: Props) {
   const { locale } = await params;
   const t = await getTranslations("HomePage");
 
-  const [settingsRaw, featuredRaw, tcmbRates] = await Promise.all([
+  const [settingsRaw, featuredRaw, sundovizRates] = await Promise.all([
     getSiteSettingsOrFallback(),
     getFeaturedListingsSafe(9),
-    getTcmbDailyRates(),
+    getSundovizRates(),
   ]);
 
   const settings = getTranslatedSiteSettings(settingsRaw, locale);
@@ -36,15 +37,17 @@ export default async function HomePage({ params }: Props) {
   return (
     <main className="flex-1">
       <div className="relative h-[100dvh] min-h-[600px] w-full overflow-visible">
-        <div className="absolute inset-0 z-0 overflow-hidden">
-          <Image
-            src={heroImage}
-            alt="Girne kıyı ve liman havadan görünümü"
-            fill
-            priority
-            className="origin-bottom scale-[1.08] object-cover object-[50%_100%]"
-            sizes="100vw"
+        <div className="absolute inset-0 z-0 overflow-hidden bg-black">
+          <HeroSlider
+            images={[
+              "/kktc_1.jpg",
+              "/kktc_2.jpg",
+              "/kktc_3.jpg",
+              "/kktc_4.jpg",
+              "/kktc_5.jpg"
+            ]}
           />
+          <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
         </div>
 
         <section className="relative z-10 flex h-full min-h-0 flex-col px-6 pb-8 pt-28 md:px-12 md:pb-10 lg:pl-24 lg:pr-32">
@@ -88,7 +91,7 @@ export default async function HomePage({ params }: Props) {
         </section>
       </div>
 
-      {tcmbRates ? <TcmbRatesStrip data={tcmbRates} /> : null}
+      {sundovizRates ? <SundovizRatesStrip initialData={sundovizRates} /> : null}
 
       <section id="portfoy" className="relative overflow-hidden bg-surface px-6 py-20 md:px-8 md:py-28 lg:py-32">
         <div className="relative z-0 mx-auto max-w-[1440px]">

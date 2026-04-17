@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { kktcCities, kktcRegions } from "@/lib/kktc-regions";
 
 const tabs = [
   { id: "SATILIK", label: "Satılık", tur: "satilik" },
@@ -10,22 +11,15 @@ const tabs = [
   { id: "GUNLUK", label: "Günlük", tur: "gunluk" },
 ] as const;
 
-const cities = [
-  { v: "", l: "Şehir seçin..." },
-  { v: "girne", l: "Girne" },
-  { v: "magusa", l: "Mağusa" },
-  { v: "lefkosa", l: "Lefkoşa" },
-  { v: "iskele", l: "İskele" },
-  { v: "lefke", l: "Lefke" },
-  { v: "guzelyurt", l: "Güzelyurt" },
-];
-
 const types = [
-  { v: "", l: "Lüks villalar" },
+  { v: "", l: "Tüm Tipler" },
   { v: "konut", l: "Konut / Daire" },
   { v: "ticari", l: "Ticari" },
   { v: "arsa", l: "Arsa / Arazi" },
 ];
+
+const rooms = ["1+0", "1+1", "2+1", "3+1", "4+1", "5+"];
+const heatingTypes = ["Klima", "Merkezi", "Yerden Isıtma", "Soba", "Kombi"];
 
 type Option = { v: string; l: string };
 
@@ -128,7 +122,18 @@ export function HeroSearch({ variant = "light" }: { variant?: "light" | "overlay
   const [tab, setTab] = useState<(typeof tabs)[number]["id"]>("SATILIK");
   const [emlak, setEmlak] = useState("");
   const [city, setCity] = useState("");
+  const [region, setRegion] = useState("");
+  
+  // Advanced filters state
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [budgetMin, setBudgetMin] = useState("");
   const [budgetMax, setBudgetMax] = useState("");
+  const [roomCount, setRoomCount] = useState("");
+  const [features, setFeatures] = useState<string[]>([]);
+  const [heating, setHeating] = useState("");
+  const [furnished, setFurnished] = useState(false);
+  const [m2Min, setM2Min] = useState("");
+  const [m2Max, setM2Max] = useState("");
 
   const onSearch = () => {
     const t = tabs.find((x) => x.id === tab)?.tur ?? "satilik";
@@ -136,9 +141,30 @@ export function HeroSearch({ variant = "light" }: { variant?: "light" | "overlay
     p.set("tur", t);
     if (emlak) p.set("emlak", emlak);
     if (city) p.set("sehir", city);
-    if (budgetMax.trim()) p.set("maxFiyat", budgetMax.replace(/\D/g, "") || budgetMax);
+    if (region) p.set("bolge", region);
+    if (budgetMin.trim()) p.set("minFiyat", budgetMin.replace(/\D/g, ""));
+    if (budgetMax.trim()) p.set("maxFiyat", budgetMax.replace(/\D/g, ""));
+    
+    if (advancedOpen) {
+      if (emlak === "konut" || emlak === "") {
+        if (roomCount) p.set("oda", roomCount);
+        if (heating) p.set("isitma", heating);
+        if (furnished) p.set("esyali", "1");
+        if (features.length > 0) p.set("ozellikler", features.join(","));
+      }
+      if (emlak === "arsa" || emlak === "ticari") {
+        if (m2Min.trim()) p.set("minM2", m2Min.replace(/\D/g, ""));
+        if (m2Max.trim()) p.set("maxM2", m2Max.replace(/\D/g, ""));
+      }
+    }
+
     router.push(`/ilanlar?${p.toString()}`);
   };
+
+  // Reset region when city changes
+  useEffect(() => {
+    setRegion("");
+  }, [city]);
 
   const isOverlay = variant === "overlay";
 
@@ -154,11 +180,16 @@ export function HeroSearch({ variant = "light" }: { variant?: "light" | "overlay
     ? "w-full rounded-2xl border border-white/15 bg-white/5 p-3 backdrop-blur-md"
     : "w-full rounded-2xl border border-slate-200/90 bg-white p-3 shadow-[var(--shadow-ambient)]";
 
-  /** Büyük sekmeler; seçili olmayanlar buzlu cam */
   const tabBtn = (active: boolean) =>
     active
       ? "rounded-xl bg-secondary px-6 py-3 font-headline text-sm font-bold uppercase tracking-[0.12em] text-white shadow-lg shadow-black/30 transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
       : "rounded-xl border border-white/30 bg-white/15 px-6 py-3 font-headline text-sm font-bold uppercase tracking-[0.12em] text-white shadow-sm backdrop-blur-md transition hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50";
+
+  const regionOptions = city ? [{v: '', l: "Tüm Bölgeler"}, ...(kktcRegions[city] || [])] : [{v: '', l: "Tüm Bölgeler"}];
+
+  const handleFeatureToggle = (feat: string) => {
+    setFeatures(prev => prev.includes(feat) ? prev.filter(f => f !== feat) : [...prev, feat]);
+  };
 
   return (
     <div className="mx-auto w-full max-w-5xl">
@@ -176,33 +207,17 @@ export function HeroSearch({ variant = "light" }: { variant?: "light" | "overlay
           </button>
         ))}
       </div>
+      
       <div className={shell}>
         <div className="grid grid-cols-1 items-stretch gap-3 p-3 md:grid-cols-[1fr_1fr_1fr_auto]">
           <div className={fieldShell}>
-            <DropdownField label="Neresi?" options={cities} value={city} onChange={setCity} isOverlay={isOverlay} />
+            <DropdownField label="Konut Tipi" options={types} value={emlak} onChange={setEmlak} isOverlay={isOverlay} />
           </div>
           <div className={fieldShell}>
-            <DropdownField label="Tip" options={types} value={emlak} onChange={setEmlak} isOverlay={isOverlay} />
+            <DropdownField label="Şehir" options={kktcCities} value={city} onChange={setCity} isOverlay={isOverlay} />
           </div>
           <div className={fieldShell}>
-            <span
-              className={
-                isOverlay
-                  ? "mb-1.5 block text-[11px] font-headline font-bold uppercase tracking-[0.08em] text-white/55"
-                  : "mb-1.5 block text-[11px] font-headline font-bold uppercase tracking-[0.08em] text-on-surface/45"
-              }
-            >
-              Bütçe (max)
-            </span>
-            <input
-              type="number"
-              inputMode="numeric"
-              name="budget"
-              className={textInputCls}
-              placeholder="Örn. 1500000"
-              value={budgetMax}
-              onChange={(e) => setBudgetMax(e.target.value)}
-            />
+            <DropdownField label="Bölge" options={regionOptions} value={region} onChange={setRegion} isOverlay={isOverlay} />
           </div>
           <button
             type="button"
@@ -212,6 +227,132 @@ export function HeroSearch({ variant = "light" }: { variant?: "light" | "overlay
             İLANLARI GÖR
           </button>
         </div>
+
+        {/* Advanced Filter Toggle */}
+        <div className="flex justify-center pb-2 pt-1 transition-all">
+          <button 
+            type="button"
+            onClick={() => setAdvancedOpen(!advancedOpen)}
+            className={`font-headline font-bold text-[11px] uppercase tracking-[0.12em] flex items-center gap-2 transition hover:opacity-80 focus-visible:outline-none ${
+              isOverlay ? 'text-white/90' : 'text-primary/70 hover:text-secondary'
+            }`}
+          >
+            {advancedOpen ? "GELİŞMİŞ FİLTRELERİ GİZLE" : "GELİŞMİŞ FİLTRELER"}
+            <span className={`text-[10px] transition-transform duration-300 ${advancedOpen ? 'rotate-180' : ''}`}>▼</span>
+          </button>
+        </div>
+
+        {/* Expanded Filter Panel */}
+        {advancedOpen && (
+          <div className={`mt-2 border-t pt-5 pb-2 px-3 animate-in fade-in slide-in-from-top-4 duration-300 ${
+            isOverlay ? 'border-white/10' : 'border-slate-200'
+          }`}>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              
+              {/* Fiyat Aralığı */}
+              <div className={fieldShell + " !px-4 !py-3"}>
+                <span className={isOverlay ? "mb-2 block text-[11px] font-headline font-bold uppercase tracking-[0.08em] text-white/55" : "mb-2 block text-[11px] font-headline font-bold uppercase tracking-[0.08em] text-on-surface/45"}>
+                  Fiyat Aralığı
+                </span>
+                <div className="flex items-center gap-2">
+                  <input type="text" className={textInputCls + " !text-sm"} placeholder="Min" value={budgetMin} onChange={e => setBudgetMin(e.target.value)} />
+                  <span className={isOverlay ? "text-white/40" : "text-primary/40"}>-</span>
+                  <input type="text" className={textInputCls + " !text-sm"} placeholder="Max" value={budgetMax} onChange={e => setBudgetMax(e.target.value)} />
+                </div>
+              </div>
+
+              {/* Konut Spesifik Alanlar */}
+              {(emlak === "konut" || emlak === "") && (
+                <>
+                  <div className={fieldShell + " !px-4 !py-3"}>
+                    <span className={isOverlay ? "mb-2 block text-[11px] font-headline font-bold uppercase tracking-[0.08em] text-white/55" : "mb-2 block text-[11px] font-headline font-bold uppercase tracking-[0.08em] text-on-surface/45"}>
+                      Oda Sayısı
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {rooms.map(room => {
+                        const active = roomCount === room;
+                        return (
+                          <button
+                            key={room}
+                            type="button"
+                            onClick={() => setRoomCount(active ? "" : room)}
+                            className={`px-2 py-1 text-[11px] font-bold rounded transition-colors ${
+                              active 
+                                ? 'bg-secondary text-white' 
+                                : isOverlay 
+                                  ? 'bg-white/10 text-white/80 hover:bg-white/20'
+                                  : 'bg-primary/5 text-primary hover:bg-primary/10'
+                            }`}
+                          >
+                            {room}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <div className={fieldShell + " !px-4 !py-3"}>
+                    <span className={isOverlay ? "mb-2 block text-[11px] font-headline font-bold uppercase tracking-[0.08em] text-white/55" : "mb-2 block text-[11px] font-headline font-bold uppercase tracking-[0.08em] text-on-surface/45"}>
+                      Isınma & Eşya
+                    </span>
+                    <select 
+                      className={`${textInputCls} !text-sm mb-3 cursor-pointer`}
+                      value={heating}
+                      onChange={e => setHeating(e.target.value)}
+                    >
+                      <option value="">Isıtma Seç</option>
+                      {heatingTypes.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                    
+                    <label className={`flex items-center gap-2 text-xs font-semibold cursor-pointer ${isOverlay ? 'text-white/80' : 'text-primary/80'}`}>
+                      <input 
+                        type="checkbox" 
+                        checked={furnished} 
+                        onChange={() => setFurnished(!furnished)} 
+                        className={`rounded bg-transparent text-secondary focus:ring-secondary ${isOverlay ? 'border-white/20' : 'border-primary/20'}`}
+                      />
+                      Eşyalı
+                    </label>
+                  </div>
+
+                  <div className={fieldShell + " !px-4 !py-3"}>
+                    <span className={isOverlay ? "mb-2 block text-[11px] font-headline font-bold uppercase tracking-[0.08em] text-white/55" : "mb-2 block text-[11px] font-headline font-bold uppercase tracking-[0.08em] text-on-surface/45"}>
+                      Özellikler
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {["Balkon", "Otopark", "Asansör", "Gvnlk", "Havuz"].map(f => (
+                        <label key={f} className={`flex items-center gap-1.5 text-[11px] font-medium cursor-pointer ${isOverlay ? 'text-white/80' : 'text-primary/80'}`}>
+                          <input 
+                            type="checkbox" 
+                            checked={features.includes(f)}
+                            onChange={() => handleFeatureToggle(f)}
+                            className={`rounded bg-transparent text-secondary focus:ring-secondary ${isOverlay ? 'border-white/20' : 'border-primary/20'}`}
+                          /> 
+                          {f}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Arsa / Ticari Spesifik Alanlar */}
+              {(emlak === "arsa" || emlak === "ticari") && (
+                <div className={fieldShell + " !px-4 !py-3"}>
+                  <span className={isOverlay ? "mb-2 block text-[11px] font-headline font-bold uppercase tracking-[0.08em] text-white/55" : "mb-2 block text-[11px] font-headline font-bold uppercase tracking-[0.08em] text-on-surface/45"}>
+                    Metrekare Aralığı
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <input type="text" className={textInputCls + " !text-sm"} placeholder="Min m²" value={m2Min} onChange={e => setM2Min(e.target.value)} />
+                    <span className={isOverlay ? "text-white/40" : "text-primary/40"}>-</span>
+                    <input type="text" className={textInputCls + " !text-sm"} placeholder="Max m²" value={m2Max} onChange={e => setM2Max(e.target.value)} />
+                  </div>
+                </div>
+              )}
+
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

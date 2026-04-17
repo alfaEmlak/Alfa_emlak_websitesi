@@ -146,14 +146,14 @@ export async function saveListing(payload: ListingSavePayload) {
     nearby_places: payload.nearbyPlaces ? JSON.parse(payload.nearbyPlaces) : null,
     nearby_enabled: payload.nearbyEnabled,
     nearby_poi_categories_json: payload.nearbyPoiCategoriesJson || null,
-    badges: JSON.stringify({
+    badges: {
       featured: payload.badgeFeatured,
       exclusive: payload.badgeExclusive,
       virtualTour: payload.badgeVirtualTour,
       video: payload.badgeVideo,
       new: payload.badgeNew,
       priceDrop: payload.badgePriceDrop,
-    }),
+    },
     publish_status: payload.publishStatus,
     favorites_count: payload.favoritesCount,
     rating: numOrNull(payload.rating) || 0,
@@ -420,5 +420,41 @@ export async function saveMenuJson(json: string) {
 
   revalidatePath("/");
   revalidatePath("/karealfaadmin/menu");
+  return { ok: true as const };
+}
+
+/* ────────── Vitrin (Featured) Toggle ────────── */
+
+export async function toggleFeatured(listingId: string, featured: boolean) {
+  const session = await getAdminSession();
+  if (!session.isAdmin) throw new Error("Yetkisiz");
+
+  // Read current badges
+  const { data: listing, error: readError } = await supabaseAdmin
+    .from("listings")
+    .select("badges")
+    .eq("id", listingId)
+    .single();
+
+  if (readError || !listing) throw new Error(`Listing read failed: ${readError?.message}`);
+
+  let badges: Record<string, boolean> = {};
+  try {
+    badges = typeof listing.badges === "string" ? JSON.parse(listing.badges) : (listing.badges || {});
+  } catch {
+    badges = {};
+  }
+
+  badges.featured = featured;
+
+  const { error } = await supabaseAdmin
+    .from("listings")
+    .update({ badges })
+    .eq("id", listingId);
+
+  if (error) throw new Error(`Toggle featured failed: ${error.message}`);
+
+  revalidatePath("/karealfaadmin/ilanlar/vitrin");
+  revalidatePath("/");
   return { ok: true as const };
 }
