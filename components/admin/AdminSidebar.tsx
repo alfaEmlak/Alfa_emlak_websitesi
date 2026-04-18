@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logoutAdmin } from "@/app/karealfaadmin/actions";
@@ -60,51 +61,90 @@ function isLinkActive(pathname: string, href: string, match: NavItem["match"]) {
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Close sidebar on path change (mobile)
+  useEffect(() => {
+    setIsOpen(false);
+  }, [pathname]);
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col border-r border-white/10 bg-linear-to-b from-(--primary) via-(--primary) to-[#020a24] text-white shadow-[4px_0_24px_rgba(4,21,70,0.12)]">
-      <div className="border-b border-white/10 px-5 py-6">
-        <p className="label-sm text-(--secondary)">ALFA EMLAK</p>
-        <p className="mt-1 font-headline text-lg font-bold tracking-tight text-white">Yönetim paneli</p>
-        <div className="mt-3 h-0.5 w-10 rounded-full bg-(--secondary)" aria-hidden />
-      </div>
+    <>
+      {/* Mobile Toggle FAB */}
+      <button
+        onClick={() => setIsOpen(true)}
+        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-(--primary) text-white shadow-[0_8px_30px_rgb(0,0,0,0.3)] transition-transform active:scale-95 lg:hidden"
+        aria-label="Menüyü Aç"
+      >
+        <AdminIcon name="menu" size={24} />
+      </button>
 
-      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
-        {navGroups.map((group, gi) => (
-          <div key={group.title} className={gi > 0 ? "mt-4" : ""}>
-            {/* Group title */}
-            <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-widest text-white/30">
-              {group.title}
-            </p>
-            {group.items.map((l) => {
-              const active = isLinkActive(pathname, l.href, l.match);
-              return (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
-                    active
-                      ? "border-l-[3px] border-(--secondary) bg-white/12 pl-2.25 text-white shadow-inner"
-                      : "border-l-[3px] border-transparent pl-2.25 text-white/70 hover:bg-white/6 hover:text-white"
-                  }`}
-                >
-                  <AdminIcon name={l.icon} size={18} className="shrink-0" />
-                  {l.label}
-                </Link>
-              );
-            })}
+      {/* Backdrop */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-[#020a24]/50 backdrop-blur-sm lg:hidden animate-in fade-in transition-opacity" 
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
+      {/* Sidebar Drawer */}
+      <aside 
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col border-r border-white/10 bg-linear-to-b from-(--primary) via-(--primary) to-[#020a24] text-white shadow-[4px_0_24px_rgba(4,21,70,0.12)] transition-transform duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] lg:static lg:translate-x-0 ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex items-center justify-between border-b border-white/10 px-5 py-6">
+          <div>
+            <p className="label-sm text-(--secondary)">ALFA EMLAK</p>
+            <p className="mt-1 font-headline text-lg font-bold tracking-tight text-white">Yönetim paneli</p>
+            <div className="mt-3 h-0.5 w-10 rounded-full bg-(--secondary)" aria-hidden />
           </div>
-        ))}
-      </nav>
+          <button 
+            type="button" 
+            onClick={() => setIsOpen(false)}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/5 text-white/70 transition-colors hover:bg-white/10 hover:text-white lg:hidden"
+          >
+            <AdminIcon name="close" size={20} />
+          </button>
+        </div>
 
-      <form className="border-t border-white/10 p-3" action={logoutAdmin}>
-        <button
-          type="submit"
-          className="w-full rounded-xl border border-white/15 bg-white/5 py-2.5 text-sm font-semibold text-white/90 transition hover:bg-white/10"
-        >
-          Çıkış
-        </button>
-      </form>
-    </aside>
+        <nav className="no-scrollbar flex flex-1 flex-col gap-1 overflow-y-auto p-3">
+          {navGroups.map((group, gi) => (
+            <div key={group.title} className={gi > 0 ? "mt-4" : ""}>
+              {/* Group title */}
+              <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-widest text-white/30">
+                {group.title}
+              </p>
+              {group.items.map((l) => {
+                const active = isLinkActive(pathname, l.href, l.match);
+                return (
+                  <Link
+                    key={l.href}
+                    href={l.href}
+                    className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                      active
+                        ? "border-l-[3px] border-(--secondary) bg-white/12 pl-2.25 text-white shadow-inner"
+                        : "border-l-[3px] border-transparent pl-2.25 text-white/70 hover:bg-white/6 hover:text-white"
+                    }`}
+                  >
+                    <AdminIcon name={l.icon} size={18} className="shrink-0" />
+                    {l.label}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
+
+        <form className="border-t border-white/10 p-3" action={logoutAdmin}>
+          <button
+            type="submit"
+            className="w-full rounded-xl border border-white/15 bg-white/5 py-2.5 text-sm font-semibold text-white/90 transition hover:bg-white/10"
+          >
+            Çıkış
+          </button>
+        </form>
+      </aside>
+    </>
   );
 }

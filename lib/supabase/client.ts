@@ -15,6 +15,8 @@ export const createServerSupabaseClient = (supabaseUrl: string, supabaseKey: str
 }
 
 // Database types will be generated automatically
+export type Tables = Database['public']['Tables']
+
 export type Database = {
   public: {
     Tables: {

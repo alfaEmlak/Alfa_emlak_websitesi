@@ -69,43 +69,43 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
   };
 
   return (
-    <div className="p-6 lg:p-10">
+    <div className="p-4 sm:p-6 lg:p-10">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-extrabold">İlanlarınız</h1>
-          <p className="text-sm text-zinc-500">Listeyi filtreleyin; düzenlemek için satırdaki bağlantıyı kullanın.</p>
+          <h1 className="text-2xl font-extrabold sm:text-3xl">İlanlarınız</h1>
+          <p className="text-sm text-zinc-500">Listeyi filtreleyin; düzenlemek için bağlantıyı kullanın.</p>
         </div>
         <Link
           href="/karealfaadmin/ilanlar/yeni"
-          className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-emerald-700"
+          className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-md transition hover:bg-emerald-700 min-h-[44px]"
         >
           Yeni ilan
         </Link>
       </div>
 
-      <form className="mt-6 grid gap-3 rounded-2xl border border-zinc-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-6">
+      <form className="mt-6 grid gap-3 rounded-2xl border border-zinc-200 bg-white p-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-6">
         <input
           name="listingId"
           placeholder="İlan ID"
           defaultValue={qId ?? ""}
-          className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25"
+          className="min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25"
         />
         <input
           name="title"
           placeholder="Başlık"
           defaultValue={qTitle ?? ""}
-          className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25"
+          className="min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25"
         />
         <input
           name="city"
           placeholder="Şehir"
           defaultValue={city ?? ""}
-          className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25"
+          className="min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25"
         />
         <select
           name="kind"
           defaultValue={kind ?? ""}
-          className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25"
+          className="min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25"
         >
           <option value="">Tür (tümü)</option>
           <option value="SATILIK">Satılık</option>
@@ -116,7 +116,7 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
         <select
           name="status"
           defaultValue={status ?? ""}
-          className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25"
+          className="min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25"
         >
           <option value="">Durum (tümü)</option>
           <option value="PUBLISHED">Yayında</option>
@@ -125,13 +125,52 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
         </select>
         <button
           type="submit"
-          className="rounded-xl bg-zinc-800 py-2 text-sm font-bold text-white transition hover:bg-zinc-900"
+          className="min-h-[44px] rounded-xl bg-zinc-800 py-2 text-sm font-bold text-white transition hover:bg-zinc-900"
         >
           Filtrele
         </button>
       </form>
 
-      <div className="mt-6 overflow-auto rounded-2xl border border-zinc-200 bg-white">
+      {/* ── Mobile: Card Layout ── */}
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:hidden">
+        {listings.length === 0 ? (
+          <p className="col-span-full py-8 text-center text-sm text-zinc-400">Henüz ilan yok</p>
+        ) : (
+          listings.map((r) => {
+            const img = getCoverImage(r);
+            const isRemote = img.startsWith("http");
+            return (
+              <Link
+                key={r.id}
+                href={`/karealfaadmin/ilanlar/${r.id}/duzenle`}
+                className="flex gap-3 rounded-2xl border border-zinc-200 bg-white p-3 transition hover:shadow-md active:scale-[0.98]"
+              >
+                <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-zinc-100 ring-1 ring-zinc-200">
+                  <Image src={img} alt="" fill className="object-cover" sizes="96px" unoptimized={isRemote} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-zinc-800">{r.title}</p>
+                  <p className="mt-0.5 text-xs text-zinc-500">{r.city} / {r.region}</p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                      r.publish_status === "PUBLISHED" ? "bg-emerald-100 text-emerald-700" :
+                      r.publish_status === "HIDDEN" ? "bg-red-100 text-red-700" :
+                      "bg-zinc-100 text-zinc-600"
+                    }`}>
+                      {statusLabels[r.publish_status] ?? r.publish_status}
+                    </span>
+                    <span className="text-xs font-medium text-zinc-600">{kindLabels[r.kind] ?? r.kind}</span>
+                  </div>
+                  <p className="mt-1 text-sm font-bold tabular-nums text-zinc-900">{formatMoney(r.price, r.currency)}</p>
+                </div>
+              </Link>
+            );
+          })
+        )}
+      </div>
+
+      {/* ── Desktop: Table Layout ── */}
+      <div className="mt-6 hidden overflow-auto rounded-2xl border border-zinc-200 bg-white lg:block">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase tracking-wide text-zinc-500">
             <tr>

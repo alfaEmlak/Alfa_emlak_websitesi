@@ -1,12 +1,12 @@
 "use client";
 
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
-import { Icon } from "leaflet";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect, useState, useRef } from "react";
 
 // Fix Leaflet default icon issue with Next.js
-const customIcon = new Icon({
+const customIcon = new L.Icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
@@ -48,7 +48,7 @@ async function reverseGeocode(lat: number, lng: number): Promise<AddressData | n
 
 function MapClickHandler({ onLocationSelect }: { onLocationSelect: (lat: number, lng: number) => void }) {
   useMapEvents({
-    async click(e) {
+    async click(e: L.LeafletMouseEvent) {
       const { lat, lng } = e.latlng;
       onLocationSelect(lat, lng);
     },
@@ -58,7 +58,7 @@ function MapClickHandler({ onLocationSelect }: { onLocationSelect: (lat: number,
 
 function DraggableMarker({ position, onDragEnd }: { position: [number, number]; onDragEnd: (lat: number, lng: number) => void }) {
   const [draggable, setDraggable] = useState(false);
-  const markerRef = useRef<any>(null);
+  const markerRef = useRef<L.Marker>(null);
 
   useEffect(() => {
     setDraggable(true);

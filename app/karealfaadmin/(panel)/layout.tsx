@@ -19,7 +19,7 @@ export default async function AdminPanelLayout({ children }: { children: React.R
     <NextIntlClientProvider locale={locale} messages={messages}>
       <div className="flex min-h-screen">
         <AdminSidebar />
-        <div className="admin-scroll admin-shell flex-1 overflow-x-auto text-[var(--on-surface)]">{children}</div>
+        <div className="admin-scroll admin-shell flex-1 overflow-x-hidden text-[var(--on-surface)]">{children}</div>
       </div>
     </NextIntlClientProvider>
   );

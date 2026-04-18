@@ -8,7 +8,9 @@ import {
   AlertTriangle,
   FilePenLine,
   Hand,
+  Headset,
   House,
+  Image as ImageIcon,
   Images,
   Inbox,
   Info,
@@ -22,12 +24,17 @@ import {
   Newspaper,
   Phone,
   Plus,
-  Trash2,
+  Presentation,
+  Save,
   Settings,
+  Sparkles,
   Star,
+  Trash2,
   User,
   UserRoundPlus,
   Users,
+  X,
+  XCircle,
   type LucideIcon,
 } from "lucide-react";
 
@@ -59,7 +66,14 @@ export type AdminIconName =
   | "person_add"
   | "add"
   | "warning"
-  | "trash";
+  | "trash"
+  | "close"
+  | "save"
+  | "support_agent"
+  | "cancel"
+  | "fiber_new"
+  | "slideshow"
+  | "image";
 
 const ICONS: Record<AdminIconName, LucideIcon> = {
   dashboard: LayoutDashboard,
@@ -90,6 +104,13 @@ const ICONS: Record<AdminIconName, LucideIcon> = {
   add: Plus,
   warning: AlertTriangle,
   trash: Trash2,
+  close: X,
+  save: Save,
+  support_agent: Headset,
+  cancel: XCircle,
+  fiber_new: Sparkles,
+  slideshow: Presentation,
+  image: ImageIcon,
 };
 
 type AdminIconProps = {

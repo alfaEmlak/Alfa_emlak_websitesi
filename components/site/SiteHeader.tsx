@@ -194,17 +194,25 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
               className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-primary/15 bg-white/95 text-primary shadow-[0_8px_20px_rgba(4,21,70,0.12)] transition hover:border-primary/30 hover:bg-white md:hidden"
               aria-expanded={open}
               aria-label={t("menu")}
-              onClick={() => setOpen((v) => !v)}
+              onClick={() => setOpen(true)}
             >
-              <span className="material-symbols-outlined text-[22px]">{open ? "close" : "menu"}</span>
+              <span className="material-symbols-outlined text-[22px]">menu</span>
             </button>
           </div>
         </nav>
 
         {open ? (
-          <div className="border-t border-slate-100 bg-white/70 px-4 pb-4 pt-3 backdrop-blur-sm md:hidden">
-            <div className="mx-auto max-h-[min(78vh,calc(100dvh-5rem))] max-w-[1440px] overflow-y-auto rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_18px_40px_rgba(4,21,70,0.14)]">
-              <ul className="space-y-2 text-sm font-semibold">
+          <div className="fixed inset-0 z-[300] flex justify-end md:hidden">
+            <div className="absolute inset-0 bg-primary/40 backdrop-blur-sm transition-opacity" onClick={() => setOpen(false)} aria-hidden />
+            <div className="relative flex h-full w-[85vw] max-w-sm flex-col overflow-y-auto bg-white shadow-2xl animate-in slide-in-from-right">
+              <div className="flex items-center justify-between border-b border-slate-100 p-5">
+                <span className="font-headline text-lg font-extrabold text-primary">{t("menu")}</span>
+                <button type="button" onClick={() => setOpen(false)} className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-primary transition hover:bg-slate-200">
+                  <span className="material-symbols-outlined text-xl">close</span>
+                </button>
+              </div>
+              <div className="flex-1 p-5">
+                <ul className="space-y-3 text-sm font-semibold">
               <li>
                 <Link
                   href="/ilanlar?tur=satilik"
@@ -285,6 +293,7 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
                 </li>
               ))}
               </ul>
+              </div>
             </div>
           </div>
         ) : null}
@@ -408,16 +417,24 @@ function SiteHeaderFallback({ menu, siteName }: { menu: MenuTopItem[]; siteName:
               className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-primary/15 bg-white/95 text-primary shadow-[0_8px_20px_rgba(4,21,70,0.12)] transition hover:border-primary/30 hover:bg-white md:hidden"
               aria-expanded={open}
               aria-label="Menü"
-              onClick={() => setOpen((v) => !v)}
+              onClick={() => setOpen(true)}
             >
-              <span className="material-symbols-outlined text-[22px]">{open ? "close" : "menu"}</span>
+              <span className="material-symbols-outlined text-[22px]">menu</span>
             </button>
           </div>
         </nav>
         {open ? (
-          <div className="border-t border-slate-100 bg-white/70 px-4 pb-4 pt-3 backdrop-blur-sm md:hidden">
-            <div className="mx-auto max-h-[min(78vh,calc(100dvh-5rem))] max-w-[1440px] overflow-y-auto rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_18px_40px_rgba(4,21,70,0.14)]">
-              <ul className="space-y-2 text-sm font-semibold">
+          <div className="fixed inset-0 z-[300] flex justify-end md:hidden">
+            <div className="absolute inset-0 bg-primary/40 backdrop-blur-sm transition-opacity" onClick={() => setOpen(false)} aria-hidden />
+            <div className="relative flex h-full w-[85vw] max-w-sm flex-col overflow-y-auto bg-white shadow-2xl animate-in slide-in-from-right">
+              <div className="flex items-center justify-between border-b border-slate-100 p-5">
+                <span className="font-headline text-lg font-extrabold text-primary">Menü</span>
+                <button type="button" onClick={() => setOpen(false)} className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-primary transition hover:bg-slate-200">
+                  <span className="material-symbols-outlined text-xl">close</span>
+                </button>
+              </div>
+              <div className="flex-1 p-5">
+                <ul className="space-y-3 text-sm font-semibold">
               <li>
                 <Link
                   href="/ilanlar?tur=satilik"
@@ -478,6 +495,7 @@ function SiteHeaderFallback({ menu, siteName }: { menu: MenuTopItem[]; siteName:
                 </Link>
               </li>
               </ul>
+              </div>
             </div>
           </div>
         ) : null}

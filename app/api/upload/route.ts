@@ -25,7 +25,8 @@ export async function POST(request: Request) {
     }
 
     const blob = entry as Blob;
-    const file = new File([blob], blob.name || "upload", { type: blob.type });
+    const fileName = (entry as File).name || "upload";
+    const file = new File([blob], fileName, { type: blob.type });
     
     // Upload to Supabase Storage
     const { path: filePath, url } = await uploadFile(file, "uploads");

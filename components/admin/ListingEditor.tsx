@@ -62,7 +62,7 @@ async function postUploadFile(file: File): Promise<string> {
 type Props = {
   listing: (Listing & { images: ListingImage[] }) | null;
   suggestedId: string;
-  agents?: { id: string; name: string; email: string; phone: string | null; photo: string | null; title: string | null }[];
+  agents?: { id: string; name: string; email: string; phone: string | null; photo: string | null; title: string | null; is_active?: boolean }[];
 };
 
 function getInitialCity(val?: string | null) {
@@ -1109,7 +1109,7 @@ export function ListingEditor({ listing, suggestedId, agents }: Props) {
       </div>
 
       {/* Sticky Bottom Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 flex flex-wrap items-center justify-center gap-2 border-t border-zinc-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur-md sm:left-64">
+      <div className="fixed bottom-0 left-0 right-0 z-40 flex flex-wrap items-center justify-center gap-2 border-t border-zinc-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur-md lg:left-64">
         <span className="hidden text-xs text-zinc-400 sm:inline">Kaydetmeyi unutmayın!</span>
         <button type="button" onClick={saveDraft} disabled={pending || uploadBusy} className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 disabled:opacity-50">
           Taslak Kaydet

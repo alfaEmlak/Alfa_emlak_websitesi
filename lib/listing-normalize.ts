@@ -64,9 +64,6 @@ export function normalizeListing(row: any): any {
     // Publish status
     publishStatus: row.publish_status ?? row.publishStatus,
     
-    // Detail fields
-    detailFields: row.detail_fields ?? row.detailFields,
-    
     // Badges (stored as JSON string)
     badgeFeatured: typeof row.badges === "string" ? JSON.parse(row.badges).featured : row.badges?.featured ?? row.badgeFeatured,
     badgeExclusive: typeof row.badges === "string" ? JSON.parse(row.badges).exclusive : row.badges?.exclusive ?? row.badgeExclusive,

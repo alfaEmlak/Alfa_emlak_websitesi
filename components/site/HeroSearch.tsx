@@ -182,8 +182,8 @@ export function HeroSearch({ variant = "light" }: { variant?: "light" | "overlay
 
   const tabBtn = (active: boolean) =>
     active
-      ? "rounded-xl bg-secondary px-6 py-3 font-headline text-sm font-bold uppercase tracking-[0.12em] text-white shadow-lg shadow-black/30 transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-      : "rounded-xl border border-white/30 bg-white/15 px-6 py-3 font-headline text-sm font-bold uppercase tracking-[0.12em] text-white shadow-sm backdrop-blur-md transition hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50";
+      ? "flex-1 sm:flex-none whitespace-nowrap rounded-lg sm:rounded-xl bg-secondary px-2 sm:px-6 py-2.5 sm:py-3 font-headline text-[10px] sm:text-sm font-bold uppercase tracking-[0.05em] sm:tracking-[0.12em] text-white shadow-lg shadow-black/30 transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+      : "flex-1 sm:flex-none whitespace-nowrap rounded-lg sm:rounded-xl border border-white/30 bg-white/15 px-2 sm:px-6 py-2.5 sm:py-3 font-headline text-[10px] sm:text-sm font-bold uppercase tracking-[0.05em] sm:tracking-[0.12em] text-white shadow-sm backdrop-blur-md transition hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50";
 
   const regionOptions = city ? [{v: '', l: "Tüm Bölgeler"}, ...(kktcRegions[city] || [])] : [{v: '', l: "Tüm Bölgeler"}];
 
@@ -209,7 +209,7 @@ export function HeroSearch({ variant = "light" }: { variant?: "light" | "overlay
       </div>
       
       <div className={shell}>
-        <div className="grid grid-cols-1 items-stretch gap-3 p-3 md:grid-cols-[1fr_1fr_1fr_auto]">
+        <div className="grid grid-cols-1 items-stretch gap-2.5 p-2 sm:gap-3 sm:p-3 md:grid-cols-[1fr_1fr_1fr_auto]">
           <div className={fieldShell}>
             <DropdownField label="Konut Tipi" options={types} value={emlak} onChange={setEmlak} isOverlay={isOverlay} />
           </div>
@@ -222,7 +222,7 @@ export function HeroSearch({ variant = "light" }: { variant?: "light" | "overlay
           <button
             type="button"
             onClick={onSearch}
-            className="btn-tactile min-h-[58px] rounded-xl bg-secondary py-5 font-headline text-sm font-bold uppercase tracking-[0.12em] text-white shadow-lg shadow-secondary/25 transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-secondary/40 md:min-h-0 md:self-stretch md:px-8"
+            className="btn-tactile min-h-[50px] sm:min-h-[58px] rounded-xl bg-secondary py-3 sm:py-5 font-headline text-xs sm:text-sm font-bold uppercase tracking-[0.12em] text-white shadow-lg shadow-secondary/25 transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-secondary/40 md:min-h-0 md:self-stretch md:px-8"
           >
             İLANLARI GÖR
           </button>
@@ -244,10 +244,10 @@ export function HeroSearch({ variant = "light" }: { variant?: "light" | "overlay
 
         {/* Expanded Filter Panel */}
         {advancedOpen && (
-          <div className={`mt-2 border-t pt-5 pb-2 px-3 animate-in fade-in slide-in-from-top-4 duration-300 ${
+          <div className={`mt-2 border-t pt-5 pb-2 px-2 sm:px-3 animate-in fade-in slide-in-from-top-4 duration-300 ${
             isOverlay ? 'border-white/10' : 'border-slate-200'
           }`}>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-6">
               
               {/* Fiyat Aralığı */}
               <div className={fieldShell + " !px-4 !py-3"}>

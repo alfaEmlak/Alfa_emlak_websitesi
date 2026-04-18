@@ -38,7 +38,7 @@ export function ContactForm({ labels }: {
   }
 
   const inputCls =
-    "w-full rounded-xl border border-primary/10 bg-surface px-4 py-3 text-sm text-on-surface placeholder:text-on-surface/30 focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20 transition";
+    "w-full rounded-xl border border-primary/10 bg-surface px-4 py-3 text-sm text-on-surface placeholder:text-on-surface/30 focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20 transition min-h-[44px]";
 
   if (status === "sent") {
     return (

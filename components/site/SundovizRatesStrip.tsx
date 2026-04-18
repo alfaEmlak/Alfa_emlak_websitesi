@@ -65,7 +65,7 @@ export function SundovizRatesStrip({ initialData }: Props) {
         </div>
 
         {/* Center: Rates */}
-        <ul className="flex flex-1 flex-wrap items-center justify-center gap-x-6 gap-y-2 sm:gap-x-8 md:gap-x-10">
+        <ul className="flex flex-1 flex-nowrap overflow-x-auto items-center justify-start sm:justify-center gap-x-6 sm:gap-x-8 md:gap-x-10 pb-1 sm:pb-0" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {currencies.map(({ code, symbol, flag }) => {
             const rate = rateMap[code];
             if (!rate) return null;

@@ -48,26 +48,26 @@ export default async function AdminDashboardPage() {
   ];
 
   return (
-    <div className="p-6 lg:p-10">
-      <h1 className="admin-page-title text-3xl font-extrabold">Özet</h1>
+    <div className="p-4 sm:p-6 lg:p-10">
+      <h1 className="admin-page-title text-2xl font-extrabold sm:text-3xl">Özet</h1>
       <p className="mt-1 text-sm text-(--on-surface)/55">Genel bakış ve son aktiviteler</p>
 
       {/* Stat Cards */}
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-6 grid gap-3 grid-cols-2 sm:mt-8 sm:gap-4 lg:grid-cols-4">
         {cards.map((c) => (
-          <div key={c.label} className="admin-card flex items-center gap-4 p-5">
-            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${c.bg}`}>
-              <AdminIcon name={c.icon} size={24} className={c.color} />
+          <div key={c.label} className="admin-card flex items-center gap-3 p-3 sm:gap-4 sm:p-5">
+            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-12 sm:w-12 ${c.bg}`}>
+              <AdminIcon name={c.icon} size={20} className={c.color} />
             </div>
-            <div>
-              <p className="label-sm text-(--on-surface)/45">{c.label}</p>
-              <p className="mt-0.5 font-headline text-2xl font-extrabold tracking-tight text-(--primary)">{c.value}</p>
+            <div className="min-w-0">
+              <p className="label-sm truncate text-(--on-surface)/45">{c.label}</p>
+              <p className="mt-0.5 font-headline text-xl font-extrabold tracking-tight text-(--primary) sm:text-2xl">{c.value}</p>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="mt-10 grid gap-6 lg:grid-cols-2">
+      <div className="mt-8 grid gap-6 sm:mt-10 lg:grid-cols-2">
         {/* Recent Listings */}
         <div>
           <div className="flex items-center justify-between gap-4">
@@ -76,7 +76,7 @@ export default async function AdminDashboardPage() {
               Tümü
             </Link>
           </div>
-          <div className="admin-card mt-4 overflow-hidden">
+          <div className="admin-card mt-4 overflow-x-auto overflow-hidden">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-(--ghost-outline) bg-(--surface-container-low)/80 text-xs font-semibold uppercase tracking-wide text-(--primary)/55">
                 <tr>

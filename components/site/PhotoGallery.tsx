@@ -131,10 +131,10 @@ export function PhotoGallery({
             </button>
           </div>
           
-          <div className="flex-1 overflow-y-auto no-scrollbar pb-10">
-            <div className="mx-auto flex max-w-4xl flex-col gap-6 sm:gap-10">
+          <div className="flex-1 overflow-x-auto overflow-y-hidden snap-x snap-mandatory flex items-center md:items-start md:overflow-y-auto md:overflow-x-hidden md:flex-col md:pb-10 no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <div className="flex flex-row md:flex-col gap-4 sm:gap-10 md:mx-auto md:max-w-4xl px-4 md:px-0">
               {displayImages.map((img, idx) => (
-                <div key={img.id || idx} className="relative w-full shadow-lg rounded-2xl overflow-hidden aspect-[4/3] sm:aspect-[16/9] lg:aspect-[3/2]">
+                <div key={img.id || idx} className="snap-center shrink-0 relative w-[85vw] md:w-full shadow-lg rounded-2xl overflow-hidden aspect-[4/3] sm:aspect-[16/9] lg:aspect-[3/2]">
                   <Image 
                     src={img.url || safePrimaryImage} 
                     alt={`Photo ${idx + 1}`} 
