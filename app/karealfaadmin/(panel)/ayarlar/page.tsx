@@ -1,9 +1,11 @@
 import { saveSiteSettings } from "@/app/karealfaadmin/actions";
+import { requireAdmin } from "@/lib/panel-auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getDefaultConsultant, getSocialLinks } from "@/lib/site-settings";
 import { MultiLangSettingsFields } from "@/components/admin/MultiLangSettingsFields";
 
 export default async function AdminSettingsPage() {
+  await requireAdmin();
   const { data: s, error } = await supabaseAdmin
     .from("site_settings")
     .select("*")

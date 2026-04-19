@@ -18,6 +18,7 @@ function offlineSiteSettings(): any {
     hero_subtitle: null,
     default_consultant_json: null,
     menu_json: JSON.stringify(defaultMegaMenu),
+    slider_json: null,
     translations: null,
     updated_at: now.toISOString(),
   };
@@ -94,4 +95,13 @@ export function getDefaultConsultant(
   row: { default_consultant_json: string | null },
 ): ConsultantDefault {
   return parseJson<ConsultantDefault>(row.default_consultant_json, {});
+}
+
+export type SliderSettings = {
+  images: string[];
+  interval: number;
+};
+
+export function getSliderSettings(row: { slider_json: string | null }): SliderSettings {
+  return parseJson<SliderSettings>(row.slider_json, { images: [], interval: 5000 });
 }

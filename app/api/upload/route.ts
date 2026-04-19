@@ -1,18 +1,19 @@
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-auth";
+import { getPanelSession } from "@/lib/panel-auth";
 import { uploadFile } from "@/lib/supabase/storage";
 
 export async function POST(request: Request) {
   try {
-    let session: Awaited<ReturnType<typeof getAdminSession>>;
+    let session: Awaited<ReturnType<typeof getPanelSession>>;
     try {
-      session = await getAdminSession();
+      session = await getPanelSession();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Oturum yapılandırması hatası";
       return NextResponse.json({ error: msg }, { status: 500 });
     }
-    if (!session.isAdmin) {
-      return NextResponse.json({ error: "Yetkisiz — yeniden giriş yapın." }, { status: 401 });
+
+    if (!session.role) {
+      return NextResponse.json({ error: "Yetkisiz, yeniden giriş yapın." }, { status: 401 });
     }
 
     const form = await request.formData();
@@ -27,8 +28,6 @@ export async function POST(request: Request) {
     const blob = entry as Blob;
     const fileName = (entry as File).name || "upload";
     const file = new File([blob], fileName, { type: blob.type });
-    
-    // Upload to Supabase Storage
     const { path: filePath, url } = await uploadFile(file, "uploads");
 
     return NextResponse.json({ url, path: filePath });

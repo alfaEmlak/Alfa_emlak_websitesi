@@ -1,9 +1,11 @@
 import { saveMenuJson } from "@/app/karealfaadmin/actions";
 import { defaultMegaMenu } from "@/lib/default-menu";
+import { requireAdmin } from "@/lib/panel-auth";
 import { getSiteSettings } from "@/lib/site-settings";
 import { MenuEditor } from "@/components/admin/MenuEditor";
 
 export default async function AdminMenuPage() {
+  await requireAdmin();
   const s = await getSiteSettings();
   const initial = s.menuJson && s.menuJson.trim() ? s.menuJson : JSON.stringify(defaultMegaMenu, null, 2);
 

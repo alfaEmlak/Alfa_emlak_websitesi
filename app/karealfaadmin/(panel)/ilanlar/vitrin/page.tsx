@@ -1,8 +1,10 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { AdminIcon } from "@/components/admin/AdminIcon";
+import { requireAdmin } from "@/lib/panel-auth";
 import { FeaturedToggleList } from "./FeaturedToggleList";
 
 export default async function VitrinPage() {
+  await requireAdmin();
   const { data: listings } = await supabaseAdmin
     .from("listings")
     .select("id, listing_id, title, price, currency, city, region, cover_image, badges, publish_status")

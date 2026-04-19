@@ -60,9 +60,10 @@ async function postUploadFile(file: File): Promise<string> {
 }
 
 type Props = {
-  listing: (Listing & { images: ListingImage[] }) | null;
+  listing: ((Listing & { images: ListingImage[] }) & { translations?: string | null }) | null;
   suggestedId: string;
   agents?: { id: string; name: string; email: string; phone: string | null; photo: string | null; title: string | null; is_active?: boolean }[];
+  viewerRole: "ADMIN" | "CONSULTANT";
 };
 
 function getInitialCity(val?: string | null) {
@@ -78,14 +79,13 @@ function getInitialRegion(cityVal: string, val?: string | null) {
   return match ? match.v : val;
 }
 
-export function ListingEditor({ listing, suggestedId, agents }: Props) {
+export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Props) {
   const t = useTranslations("Wizard");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const [wizardStep, setWizardStep] = useState(0);
   const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
-  const [showMapPicker, setShowMapPicker] = useState(false);
 
   const PROPERTY_LABELS: Record<string, string> = {
     bedrooms: t("propertyLabels.bedrooms"),
@@ -173,7 +173,7 @@ export function ListingEditor({ listing, suggestedId, agents }: Props) {
     consultantPhoto: listing?.consultantPhoto ?? "",
     consultantOfficeLogo: listing?.consultantOfficeLogo ?? "",
     selectedAgentId: "",
-    publishStatus: listing?.publishStatus ?? "DRAFT",
+    publishStatus: listing?.publishStatus ?? (viewerRole === "ADMIN" ? "DRAFT" : "PENDING_APPROVAL"),
     statsShowViews: listing?.statsShowViews ?? true,
     statsShowFavs: listing?.statsShowFavs ?? true,
     statsShowRating: listing?.statsShowRating ?? false,
@@ -193,10 +193,10 @@ export function ListingEditor({ listing, suggestedId, agents }: Props) {
     }
   }, [form.translations]);
 
-  const setTranslation = (lang: string, field: string, value: string) => {
+  const setTranslation = (lang: string, field: "title" | "shortDescription" | "longDescription", value: string) => {
     const newTrans = { ...translations };
     if (!newTrans[lang]) newTrans[lang] = { title: "", shortDescription: "", longDescription: "" };
-    (newTrans[lang] as any)[field] = value;
+    newTrans[lang][field] = value;
     set("translations", JSON.stringify(newTrans));
   };
 
@@ -406,6 +406,7 @@ export function ListingEditor({ listing, suggestedId, agents }: Props) {
     });
   }
 
+
   async function doSave(statusOverride?: string) {
     setMessage(null);
     setMessageType(null);
@@ -492,8 +493,14 @@ export function ListingEditor({ listing, suggestedId, agents }: Props) {
     };
 
     try {
-      await saveListing(payload);
-      const statusLabel = statusOverride === "PUBLISHED" ? "yayınlandı" : "taslak olarak kaydedildi";
+      const result = await saveListing(payload);
+      void result;
+      const statusLabel =
+        statusOverride === "PUBLISHED"
+          ? viewerRole === "ADMIN"
+            ? "yayına alındı"
+            : "admin onayına gönderildi"
+          : "taslak olarak kaydedildi";
       setMessage(`İlan başarıyla ${statusLabel}!`);
       setMessageType("success");
       router.refresh();
@@ -553,7 +560,7 @@ export function ListingEditor({ listing, suggestedId, agents }: Props) {
             disabled={pending || uploadBusy}
             className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-md shadow-emerald-600/25 disabled:opacity-50 hover:bg-emerald-700"
           >
-            Yayınla
+            {viewerRole === "ADMIN" ? "Yayınla" : "Admin Onayına Gönder"}
           </button>
         </div>
       </div>
@@ -1066,20 +1073,22 @@ export function ListingEditor({ listing, suggestedId, agents }: Props) {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-zinc-800">Yayın Durumu</h2>
-            <p className="mt-1 text-sm text-zinc-500">İlanın yayın durumunu belirleyin</p>
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-zinc-700">
-                Durum
-                <select className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" value={form.publishStatus} onChange={(e) => set("publishStatus", e.target.value)}>
-                  <option value="DRAFT">Taslak</option>
-                  <option value="PUBLISHED">Yayında</option>
-                  <option value="HIDDEN">Gizli</option>
-                </select>
-              </label>
-            </div>
-          </section>
+          {viewerRole === "ADMIN" ? (
+            <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+              <h2 className="text-lg font-bold text-zinc-800">Yayın Durumu</h2>
+              <p className="mt-1 text-sm text-zinc-500">İlanın yayın durumunu belirleyin</p>
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-zinc-700">
+                  Durum
+                  <select className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" value={form.publishStatus} onChange={(e) => set("publishStatus", e.target.value)}>
+                    <option value="DRAFT">Taslak</option>
+                    <option value="PUBLISHED">Yayında</option>
+                    <option value="HIDDEN">Gizli</option>
+                  </select>
+                </label>
+              </div>
+            </section>
+          ) : null}
         </>
       )}
 
@@ -1115,7 +1124,7 @@ export function ListingEditor({ listing, suggestedId, agents }: Props) {
           Taslak Kaydet
         </button>
         <button type="button" onClick={publish} disabled={pending || uploadBusy} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-md shadow-emerald-600/25 disabled:opacity-50 hover:bg-emerald-700">
-          Yayınla
+          {viewerRole === "ADMIN" ? "Yayınla" : "Admin Onayına Gönder"}
         </button>
       </div>
     </div>

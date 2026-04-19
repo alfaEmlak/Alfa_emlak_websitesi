@@ -1,9 +1,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import { AdminIcon } from "@/components/admin/AdminIcon";
+import { requireAdmin } from "@/lib/panel-auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export default async function AgentsPage() {
+  await requireAdmin();
   const { data: agents } = await supabaseAdmin
     .from("agents")
     .select("*")

@@ -1,12 +1,14 @@
 import { notFound } from "next/navigation";
 import { ListingEditor } from "@/components/admin/ListingEditor";
 import { suggestListingId } from "@/app/karealfaadmin/actions";
+import { requirePanelUser } from "@/lib/panel-auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { normalizeListing } from "@/lib/listing-normalize";
 
 type Props = { params: Promise<{ id: string }> };
 
 export default async function EditListingPage({ params }: Props) {
+  const user = await requirePanelUser();
   const { id } = await params;
   const { data: listingRaw, error } = await supabaseAdmin
     .from("listings")
@@ -27,7 +29,7 @@ export default async function EditListingPage({ params }: Props) {
 
   return (
     <div className="p-6 lg:p-10">
-      <ListingEditor listing={listing} suggestedId={suggested} agents={agents || []} />
+      <ListingEditor listing={listing} suggestedId={suggested} agents={agents || []} viewerRole={user.role} />
     </div>
   );
 }

@@ -63,8 +63,17 @@ model Listing {
   consultantEmail         String?
   consultantOffice        String?
   consultantOfficeLogo    String?
-  /// DRAFT | PUBLISHED | HIDDEN
+  /// DRAFT | PENDING_APPROVAL | PUBLISHED | HIDDEN | REJECTED
   publishStatus           String         @default("DRAFT")
+  createdByAgentId        String?
+  createdByName           String?
+  lastUpdatedByAgentId    String?
+  lastUpdatedByName       String?
+  approvalSubmittedAt     DateTime?
+  approvedByName          String?
+  approvedAt              DateTime?
+  rejectedByName          String?
+  rejectedAt              DateTime?
   views                   Int            @default(0)
   favoritesCount          Int            @default(0)
   rating                  Float?
@@ -154,8 +163,8 @@ model Agent {
   phone        String?
   photo        String?
   title        String?  @default("Emlak Danışmanı")
-  /// ADMIN | AGENT
-  role         String   @default("AGENT")
+  /// ADMIN | CONSULTANT
+  role         String   @default("CONSULTANT")
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

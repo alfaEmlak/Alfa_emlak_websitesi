@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { getTranslatedListing, getTranslatedSiteSettings } from "@/lib/i18n-utils";
-import { getSiteSettingsOrFallback } from "@/lib/site-settings";
+import { getSiteSettingsOrFallback, getSliderSettings } from "@/lib/site-settings";
 import { getFeaturedListingsSafe } from "@/lib/listings-query";
 import { getSundovizRates } from "@/lib/sundoviz-rates";
 import { HeroSearch } from "@/components/site/HeroSearch";
@@ -32,6 +32,7 @@ export default async function HomePage({ params }: Props) {
   ]);
 
   const settings = getTranslatedSiteSettings(settingsRaw, locale);
+  const sliderSettings = getSliderSettings(settingsRaw);
   const grid = featuredRaw.slice(0, 9).map(l => getTranslatedListing(l, locale));
 
   return (
@@ -39,13 +40,8 @@ export default async function HomePage({ params }: Props) {
       <div className="relative h-[100dvh] min-h-[600px] w-full overflow-visible">
         <div className="absolute inset-0 z-0 overflow-hidden bg-black">
           <HeroSlider
-            images={[
-              "/kktc_1.jpg",
-              "/kktc_2.jpg",
-              "/kktc_3.jpg",
-              "/kktc_4.jpg",
-              "/kktc_5.jpg"
-            ]}
+            images={sliderSettings.images}
+            interval={sliderSettings.interval}
           />
           <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
         </div>

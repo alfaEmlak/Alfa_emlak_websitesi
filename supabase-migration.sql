@@ -93,3 +93,39 @@ alter table listings alter column neighborhood drop not null;
 
 -- description_tr ve description_en nullable yap
 alter table listings alter column description_tr drop not null;
+
+-- publish status approval workflow
+alter table listings drop constraint if exists listings_publish_status_check;
+alter table listings
+  add constraint listings_publish_status_check
+  check (publish_status in ('DRAFT', 'PENDING_APPROVAL', 'PUBLISHED', 'HIDDEN', 'REJECTED'));
+
+-- approval metadata
+alter table listings add column if not exists created_by_agent_id uuid references agents(id) on delete set null;
+alter table listings add column if not exists created_by_name text;
+alter table listings add column if not exists last_updated_by_agent_id uuid references agents(id) on delete set null;
+alter table listings add column if not exists last_updated_by_name text;
+alter table listings add column if not exists approval_submitted_at timestamp with time zone;
+alter table listings add column if not exists approved_by_name text;
+alter table listings add column if not exists approved_at timestamp with time zone;
+alter table listings add column if not exists rejected_by_name text;
+alter table listings add column if not exists rejected_at timestamp with time zone;
+
+-- normalize consultant role naming
+update agents set role = 'CONSULTANT' where role = 'AGENT';
+alter table agents drop constraint if exists agents_role_check;
+alter table agents
+  add constraint agents_role_check
+  check (role in ('ADMIN', 'CONSULTANT'));
+
+-- initial consultant panel account
+insert into agents (name, email, password_hash, title, role, is_active)
+values (
+  'Panel Danışmanı',
+  'consultant.panel@alfa.local',
+  'scrypt:20d3305c6a90ecef18cf6d2ff14c76cc:0903f0efbb216115f516f8125ad58510d8ec7a3fe964594ca07e92853fd1e224a35175adfcd03935b6a0b2bd082cddea48fae4d9b225760b35b71357fa60549b',
+  'Panel Danışmanı',
+  'CONSULTANT',
+  true
+)
+on conflict (email) do nothing;

@@ -15,3 +15,12 @@ export const sessionOptions: SessionOptions = {
 export type AdminSessionData = {
   isAdmin?: boolean;
 };
+
+export type PanelRole = "ADMIN" | "CONSULTANT";
+
+export type PanelSessionData = {
+  isAdmin?: boolean;
+  role?: PanelRole;
+  agentId?: string;
+  name?: string;
+};

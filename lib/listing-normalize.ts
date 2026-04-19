@@ -63,6 +63,13 @@ export function normalizeListing(row: any): any {
     
     // Publish status
     publishStatus: row.publish_status ?? row.publishStatus,
+    createdByAgentId: row.created_by_agent_id ?? row.createdByAgentId,
+    createdByName: row.created_by_name ?? row.createdByName,
+    approvalSubmittedAt: row.approval_submitted_at ?? row.approvalSubmittedAt,
+    approvedByName: row.approved_by_name ?? row.approvedByName,
+    approvedAt: row.approved_at ?? row.approvedAt,
+    rejectedByName: row.rejected_by_name ?? row.rejectedByName,
+    rejectedAt: row.rejected_at ?? row.rejectedAt,
     
     // Badges (stored as JSON string)
     badgeFeatured: typeof row.badges === "string" ? JSON.parse(row.badges).featured : row.badges?.featured ?? row.badgeFeatured,

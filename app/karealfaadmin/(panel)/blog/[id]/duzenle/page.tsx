@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { BlogEditor } from "@/components/admin/BlogEditor";
+import { requireAdmin } from "@/lib/panel-auth";
 
 export default async function EditBlogPostPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdmin();
   const { id } = await params;
   const { data: post, error } = await supabaseAdmin
     .from("blog_posts")

@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { AdminIcon } from "@/components/admin/AdminIcon";
+import { requireAdmin } from "@/lib/panel-auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export default async function BlogAdminPage() {
+  await requireAdmin();
   const { data: posts } = await supabaseAdmin
     .from("blog_posts")
     .select("id, title, slug, status, published_at, created_at")

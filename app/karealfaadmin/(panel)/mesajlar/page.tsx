@@ -1,8 +1,10 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { AdminIcon } from "@/components/admin/AdminIcon";
+import { requireAdmin } from "@/lib/panel-auth";
 import { MessageList } from "./MessageList";
 
 export default async function MessagesPage() {
+  await requireAdmin();
   const { data: messages } = await supabaseAdmin
     .from("contact_messages")
     .select("*")
