@@ -33,6 +33,7 @@ export function HeroSlider({ images, interval = 5000 }: Props) {
           fill
           priority={index === 0}
           quality={100}
+          unoptimized={src.startsWith('http')}
           className={`object-cover object-center transition-opacity duration-1000 ease-in-out ${
             index === currentIndex ? "opacity-100 z-10" : "opacity-0 z-0"
           }`}

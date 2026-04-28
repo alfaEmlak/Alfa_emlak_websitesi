@@ -40,7 +40,7 @@ export default async function HomePage({ params }: Props) {
       <div className="relative h-[100dvh] min-h-[600px] w-full overflow-visible">
         <div className="absolute inset-0 z-0 overflow-hidden bg-black">
           <HeroSlider
-            images={sliderSettings.images}
+            images={sliderSettings.images.length > 0 ? sliderSettings.images : [heroImage]}
             interval={sliderSettings.interval}
           />
           <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />

@@ -129,3 +129,7 @@ values (
   true
 )
 on conflict (email) do nothing;
+
+-- site_settings slider_json (JSON)
+alter table site_settings add column if not exists slider_json jsonb;
+
