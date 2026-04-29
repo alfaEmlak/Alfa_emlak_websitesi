@@ -20,6 +20,19 @@ export default async function AdminSettingsPage() {
   const dc = s ? getDefaultConsultant(s) : {};
   const translations = s?.translations ? JSON.parse(s.translations) : null;
 
+  const ext101 = (() => {
+    const raw = s?.ext_101evler;
+    if (!raw) return { first_realtor_id: "", second_realtor_id: "" };
+    let parsed: any = raw;
+    if (typeof raw === "string") {
+      try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+    }
+    return {
+      first_realtor_id: parsed?.first_realtor_id ?? "",
+      second_realtor_id: parsed?.second_realtor_id ?? "",
+    };
+  })();
+
   return (
     <div className="p-6 lg:p-10">
       <h1 className="admin-page-title text-3xl font-extrabold">Site ayarları</h1>
@@ -100,6 +113,42 @@ export default async function AdminSettingsPage() {
             <input name="dc_logo" defaultValue={dc.logo ?? ""} className="mt-1 w-full rounded-xl border border-(--ghost-outline) bg-(--surface) px-3 py-2 text-sm outline-none focus:border-(--secondary) focus:ring-2 focus:ring-(--secondary)/20" />
           </label>
         </section>
+        <section className="admin-card space-y-3 p-6">
+          <h2 className="label-sm text-(--primary)/55">101evler entegrasyonu</h2>
+          <p className="text-xs text-(--on-surface)/55">
+            101evler size atadığında <code>realtor_id</code>'leri buraya girin. ID girilmeden gönderilen XML'de bu alanlar boş kalır.
+          </p>
+          <label className="block text-sm">
+            First realtor ID
+            <input
+              name="ext101_first_realtor_id"
+              type="number"
+              inputMode="numeric"
+              defaultValue={String(ext101.first_realtor_id ?? "")}
+              placeholder="Örn: 1234"
+              className="mt-1 w-full rounded-xl border border-(--ghost-outline) bg-(--surface) px-3 py-2 text-sm outline-none focus:border-(--secondary) focus:ring-2 focus:ring-(--secondary)/20"
+            />
+          </label>
+          <label className="block text-sm">
+            Second realtor ID
+            <input
+              name="ext101_second_realtor_id"
+              type="number"
+              inputMode="numeric"
+              defaultValue={String(ext101.second_realtor_id ?? "")}
+              placeholder="Opsiyonel"
+              className="mt-1 w-full rounded-xl border border-(--ghost-outline) bg-(--surface) px-3 py-2 text-sm outline-none focus:border-(--secondary) focus:ring-2 focus:ring-(--secondary)/20"
+            />
+          </label>
+          <div className="rounded-lg bg-(--surface)/50 p-3 text-xs text-(--on-surface)/70">
+            <p className="font-semibold">Feed URL</p>
+            <code className="mt-1 block break-all">/api/feeds/101evler.xml?token=&lt;FEED_101EVLER_TOKEN&gt;</code>
+            <p className="mt-2 text-(--on-surface)/55">
+              Token <code>.env.local</code> dosyasındaki <code>FEED_101EVLER_TOKEN</code> değerinden alınır. Bu URL'i 101evler hesap yöneticisine verin.
+            </p>
+          </div>
+        </section>
+
         <button
           type="submit"
           className="btn-tactile rounded-xl bg-(--secondary) px-8 py-3 text-sm font-bold text-white shadow-md shadow-(--secondary)/25 transition hover:bg-brand-hover"

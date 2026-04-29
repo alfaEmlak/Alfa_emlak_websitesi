@@ -133,3 +133,49 @@ on conflict (email) do nothing;
 -- site_settings slider_json (JSON)
 alter table site_settings add column if not exists slider_json jsonb;
 
+-- ============================================================================
+-- 101evler XML feed entegrasyonu
+-- ============================================================================
+
+-- Bu ilan 101evler feed'ine dahil edilsin mi?
+alter table listings add column if not exists export_to_101evler boolean not null default false;
+
+-- 101evler-spesifik alanlar (type_id, area_id, room_count_id, build_age_id,
+-- furnishing_id, billing_cycle_id, title_type_id, price_for, reference_no)
+alter table listings add column if not exists ext_101evler jsonb not null default '{}'::jsonb;
+
+-- Feed sorgusu için partial index
+create index if not exists idx_listings_export_101evler
+  on listings(export_to_101evler)
+  where export_to_101evler = true;
+
+-- Site genel 101evler ayarları (first/second_realtor_id)
+alter table site_settings add column if not exists ext_101evler jsonb;
+
+-- ============================================================================
+-- Kariyer başvuruları
+-- ============================================================================
+create table if not exists career_applications (
+  id uuid primary key default uuid_generate_v4(),
+  first_name text not null,
+  last_name text not null,
+  email text not null,
+  phone text not null,
+  message text,
+  cv_url text,
+  cv_path text,
+  cv_filename text,
+  is_read boolean not null default false,
+  status text not null default 'NEW' check (status in ('NEW', 'REVIEWING', 'INTERVIEW', 'HIRED', 'REJECTED')),
+  notes text,
+  created_at timestamp with time zone default now(),
+  updated_at timestamp with time zone default now()
+);
+
+create index if not exists idx_career_applications_is_read on career_applications(is_read);
+create index if not exists idx_career_applications_created_at on career_applications(created_at desc);
+
+alter table career_applications enable row level security;
+create policy "Career apps insert by anyone" on career_applications for insert with check (true);
+create policy "Career apps managed by authenticated" on career_applications for all using (auth.role() = 'authenticated');
+

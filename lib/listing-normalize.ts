@@ -81,6 +81,10 @@ export function normalizeListing(row: any): any {
     
     // Features (stored as JSON array)
     features: Array.isArray(row.features) ? JSON.stringify(row.features) : row.features,
+
+    // 101evler XML feed entegrasyonu
+    exportTo101evler: row.export_to_101evler ?? row.exportTo101evler ?? false,
+    ext101evler: row.ext_101evler ?? row.ext101evler ?? null,
   };
 }
 

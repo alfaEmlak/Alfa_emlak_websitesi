@@ -156,6 +156,18 @@ export type ListingSavePayload = {
   favoritesCount: number;
   translations: string;
   gallery: { url: string; sortOrder: number; isPrimary: boolean }[];
+  exportTo101evler?: boolean;
+  ext101evler?: {
+    type_id?: number | null;
+    area_id?: number | null;
+    title_type_id?: number | null;
+    room_count_id?: number | null;
+    build_age_id?: number | null;
+    furnishing_id?: number | null;
+    billing_cycle_id?: number | null;
+    price_for?: "T" | "U" | null;
+    reference_no?: string | null;
+  };
 };
 
 function numOrNull(s: string) {
@@ -371,6 +383,8 @@ export async function saveListing(payload: ListingSavePayload) {
     approved_by_name: finalStatus === "PUBLISHED" && canPublishDirectly(user.role) ? user.name : null,
     rejected_at: finalStatus === "REJECTED" && canPublishDirectly(user.role) ? now : null,
     rejected_by_name: finalStatus === "REJECTED" && canPublishDirectly(user.role) ? user.name : null,
+    export_to_101evler: payload.exportTo101evler ?? false,
+    ext_101evler: payload.ext101evler ?? {},
     updated_at: now,
   };
 
@@ -593,6 +607,13 @@ export async function saveSiteSettings(formData: FormData) {
     }
   }
 
+  const ext101FirstRaw = String(formData.get("ext101_first_realtor_id") ?? "").trim();
+  const ext101SecondRaw = String(formData.get("ext101_second_realtor_id") ?? "").trim();
+  const ext101 = {
+    first_realtor_id: ext101FirstRaw ? Number(ext101FirstRaw) : null,
+    second_realtor_id: ext101SecondRaw ? Number(ext101SecondRaw) : null,
+  };
+
   const settingsData = {
     site_name: String(formData.get("siteName") ?? "ALFA EMLAK"),
     logo_url: String(formData.get("logoUrl") ?? "").trim() || null,
@@ -608,6 +629,7 @@ export async function saveSiteSettings(formData: FormData) {
     default_consultant_json: JSON.stringify(consultant),
     menu_json: JSON.stringify(defaultMegaMenu),
     translations: Object.keys(translations).length > 0 ? JSON.stringify(translations) : null,
+    ext_101evler: ext101,
     updated_at: new Date().toISOString(),
   };
 

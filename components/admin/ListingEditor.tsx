@@ -13,6 +13,16 @@ import {
   type NearbyPoiCategoryId,
 } from "@/lib/nearby-poi";
 import { parseLatLngPair, parseNearby, parseStringArray } from "@/lib/listing-utils";
+import {
+  TYPE_ID_OPTIONS,
+  AREA_ID_OPTIONS,
+  TITLE_TYPE_OPTIONS,
+  ROOM_COUNT_OPTIONS,
+  BUILD_AGE_OPTIONS,
+  FURNISHING_OPTIONS,
+  BILLING_CYCLE_OPTIONS,
+  CURRENCY_CODE_MAP,
+} from "@/lib/feeds/101evler-constants";
 import { AdminIcon, type AdminIconName } from "@/components/admin/AdminIcon";
 import { NearbyPoiAdminPreview } from "@/components/admin/NearbyPoiAdminPreview";
 import dynamic from "next/dynamic";
@@ -59,12 +69,123 @@ async function postUploadFile(file: File): Promise<string> {
   return data.url;
 }
 
+type Ext101evler = {
+  type_id?: number | string | null;
+  area_id?: number | string | null;
+  title_type_id?: number | string | null;
+  room_count_id?: number | string | null;
+  build_age_id?: number | string | null;
+  furnishing_id?: number | string | null;
+  billing_cycle_id?: number | string | null;
+  price_for?: "T" | "U" | null;
+  reference_no?: string | null;
+};
+
 type Props = {
-  listing: ((Listing & { images: ListingImage[] }) & { translations?: string | null }) | null;
+  listing:
+    | ((Listing & { images: ListingImage[] }) & {
+        translations?: string | null;
+        exportTo101evler?: boolean | null;
+        ext101evler?: Ext101evler | string | null;
+      })
+    | null;
   suggestedId: string;
   agents?: { id: string; name: string; email: string; phone: string | null; photo: string | null; title: string | null; is_active?: boolean }[];
   viewerRole: "ADMIN" | "CONSULTANT";
 };
+
+function parseExt101(v: unknown): Ext101evler {
+  if (!v) return {};
+  if (typeof v === "string") {
+    try { return JSON.parse(v) as Ext101evler; } catch { return {}; }
+  }
+  if (typeof v === "object") return v as Ext101evler;
+  return {};
+}
+
+const CITY_VALUE_TO_101_LABEL: Record<string, keyof typeof AREA_ID_OPTIONS> = {
+  lefkosa: "Lefkoşa",
+  girne: "Girne",
+  gazimagusa: "Gazimağusa",
+  guzelyurt: "Güzelyurt",
+  iskele: "İskele",
+  lefke: "Lefke",
+};
+
+const REGION_VALUE_101_ALIASES: Record<string, string> = {
+  "gazimagusa-merkez": "Mağusa Merkez",
+  yenibogazici: "Yeni Boğaziçi",
+  surlarici: "Lefkoşa Surlariçi",
+  "lefke-merkez": "Lefke",
+  "guzelyurt-merkez": "Güzelyurt Merkez",
+  karaolanoglu: "Karaoğlanoğlu",
+  kilicaslan: "Kılıçarslan",
+};
+
+function normalize101Text(value: string): string {
+  return value
+    .toLocaleLowerCase("tr-TR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ı/g, "i")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function infer101TypeId(propertyType: string): string {
+  const key = propertyType.trim().toLowerCase();
+  if (key === "arsa") return "5";
+  if (key === "ticari") return "12";
+  if (key === "konut") return "2";
+  return "";
+}
+
+function infer101AreaCity(cityValue: string): string {
+  return CITY_VALUE_TO_101_LABEL[cityValue] ?? "";
+}
+
+function infer101AreaId(cityValue: string, regionValue: string): string {
+  const cityLabel = infer101AreaCity(cityValue);
+  if (!cityLabel || !regionValue) return "";
+
+  const regionLabel =
+    REGION_VALUE_101_ALIASES[regionValue] ??
+    kktcRegions[cityValue]?.find((r) => r.v === regionValue)?.l ??
+    regionValue;
+
+  const target = normalize101Text(regionLabel);
+  const match = AREA_ID_OPTIONS[cityLabel]?.find((option) => normalize101Text(option.label) === target);
+  return match ? String(match.id) : "";
+}
+
+function infer101RoomCountId(bedrooms: string, livingRooms: string): string {
+  const bedroomCount = Number.parseInt(bedrooms, 10);
+  if (!Number.isFinite(bedroomCount)) return "";
+
+  const livingRoomCount = Number.parseInt(livingRooms, 10);
+  const label = Number.isFinite(livingRoomCount)
+    ? `${bedroomCount}+${livingRoomCount}`
+    : String(bedroomCount);
+
+  const match = ROOM_COUNT_OPTIONS.find((option) => normalize101Text(option.label) === normalize101Text(label));
+  return match ? String(match.id) : "";
+}
+
+function infer101BuildAgeId(buildingAge: string): string {
+  const normalized = buildingAge.trim().toLocaleLowerCase("tr-TR");
+  if (!normalized) return "";
+  if (normalized.includes("proje")) return "12";
+
+  const age = Number.parseInt(normalized, 10);
+  if (!Number.isFinite(age) || age < 0) return "";
+  if (age === 0) return "10";
+  if (age >= 1 && age <= 4) return String(age);
+  if (age === 5) return "11";
+  if (age >= 6 && age <= 10) return "5";
+  if (age >= 11 && age <= 15) return "6";
+  if (age >= 16 && age <= 20) return "7";
+  if (age >= 21 && age <= 25) return "8";
+  return "9";
+}
 
 function getInitialCity(val?: string | null) {
   if (!val) return "";
@@ -120,6 +241,8 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
 
   const initialCity = getInitialCity(listing?.city);
   const initialRegion = getInitialRegion(initialCity, listing?.region);
+
+  const initialExt101 = parseExt101(listing?.ext101evler ?? null);
 
   const [form, setForm] = useState({
     listingId: listing?.listingId ?? suggestedId,
@@ -180,7 +303,45 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
     rating: listing?.rating != null ? String(listing.rating) : "",
     favoritesCount: listing?.favoritesCount ?? 0,
     translations: typeof listing?.translations === "string" ? listing.translations : "{}",
+    exportTo101evler: listing?.exportTo101evler ?? false,
+    ext101_type_id: initialExt101.type_id != null ? String(initialExt101.type_id) : "",
+    ext101_area_id: initialExt101.area_id != null ? String(initialExt101.area_id) : "",
+    ext101_title_type_id: initialExt101.title_type_id != null ? String(initialExt101.title_type_id) : "",
+    ext101_room_count_id: initialExt101.room_count_id != null ? String(initialExt101.room_count_id) : "",
+    ext101_build_age_id: initialExt101.build_age_id != null ? String(initialExt101.build_age_id) : "",
+    ext101_furnishing_id: initialExt101.furnishing_id != null ? String(initialExt101.furnishing_id) : "",
+    ext101_billing_cycle_id: initialExt101.billing_cycle_id != null ? String(initialExt101.billing_cycle_id) : "",
+    ext101_price_for: (initialExt101.price_for as string | null | undefined) ?? "T",
+    ext101_reference_no: initialExt101.reference_no ?? "",
+    ext101_area_city: infer101AreaCity(initialCity),
   });
+
+  function with101Defaults(current: typeof form, overwrite = false): typeof form {
+    const apply = (existing: string, inferred: string) => (overwrite ? inferred || existing : existing || inferred);
+
+    return {
+      ...current,
+      ext101_type_id: apply(current.ext101_type_id, infer101TypeId(current.propertyType)),
+      ext101_area_city: apply(current.ext101_area_city, infer101AreaCity(current.city)),
+      ext101_area_id: apply(current.ext101_area_id, infer101AreaId(current.city, current.region)),
+      ext101_room_count_id: apply(current.ext101_room_count_id, infer101RoomCountId(current.bedrooms, current.livingRooms)),
+      ext101_build_age_id: apply(current.ext101_build_age_id, infer101BuildAgeId(current.buildingAge)),
+      ext101_furnishing_id: apply(current.ext101_furnishing_id, current.furnished ? "3" : "1"),
+      ext101_price_for: current.ext101_price_for || "T",
+      ext101_reference_no: current.ext101_reference_no || current.listingId,
+    };
+  }
+
+  function setExportTo101evler(enabled: boolean) {
+    setForm((current) => {
+      const next = { ...current, exportTo101evler: enabled };
+      return enabled ? with101Defaults(next) : next;
+    });
+  }
+
+  function refresh101Defaults() {
+    setForm((current) => with101Defaults(current, true));
+  }
 
   const translations = useMemo(() => {
     try {
@@ -201,7 +362,28 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
   };
 
   const set = (k: keyof typeof form, v: string | boolean | number) =>
-    setForm((f) => ({ ...f, [k]: v } as typeof form));
+    setForm((f) => {
+      const next = { ...f, [k]: v } as typeof form;
+      if (!next.exportTo101evler) return next;
+
+      if (k === "propertyType") {
+        return { ...next, ext101_type_id: infer101TypeId(next.propertyType) };
+      }
+      if (k === "bedrooms" || k === "livingRooms") {
+        return { ...next, ext101_room_count_id: infer101RoomCountId(next.bedrooms, next.livingRooms) };
+      }
+      if (k === "buildingAge") {
+        return { ...next, ext101_build_age_id: infer101BuildAgeId(next.buildingAge) };
+      }
+      if (k === "furnished") {
+        return { ...next, ext101_furnishing_id: next.furnished ? "3" : "1" };
+      }
+      if (k === "listingId" && !next.ext101_reference_no) {
+        return { ...next, ext101_reference_no: next.listingId };
+      }
+
+      return next;
+    });
 
   const previewCoords = useMemo(() => {
     const p = parseLatLngPair(form.coordinates);
@@ -270,7 +452,7 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
           updates.region = regionParts;
         }
       }
-      return updates;
+      return updates.exportTo101evler ? with101Defaults(updates) : updates;
     });
   }
 
@@ -410,12 +592,35 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
   async function doSave(statusOverride?: string) {
     setMessage(null);
     setMessageType(null);
-    const featuresLines = form.featuresText
+    const preparedForm = form.exportTo101evler ? with101Defaults(form) : form;
+    if (preparedForm !== form) {
+      setForm(preparedForm);
+    }
+
+    if (preparedForm.exportTo101evler) {
+      const missing101: string[] = [];
+      if (!preparedForm.ext101_type_id) missing101.push("İlan Tipi");
+      if (!preparedForm.ext101_area_id) missing101.push("Bölge");
+      if (!Object.prototype.hasOwnProperty.call(CURRENCY_CODE_MAP, preparedForm.currency.toUpperCase())) {
+        missing101.push("101evler para birimi kodu");
+      }
+      if (!preparedForm.price || Number(preparedForm.price) <= 0) missing101.push("Fiyat");
+
+      if (missing101.length > 0) {
+        setMessage(`101evler'e gönderim için eksik/uyumsuz alanlar: ${missing101.join(", ")}. Lütfen 101evler adımını kontrol edin.`);
+        setMessageType("error");
+        setWizardStep(missing101.includes("101evler para birimi kodu") || missing101.includes("Fiyat") ? 0 : 5);
+        return;
+      }
+    }
+
+    const f = preparedForm;
+    const featuresLines = f.featuresText
       .split("\n")
       .map((s) => s.trim())
       .filter(Boolean);
 
-    const parsedCoords = parseLatLngPair(form.coordinates);
+    const parsedCoords = parseLatLngPair(f.coordinates);
     if (!parsedCoords || !parsedCoords.lat || !parsedCoords.lng) {
       setMessage("Lütfen haritadan bir konum seçin veya koordinat girin");
       setMessageType("error");
@@ -423,7 +628,7 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
     }
 
     const normGallery = normalizeGalleryForSave(gallery);
-    let coverOut = form.coverImage.trim();
+    let coverOut = f.coverImage.trim();
     if (!coverOut && normGallery.length > 0) {
       const primary = normGallery.find((g) => g.isPrimary) ?? normGallery[0];
       coverOut = primary.url;
@@ -431,65 +636,77 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
 
     const payload: ListingSavePayload = {
       id: listing?.id,
-      listingId: form.listingId,
-      title: form.title,
-      kind: form.kind,
-      propertyType: form.propertyType,
-      city: form.city,
-      region: form.region,
-      neighborhood: form.neighborhood,
-      fullAddress: form.fullAddress,
-      price: Number(form.price) || 0,
-      currency: form.currency,
-      shortDescription: form.shortDescription,
-      longDescription: form.longDescription,
+      listingId: f.listingId,
+      title: f.title,
+      kind: f.kind,
+      propertyType: f.propertyType,
+      city: f.city,
+      region: f.region,
+      neighborhood: f.neighborhood,
+      fullAddress: f.fullAddress,
+      price: Number(f.price) || 0,
+      currency: f.currency,
+      shortDescription: f.shortDescription,
+      longDescription: f.longDescription,
       coverImage: coverOut,
-      bedrooms: form.bedrooms,
-      bathrooms: form.bathrooms,
-      areaM2: form.areaM2,
-      plotAreaM2: form.plotAreaM2,
-      floor: form.floor,
-      buildingAge: form.buildingAge,
-      livingRooms: form.livingRooms,
-      hasPool: form.hasPool,
-      hasGarden: form.hasGarden,
-      hasFireplace: form.hasFireplace,
-      hasParking: form.hasParking,
-      furnished: form.furnished,
-      seaView: form.seaView,
+      bedrooms: f.bedrooms,
+      bathrooms: f.bathrooms,
+      areaM2: f.areaM2,
+      plotAreaM2: f.plotAreaM2,
+      floor: f.floor,
+      buildingAge: f.buildingAge,
+      livingRooms: f.livingRooms,
+      hasPool: f.hasPool,
+      hasGarden: f.hasGarden,
+      hasFireplace: f.hasFireplace,
+      hasParking: f.hasParking,
+      furnished: f.furnished,
+      seaView: f.seaView,
       detailFields: listing?.detailFields ?? "{}",
       features: JSON.stringify(featuresLines),
-      nearbyPlaces: form.nearbyText || "[]",
-      nearbyEnabled: form.nearbyEnabled,
-      nearbyPoiCategoriesJson: serializeNearbyPoiCategoriesJson(form.poiCategories) ?? "",
-      badgeFeatured: form.badgeFeatured,
-      badgeExclusive: form.badgeExclusive,
-      badgeVirtualTour: form.badgeVirtualTour,
-      badgeVideo: form.badgeVideo,
-      badgeNew: form.badgeNew,
-      badgePriceDrop: form.badgePriceDrop,
-      virtualTourUrl: form.virtualTourUrl,
-      virtualTourEnabled: form.virtualTourEnabled,
-      videoUrl: form.videoUrl,
-      videoEnabled: form.videoEnabled,
+      nearbyPlaces: f.nearbyText || "[]",
+      nearbyEnabled: f.nearbyEnabled,
+      nearbyPoiCategoriesJson: serializeNearbyPoiCategoriesJson(f.poiCategories) ?? "",
+      badgeFeatured: f.badgeFeatured,
+      badgeExclusive: f.badgeExclusive,
+      badgeVirtualTour: f.badgeVirtualTour,
+      badgeVideo: f.badgeVideo,
+      badgeNew: f.badgeNew,
+      badgePriceDrop: f.badgePriceDrop,
+      virtualTourUrl: f.virtualTourUrl,
+      virtualTourEnabled: f.virtualTourEnabled,
+      videoUrl: f.videoUrl,
+      videoEnabled: f.videoEnabled,
       lat: parsedCoords.lat,
       lng: parsedCoords.lng,
-      mapEnabled: form.mapEnabled,
-      consultantName: form.consultantName,
-      consultantPhone: form.consultantPhone,
-      consultantWhatsapp: form.consultantWhatsapp,
-      consultantEmail: form.consultantEmail,
-      consultantOffice: form.consultantOffice,
-      consultantPhoto: form.consultantPhoto,
-      consultantOfficeLogo: form.consultantOfficeLogo,
-      publishStatus: statusOverride ?? form.publishStatus,
-      statsShowViews: form.statsShowViews,
-      statsShowFavs: form.statsShowFavs,
-      statsShowRating: form.statsShowRating,
-      rating: form.rating,
-      favoritesCount: form.favoritesCount,
-      translations: form.translations,
+      mapEnabled: f.mapEnabled,
+      consultantName: f.consultantName,
+      consultantPhone: f.consultantPhone,
+      consultantWhatsapp: f.consultantWhatsapp,
+      consultantEmail: f.consultantEmail,
+      consultantOffice: f.consultantOffice,
+      consultantPhoto: f.consultantPhoto,
+      consultantOfficeLogo: f.consultantOfficeLogo,
+      publishStatus: statusOverride ?? f.publishStatus,
+      statsShowViews: f.statsShowViews,
+      statsShowFavs: f.statsShowFavs,
+      statsShowRating: f.statsShowRating,
+      rating: f.rating,
+      favoritesCount: f.favoritesCount,
+      translations: f.translations,
       gallery: normGallery,
+      exportTo101evler: f.exportTo101evler,
+      ext101evler: {
+        type_id: f.ext101_type_id ? Number(f.ext101_type_id) : null,
+        area_id: f.ext101_area_id ? Number(f.ext101_area_id) : null,
+        title_type_id: f.ext101_title_type_id ? Number(f.ext101_title_type_id) : null,
+        room_count_id: f.ext101_room_count_id ? Number(f.ext101_room_count_id) : null,
+        build_age_id: f.ext101_build_age_id ? Number(f.ext101_build_age_id) : null,
+        furnishing_id: f.ext101_furnishing_id ? Number(f.ext101_furnishing_id) : null,
+        billing_cycle_id: f.ext101_billing_cycle_id ? Number(f.ext101_billing_cycle_id) : null,
+        price_for: (f.ext101_price_for === "U" ? "U" : "T") as "T" | "U",
+        reference_no: f.ext101_reference_no?.trim() || null,
+      },
     };
 
     try {
@@ -528,6 +745,7 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
     { icon: "home" as AdminIconName, label: "Özellikler" },
     { icon: "photo_library" as AdminIconName, label: "Medya" },
     { icon: "person" as AdminIconName, label: "Danışman & Yayın" },
+    { icon: "settings" as AdminIconName, label: "101evler" },
   ];
 
   return (
@@ -683,7 +901,15 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
                   value={form.city}
                   onChange={(e) => {
                     const newCity = e.target.value;
-                    setForm((f) => ({ ...f, city: newCity, region: "" }));
+                    setForm((f) => {
+                      const next = { ...f, city: newCity, region: "" };
+                      if (!next.exportTo101evler) return next;
+                      return {
+                        ...next,
+                        ext101_area_city: infer101AreaCity(newCity),
+                        ext101_area_id: "",
+                      };
+                    });
                   }}
                 >
                   {kktcCities.map((c) => (
@@ -697,7 +923,18 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
                   <select
                     className={LOCATION_SELECT_CLASS}
                     value={form.region}
-                    onChange={(e) => set("region", e.target.value)}
+                    onChange={(e) => {
+                      const newRegion = e.target.value;
+                      setForm((f) => {
+                        const next = { ...f, region: newRegion };
+                        if (!next.exportTo101evler) return next;
+                        return {
+                          ...next,
+                          ext101_area_city: infer101AreaCity(next.city),
+                          ext101_area_id: infer101AreaId(next.city, newRegion),
+                        };
+                      });
+                    }}
                   >
                     <option value="">Seçiniz</option>
                     {kktcRegions[form.city].map((r) => (
@@ -709,7 +946,18 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
                     className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                     placeholder="Örn: Esentepe, Koru Mevkii"
                     value={form.region}
-                    onChange={(e) => set("region", e.target.value)}
+                    onChange={(e) => {
+                      const newRegion = e.target.value;
+                      setForm((f) => {
+                        const next = { ...f, region: newRegion };
+                        if (!next.exportTo101evler) return next;
+                        return {
+                          ...next,
+                          ext101_area_city: infer101AreaCity(next.city),
+                          ext101_area_id: infer101AreaId(next.city, newRegion),
+                        };
+                      });
+                    }}
                   />
                 )}
                 <span className="mt-1 block text-xs text-zinc-400">Şehir şeçtikten sonra bölgeyi listeden seçin veya yazın</span>
@@ -862,7 +1110,7 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
                       if (!url) return null;
                       return (
                         <li key={`${url}-${idx}`} className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 shadow-sm">
-                          <div className="relative aspect-[4/3] bg-zinc-200">
+                          <div className="relative aspect-4/3 bg-zinc-200">
                             <Image src={url} alt="" fill className="object-cover" sizes="(max-width:640px) 50vw, 25vw" unoptimized />
                             {g.isPrimary && (
                               <span className="absolute left-2 top-2 rounded bg-emerald-600 px-2 py-0.5 text-xs font-bold text-white">Kapak</span>
@@ -1090,6 +1338,205 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
             </section>
           ) : null}
         </>
+      )}
+
+      {/* STEP 5: 101evler XML Yayını */}
+      {wizardStep === 5 && (
+        <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-bold text-zinc-800">101evler XML Yayını</h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            Bu ilanı 101evler.com üzerinde yayınlamak için aşağıdaki bilgileri eksiksiz doldurun.
+            <code>type_id</code> ve <code>area_id</code> zorunludur, eksikse ilan feed&apos;e dahil edilmez.
+          </p>
+
+          <label className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/50 px-4 py-3 text-sm font-medium">
+            <input
+              type="checkbox"
+              checked={form.exportTo101evler}
+              onChange={(e) => setExportTo101evler(e.target.checked)}
+              className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
+            />
+            <span className="font-semibold text-emerald-800">Bu ilanı 101evler&apos;e gönder</span>
+          </label>
+
+          <fieldset disabled={!form.exportTo101evler} className={form.exportTo101evler ? "" : "opacity-60"}>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm">
+              <p className="text-zinc-600">
+                Sistem; emlak tipi, şehir/bölge, oda sayısı, bina yaşı ve eşya durumundan 101evler ID&apos;lerini otomatik önerir.
+              </p>
+              <button
+                type="button"
+                onClick={refresh101Defaults}
+                className="rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50"
+              >
+                Bilgilerden otomatik doldur
+              </button>
+            </div>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <label className="block text-sm font-medium text-zinc-700">
+                İlan Tipi (type_id) *
+                <select
+                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                  value={form.ext101_type_id}
+                  onChange={(e) => set("ext101_type_id", e.target.value)}
+                >
+                  <option value="">— Seçiniz —</option>
+                  {TYPE_ID_OPTIONS.map((o) => (
+                    <option key={o.id} value={o.id}>{o.id} — {o.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block text-sm font-medium text-zinc-700">
+                Şehir (area filtresi)
+                <select
+                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                  value={form.ext101_area_city}
+                  onChange={(e) => set("ext101_area_city", e.target.value)}
+                >
+                  <option value="">— Tümü —</option>
+                  {Object.keys(AREA_ID_OPTIONS).map((city) => (
+                    <option key={city} value={city}>{city}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block text-sm font-medium text-zinc-700 sm:col-span-2">
+                Bölge (area_id) *
+                <select
+                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                  value={form.ext101_area_id}
+                  onChange={(e) => set("ext101_area_id", e.target.value)}
+                >
+                  <option value="">— Seçiniz —</option>
+                  {(form.ext101_area_city
+                    ? AREA_ID_OPTIONS[form.ext101_area_city] ?? []
+                    : Object.entries(AREA_ID_OPTIONS).flatMap(([c, opts]) => opts.map((o) => ({ ...o, label: `${c} — ${o.label}` })))
+                  ).map((o) => (
+                    <option key={o.id} value={o.id}>{o.id} — {o.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block text-sm font-medium text-zinc-700">
+                Koçan Türü (title_type_id)
+                <select
+                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                  value={form.ext101_title_type_id}
+                  onChange={(e) => set("ext101_title_type_id", e.target.value)}
+                >
+                  <option value="">—</option>
+                  {TITLE_TYPE_OPTIONS.map((o) => (
+                    <option key={o.id} value={o.id}>{o.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block text-sm font-medium text-zinc-700">
+                Oda Sayısı (room_count_id)
+                <select
+                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                  value={form.ext101_room_count_id}
+                  onChange={(e) => set("ext101_room_count_id", e.target.value)}
+                >
+                  <option value="">—</option>
+                  {ROOM_COUNT_OPTIONS.map((o) => (
+                    <option key={o.id} value={o.id}>{o.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block text-sm font-medium text-zinc-700">
+                Bina Yaşı (build_age_id)
+                <select
+                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                  value={form.ext101_build_age_id}
+                  onChange={(e) => set("ext101_build_age_id", e.target.value)}
+                >
+                  <option value="">—</option>
+                  {BUILD_AGE_OPTIONS.map((o) => (
+                    <option key={o.id} value={o.id}>{o.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block text-sm font-medium text-zinc-700">
+                Eşya Durumu (furnishing_id)
+                <select
+                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                  value={form.ext101_furnishing_id}
+                  onChange={(e) => set("ext101_furnishing_id", e.target.value)}
+                >
+                  <option value="">—</option>
+                  {FURNISHING_OPTIONS.map((o) => (
+                    <option key={o.id} value={o.id}>{o.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              {(form.kind === "KIRALIK" || form.kind === "GUNLUK_KIRALIK") && (
+                <label className="block text-sm font-medium text-zinc-700">
+                  Kira Ödeme Dönemi (billing_cycle_id)
+                  <select
+                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                    value={form.ext101_billing_cycle_id}
+                    onChange={(e) => set("ext101_billing_cycle_id", e.target.value)}
+                  >
+                    <option value="">—</option>
+                    {BILLING_CYCLE_OPTIONS.map((o) => (
+                      <option key={o.id} value={o.id}>{o.label}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
+              <label className="block text-sm font-medium text-zinc-700">
+                Fiyat Tipi (price_for)
+                <div className="mt-1 flex gap-3">
+                  <label className="flex items-center gap-1.5 text-sm">
+                    <input
+                      type="radio"
+                      name="ext101_price_for"
+                      value="T"
+                      checked={form.ext101_price_for === "T"}
+                      onChange={() => set("ext101_price_for", "T")}
+                    />
+                    Toplam
+                  </label>
+                  <label className="flex items-center gap-1.5 text-sm">
+                    <input
+                      type="radio"
+                      name="ext101_price_for"
+                      value="U"
+                      checked={form.ext101_price_for === "U"}
+                      onChange={() => set("ext101_price_for", "U")}
+                    />
+                    Birim (m²)
+                  </label>
+                </div>
+              </label>
+
+              <label className="block text-sm font-medium text-zinc-700">
+                Referans No (reference_no)
+                <input
+                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                  placeholder="Boş bırakılırsa İlan No kullanılır"
+                  value={form.ext101_reference_no}
+                  onChange={(e) => set("ext101_reference_no", e.target.value)}
+                />
+              </label>
+            </div>
+          </fieldset>
+
+          <div className="mt-6 rounded-xl bg-amber-50 border border-amber-200 p-4 text-xs text-amber-800">
+            <p className="font-semibold">Not</p>
+            <ul className="mt-1 list-disc pl-5 space-y-1">
+              <li>İlan 101evler&apos;e gitmesi için <strong>Yayın Durumu = Yayında</strong> olmalı.</li>
+              <li>Para birimi sadece TRY ve USD desteklenir; EUR/GBP ilanlar feed&apos;e girmez (101evler kur kodları teyit edildiğinde eklenecek).</li>
+              <li>type_id veya area_id boş olan ilanlar feed&apos;den otomatik düşer.</li>
+            </ul>
+          </div>
+        </section>
       )}
 
       {/* Prev/Next */}
