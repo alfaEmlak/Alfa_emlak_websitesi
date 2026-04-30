@@ -56,7 +56,8 @@
     "listProperty": "List Property",
     "menu": "Menu",
     "privacy": "Privacy Policy",
-    "allRightsReserved": "All rights reserved"
+    "allRightsReserved": "All rights reserved",
+    "career": "Careers"
   },
   "HomePage": {
     "heroTitle": "Cyprus's Most",
@@ -162,14 +163,14 @@
       "livingRooms": "Living Rooms"
     },
     "consultantLabels": {
-      "consultantName": "Full Name",
+      "consultantName": "Consultant Name",
       "consultantPhone": "Phone",
       "consultantWhatsapp": "WhatsApp",
       "consultantEmail": "Email",
-      "consultantOffice": "Office / Company",
-      "consultantPhoto": "Photo (URL)",
+      "consultantOffice": "Office Name",
+      "consultantPhoto": "Consultant Photo (URL)",
       "consultantOfficeLogo": "Office Logo (URL)",
-      "ratingPlaceholder": "Rating (0-5)",
+      "ratingPlaceholder": "Rating (e.g. 4.8)",
       "favPlaceholder": "Favorites count"
     },
     "steps": {
@@ -219,26 +220,6 @@
     "multilingual": {
       "title": "Multilingual Content",
       "subtitle": "You can manually edit titles and descriptions for other languages here."
-    },
-    "propertyLabels": {
-      "bedrooms": "Bedrooms",
-      "bathrooms": "Bathrooms",
-      "areaM2": "Area (m²)",
-      "plotAreaM2": "Plot Area (m²)",
-      "floor": "Floor",
-      "buildingAge": "Building Age",
-      "livingRooms": "Living Rooms"
-    },
-    "consultantLabels": {
-      "consultantName": "Consultant Name",
-      "consultantPhone": "Phone",
-      "consultantWhatsapp": "WhatsApp",
-      "consultantEmail": "Email",
-      "consultantOffice": "Office Name",
-      "consultantPhoto": "Consultant Photo (URL)",
-      "consultantOfficeLogo": "Office Logo (URL)",
-      "ratingPlaceholder": "Rating (e.g. 4.8)",
-      "favPlaceholder": "Favorites count"
     },
     "sections": {
       "basicInfo": "Listing info",
@@ -379,5 +360,106 @@
       "GUNLUK_KIRALIK": "Daily rent",
       "PROJE": "Project"
     }
+  },
+  "Career": {
+    "title": "Careers at Alfa Emlak",
+    "subtitle": "Apply to join our team.",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "email": "Email",
+    "phone": "Phone",
+    "message": "Short Message",
+    "messagePlaceholder": "Tell us briefly about yourself (optional)",
+    "cv": "Resume (CV)",
+    "cvHint": "PDF, DOC or DOCX • max 5 MB",
+    "uploadCv": "Upload CV",
+    "changeCv": "Change CV",
+    "uploading": "Uploading...",
+    "submit": "Submit Application",
+    "submitting": "Submitting...",
+    "cancel": "Cancel",
+    "close": "Close",
+    "success": "Application received. We will get back to you soon.",
+    "errors": {
+      "invalidFile": "Only PDF or Word (DOC/DOCX) files are accepted.",
+      "fileTooLarge": "File must be smaller than 5 MB.",
+      "uploadFailed": "Upload failed.",
+      "submitFailed": "Submission failed."
+    }
+  },
+  "HeroSearch": {
+    "tabs": {
+      "sale": "For Sale",
+      "project": "Projects",
+      "rent": "For Rent",
+      "daily": "Daily"
+    },
+    "category": "Category",
+    "propertyType": "Property Type",
+    "city": "City",
+    "region": "Region",
+    "selectCategory": "Select Category",
+    "catKonut": "Residential",
+    "catArsa": "Land",
+    "catTicari": "Commercial",
+    "catProje": "Project",
+    "allSubTypes": "All Types",
+    "selectCategoryFirst": "Select category first",
+    "subTypes": {
+      "villa": "Villa",
+      "daire": "Apartment",
+      "ikizVilla": "Twin Villa",
+      "penthouse": "Penthouse",
+      "residence": "Residence",
+      "bungalow": "Bungalow",
+      "mustakilEv": "Detached House",
+      "kompleBina": "Whole Building",
+      "devremulk": "Timeshare",
+      "metrukBina": "Derelict Building",
+      "yarimInsaat": "Unfinished Construction",
+      "konutImarli": "Residential Zoned",
+      "ticariImarli": "Commercial Zoned",
+      "tarla": "Field",
+      "bagBahce": "Vineyard & Garden",
+      "sanayiArsasi": "Industrial Land",
+      "ofis": "Office",
+      "dukkan": "Shop",
+      "magaza": "Store",
+      "otel": "Hotel",
+      "restoran": "Restaurant",
+      "depo": "Warehouse",
+      "fabrika": "Factory",
+      "devamEden": "Ongoing Projects",
+      "tamamlanmis": "Completed Projects"
+    },
+    "selectCity": "Select city",
+    "allRegions": "All Regions",
+    "submit": "View Listings",
+    "advancedShow": "Advanced Filters",
+    "advancedHide": "Hide Advanced Filters",
+    "priceRange": "Price Range",
+    "min": "Min",
+    "max": "Max",
+    "roomCount": "Bedrooms",
+    "heatingFurniture": "Heating & Furniture",
+    "heatingSelect": "Select heating",
+    "heating": {
+      "ac": "AC",
+      "central": "Central",
+      "floor": "Underfloor",
+      "stove": "Stove",
+      "combi": "Combi"
+    },
+    "furnished": "Furnished",
+    "featuresLabel": "Features",
+    "features": {
+      "balcony": "Balcony",
+      "parking": "Parking",
+      "elevator": "Elevator",
+      "security": "Security",
+      "pool": "Pool"
+    },
+    "areaRange": "Area Range (m²)",
+    "ariaListingType": "Listing type"
   }
 }

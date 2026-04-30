@@ -29,21 +29,60 @@ function toStringArray(input: unknown): string[] {
 }
 
 type Ext101evler = {
-  type_id?: number | string;
-  area_id?: number | string;
-  title_type_id?: number | string;
-  room_count_id?: number | string;
-  build_age_id?: number | string;
-  furnishing_id?: number | string;
-  billing_cycle_id?: number | string;
-  price_for?: "T" | "U";
-  reference_no?: string;
+  type_id?: number | string | null;
+  area_id?: number | string | null;
+  title_type_id?: number | string | null;
+  room_count_id?: number | string | null;
+  build_age_id?: number | string | null;
+  furnishing_id?: number | string | null;
+  billing_cycle_id?: number | string | null;
+  price_for?: "T" | "U" | null;
+  reference_no?: string | null;
 };
 
 type FeedListingRow = Record<string, unknown> & {
   ext_101evler?: Ext101evler | string | null;
+  type_id_101?: number | null;
+  area_id_101?: number | null;
+  title_type_id_101?: number | null;
+  room_count_id_101?: number | null;
+  build_age_id_101?: number | null;
+  furnishing_id_101?: number | null;
+  billing_cycle_id_101?: number | null;
+  price_for_101?: string | null;
+  reference_no_101?: string | null;
   listing_images?: Array<{ url: string; sort_order?: number; sortOrder?: number }> | null;
   images?: Array<{ url: string; sort_order?: number; sortOrder?: number }> | null;
+};
+
+type NormalizedFeedListing = {
+  id?: string | number;
+  listingId?: string | number;
+  kind?: string | null;
+  currency?: string | null;
+  price?: string | number | null;
+  updatedAt?: string | Date | null;
+  createdAt?: string | Date | null;
+  title?: string | null;
+  longDescription?: string | null;
+  shortDescription?: string | null;
+  badgeNew?: boolean | null;
+  bedrooms?: string | number | null;
+  bathrooms?: string | number | null;
+  floor?: string | number | null;
+  areaM2?: string | number | null;
+  plotAreaM2?: string | number | null;
+  mapEnabled?: boolean | null;
+  lat?: string | number | null;
+  lng?: string | number | null;
+  videoUrl?: string | null;
+  virtualTourUrl?: string | null;
+  hasPool?: boolean | null;
+  hasGarden?: boolean | null;
+  hasFireplace?: boolean | null;
+  hasParking?: boolean | null;
+  seaView?: boolean | null;
+  furnished?: boolean | null;
 };
 
 export type RealtorIds = {
@@ -194,6 +233,31 @@ function parseExt101evler(input: FeedListingRow["ext_101evler"]): Ext101evler {
   return input;
 }
 
+/**
+ * listings tablosundaki yeni `*_101` kolonlarını öncelikli alır,
+ * eski `ext_101evler` JSONB değerlerini geri-uyumluluk için fallback olarak okur.
+ */
+function resolve101Mapping(row: FeedListingRow): Ext101evler {
+  const fromJson = parseExt101evler(row.ext_101evler);
+  const pick = <T,>(primary: T | null | undefined, fallback: T | null | undefined): T | null | undefined =>
+    primary ?? fallback;
+
+  return {
+    type_id: pick(row.type_id_101 ?? null, fromJson.type_id ?? null),
+    area_id: pick(row.area_id_101 ?? null, fromJson.area_id ?? null),
+    title_type_id: pick(row.title_type_id_101 ?? null, fromJson.title_type_id ?? null),
+    room_count_id: pick(row.room_count_id_101 ?? null, fromJson.room_count_id ?? null),
+    build_age_id: pick(row.build_age_id_101 ?? null, fromJson.build_age_id ?? null),
+    furnishing_id: pick(row.furnishing_id_101 ?? null, fromJson.furnishing_id ?? null),
+    billing_cycle_id: pick(row.billing_cycle_id_101 ?? null, fromJson.billing_cycle_id ?? null),
+    price_for: (pick(row.price_for_101 as "T" | "U" | null | undefined, fromJson.price_for ?? null) ?? null) as
+      | "T"
+      | "U"
+      | null,
+    reference_no: pick(row.reference_no_101 ?? null, fromJson.reference_no ?? null) ?? null,
+  };
+}
+
 /* ────────── <ad> üretimi ────────── */
 
 export type FeedSkipReason =
@@ -212,10 +276,11 @@ export function buildAdElement(
   realtors: RealtorIds,
   opts: FeedBuildOptions,
 ): AdBuildResult {
-  const l = normalizeListing(rawListing);
-  const ext = parseExt101evler(rawListing.ext_101evler);
+  const normalized = normalizeListing(rawListing);
+  if (!normalized) return { ok: false, reason: "missing_price" };
+  const l = normalized as NormalizedFeedListing;
+  const ext = resolve101Mapping(rawListing);
 
-  // Zorunlu alan kontrolleri — eksikse atla
   if (ext.type_id === undefined || ext.type_id === null || ext.type_id === "") {
     return { ok: false, reason: "missing_type_id" };
   }

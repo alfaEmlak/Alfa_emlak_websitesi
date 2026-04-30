@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Alfa Emlak — Hangiev örnek katalog feed'i (tek ilan).
+  Bu XML şu an Hangiev'in resmî şemasına bağlı değildir; mevcut tüm
+  bilgi text/CDATA olarak gönderilir. Hangiev kendi ID listesini
+  paylaştıktan sonra /api/feeds/hangiev.xml?token=... endpoint'i
+  bu ID'leri ekleyerek prod beslemesini üretecektir.
+-->
+<catalog generated_at="2026-04-30T07:14:37.931Z" source="Alfa Emlak">
+  <listing>
+    <external_id>c6a16bbd-ca02-4ea3-88f1-acec45359abf</external_id>
+    <reference_no>AE-2026-96331</reference_no>
+    <last_update>2026-04-29 23:03:21</last_update>
+    <created_at>2026-04-14 21:49:00</created_at>
+    <publish_status>PUBLISHED</publish_status>
+    <kind>SALE</kind>
+    <kind_label_tr>SATILIK</kind_label_tr>
+    <property_type>Konut</property_type>
+    <city>guzelyurt</city>
+    <region>guzelyurt-merkez</region>
+    <full_address>Administrative Building, A, ODTÜ KKK, Kalkanlı, Güzelyurt Belediyesi, Güzelyurt ilçesi, Kuzey Kıbrıs, 99738, Kıbrıs</full_address>
+    <title_tr><![CDATA[Satılık Üniversite]]></title_tr>
+    <price>100000000</price>
+    <currency>TRY</currency>
+    <bedrooms>5</bedrooms>
+    <bathrooms>2</bathrooms>
+    <living_rooms>5</living_rooms>
+    <floor>50</floor>
+    <area_m2>3000</area_m2>
+    <plot_area_m2>500</plot_area_m2>
+    <building_age>8</building_age>
+    <furnished>true</furnished>
+    <has_pool>true</has_pool>
+    <has_garden>true</has_garden>
+    <has_fireplace>true</has_fireplace>
+    <has_parking>true</has_parking>
+    <sea_view>true</sea_view>
+    <latitude>35.249211</latitude>
+    <longitude>33.023722</longitude>
+    <video_url>https://youtu.be/WEEhgxTuzpw?si=UG5T3lvUCkoFnooY</video_url>
+    <virtual_tour_url>https://youtu.be/WEEhgxTuzpw?si=UG5T3lvUCkoFnooY</virtual_tour_url>
+    <consultant_name>Yener Er</consultant_name>
+    <consultant_phone>5338794875</consultant_phone>
+    <consultant_whatsapp>5338794875</consultant_whatsapp>
+    <consultant_email>yenerer52@gmail.com</consultant_email>
+    <detail_url>https://www.alfaemlak.com/tr/ilan/AE-2026-96331</detail_url>
+    <images>
+      <image>
+        <url>https://edioisowmuhhipefyoqq.supabase.co/storage/v1/object/public/uploads/1776204286852-yxnzw5.png</url>
+        <order>1</order>
+        <is_primary>true</is_primary>
+      </image>
+      <image>
+        <url>https://edioisowmuhhipefyoqq.supabase.co/storage/v1/object/public/uploads/1776204287659-d5dv6.png</url>
+        <order>2</order>
+      </image>
+      <image>
+        <url>https://edioisowmuhhipefyoqq.supabase.co/storage/v1/object/public/uploads/1776204288507-bxf6qf.png</url>
+        <order>3</order>
+      </image>
+    </images>
+  </listing>
+</catalog>

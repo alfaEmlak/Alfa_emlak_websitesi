@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useRef, useState } from "react";
 import type { MenuTopItem } from "@/lib/default-menu";
 import { LanguageSwitcher } from "@/components/site/LanguageSwitcher";
+import { CareerModal } from "@/components/site/CareerModal";
 import { useTranslations } from "next-intl";
 
 type ActiveNav = "satilik" | "proje" | "kiralik" | "hakkimizda" | "ilanlar" | null;
@@ -81,6 +82,7 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
   const tur = searchParams.get("tur");
   const active = computeActive(pathname, tur);
   const [open, setOpen] = useState(false);
+  const [careerOpen, setCareerOpen] = useState(false);
   const [desktopOpenId, setDesktopOpenId] = useState<string | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isHome = pathname === "/";
@@ -174,6 +176,17 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
               }}>
                 {t("aboutUs")}
               </Link>
+              <button
+                type="button"
+                onClick={() => setCareerOpen(true)}
+                onMouseEnter={() => {
+                  cancelDesktopClose();
+                  setDesktopOpenId(null);
+                }}
+                className={navItemClass(false) + " bg-transparent"}
+              >
+                {t("career")}
+              </button>
               </div>
               {desktopActiveMega ? (
                 <MegaPanel item={desktopActiveMega} onMouseEnter={cancelDesktopClose} onMouseLeave={scheduleDesktopClose} />
@@ -264,6 +277,19 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
                 </Link>
               </li>
               <li>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between rounded-xl border border-transparent px-3 py-3 text-left text-primary transition hover:border-slate-200 hover:bg-slate-50"
+                  onClick={() => {
+                    setOpen(false);
+                    setCareerOpen(true);
+                  }}
+                >
+                  <span>{t("career")}</span>
+                  <span className="material-symbols-outlined text-base text-primary/35">chevron_right</span>
+                </button>
+              </li>
+              <li>
                 <Link
                   href="/iletisim"
                   className="mt-1 block rounded-xl bg-secondary px-4 py-3 text-center font-headline text-xs font-extrabold uppercase tracking-[0.16em] text-white shadow-lg shadow-secondary/25"
@@ -299,6 +325,7 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
         ) : null}
       </header>
       {!isHome ? <div className="h-[var(--header-offset)] shrink-0" aria-hidden /> : null}
+      <CareerModal open={careerOpen} onClose={() => setCareerOpen(false)} />
     </>
   );
 }

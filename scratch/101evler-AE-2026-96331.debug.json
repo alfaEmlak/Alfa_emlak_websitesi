@@ -1,0 +1,30 @@
+{
+  "listing_id": "AE-2026-96331",
+  "total": 1,
+  "included": 1,
+  "skipped": [],
+  "realtors": {},
+  "siteUrl": "http://localhost:3000",
+  "meta": {
+    "publish_status": "PUBLISHED",
+    "export_to_101evler": true,
+    "ext_101evler": {
+      "area_id": 70,
+      "type_id": 2,
+      "price_for": "T",
+      "build_age_id": 5,
+      "reference_no": "AE-2026-96331",
+      "furnishing_id": 3,
+      "room_count_id": 11,
+      "title_type_id": 2,
+      "billing_cycle_id": null
+    },
+    "type_id_101": 2,
+    "area_id_101": 70,
+    "currency": "TRY",
+    "kind": "SATILIK",
+    "price": 100000000,
+    "updated_at": "2026-04-29T23:03:21.2181+00:00",
+    "image_count": 3
+  }
+}

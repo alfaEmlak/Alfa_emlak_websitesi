@@ -56,7 +56,8 @@
     "listProperty": "Разместить объект",
     "menu": "Меню",
     "privacy": "Политика конфиденциальности",
-    "allRightsReserved": "Все права защищены"
+    "allRightsReserved": "Все права защищены",
+    "career": "Карьера"
   },
   "HomePage": {
     "heroTitle": "Самый",
@@ -154,23 +155,23 @@
   "Wizard": {
     "propertyLabels": {
       "bedrooms": "Спальни",
-      "bathrooms": "Ванные",
+      "bathrooms": "Ванные комнаты",
       "areaM2": "Площадь (м²)",
       "plotAreaM2": "Площадь участка (м²)",
       "floor": "Этаж",
       "buildingAge": "Возраст здания",
-      "livingRooms": "Количество гостиных"
+      "livingRooms": "Гостиные"
     },
     "consultantLabels": {
-      "consultantName": "Имя Фамилия",
+      "consultantName": "Имя консультанта",
       "consultantPhone": "Телефон",
       "consultantWhatsapp": "WhatsApp",
-      "consultantEmail": "Эл. почта",
-      "consultantOffice": "Офис / Компания",
-      "consultantPhoto": "Фото (URL)",
+      "consultantEmail": "Электронная почта",
+      "consultantOffice": "Название офиса",
+      "consultantPhoto": "Фото консультанта (URL)",
       "consultantOfficeLogo": "Логотип офиса (URL)",
-      "ratingPlaceholder": "Рейтинг (0-5)",
-      "favPlaceholder": "Число избранных"
+      "ratingPlaceholder": "Рейтинг (напр., 4.8)",
+      "favPlaceholder": "Количество в избранном"
     },
     "steps": {
       "basic": "Основная информация",
@@ -219,26 +220,6 @@
     "multilingual": {
       "title": "Мультиязычный контент",
       "subtitle": "Здесь вы можете вручную отредактировать заголовки и описания для других языков."
-    },
-    "propertyLabels": {
-      "bedrooms": "Спальни",
-      "bathrooms": "Ванные комнаты",
-      "areaM2": "Площадь (м²)",
-      "plotAreaM2": "Площадь участка (м²)",
-      "floor": "Этаж",
-      "buildingAge": "Возраст здания",
-      "livingRooms": "Гостиные"
-    },
-    "consultantLabels": {
-      "consultantName": "Имя консультанта",
-      "consultantPhone": "Телефон",
-      "consultantWhatsapp": "WhatsApp",
-      "consultantEmail": "Электронная почта",
-      "consultantOffice": "Название офиса",
-      "consultantPhoto": "Фото консультанта (URL)",
-      "consultantOfficeLogo": "Логотип офиса (URL)",
-      "ratingPlaceholder": "Рейтинг (напр., 4.8)",
-      "favPlaceholder": "Количество в избранном"
     },
     "sections": {
       "basicInfo": "Информация об объявлении",
@@ -379,5 +360,106 @@
       "GUNLUK_KIRALIK": "Посуточно",
       "PROJE": "Проект"
     }
+  },
+  "Career": {
+    "title": "Карьера в Alfa Emlak",
+    "subtitle": "Подайте заявку, чтобы присоединиться к нашей команде.",
+    "firstName": "Имя",
+    "lastName": "Фамилия",
+    "email": "Эл. почта",
+    "phone": "Телефон",
+    "message": "Сообщение",
+    "messagePlaceholder": "Кратко расскажите о себе (по желанию)",
+    "cv": "Резюме (CV)",
+    "cvHint": "PDF, DOC или DOCX • максимум 5 МБ",
+    "uploadCv": "Загрузить CV",
+    "changeCv": "Заменить CV",
+    "uploading": "Загрузка...",
+    "submit": "Отправить заявку",
+    "submitting": "Отправка...",
+    "cancel": "Отмена",
+    "close": "Закрыть",
+    "success": "Заявка получена. Мы скоро свяжемся с вами.",
+    "errors": {
+      "invalidFile": "Принимаются только файлы PDF или Word (DOC/DOCX).",
+      "fileTooLarge": "Файл должен быть меньше 5 МБ.",
+      "uploadFailed": "Не удалось загрузить.",
+      "submitFailed": "Не удалось отправить."
+    }
+  },
+  "HeroSearch": {
+    "tabs": {
+      "sale": "Продажа",
+      "project": "Проекты",
+      "rent": "Аренда",
+      "daily": "Посуточно"
+    },
+    "category": "Категория",
+    "propertyType": "Тип недвижимости",
+    "city": "Город",
+    "region": "Район",
+    "selectCategory": "Выберите категорию",
+    "catKonut": "Жилая",
+    "catArsa": "Земля",
+    "catTicari": "Коммерческая",
+    "catProje": "Проект",
+    "allSubTypes": "Все типы",
+    "selectCategoryFirst": "Сначала выберите категорию",
+    "subTypes": {
+      "villa": "Вилла",
+      "daire": "Квартира",
+      "ikizVilla": "Двойная вилла",
+      "penthouse": "Пентхаус",
+      "residence": "Резиденция",
+      "bungalow": "Бунгало",
+      "mustakilEv": "Частный дом",
+      "kompleBina": "Целое здание",
+      "devremulk": "Таймшер",
+      "metrukBina": "Ветхое здание",
+      "yarimInsaat": "Незавершённое строительство",
+      "konutImarli": "Жилая застройка",
+      "ticariImarli": "Коммерческая застройка",
+      "tarla": "Поле",
+      "bagBahce": "Виноградник и сад",
+      "sanayiArsasi": "Промышленный участок",
+      "ofis": "Офис",
+      "dukkan": "Магазин",
+      "magaza": "Торговый центр",
+      "otel": "Отель",
+      "restoran": "Ресторан",
+      "depo": "Склад",
+      "fabrika": "Фабрика",
+      "devamEden": "Текущие проекты",
+      "tamamlanmis": "Завершённые проекты"
+    },
+    "selectCity": "Выберите город",
+    "allRegions": "Все районы",
+    "submit": "Смотреть объявления",
+    "advancedShow": "Расширенные фильтры",
+    "advancedHide": "Скрыть фильтры",
+    "priceRange": "Диапазон цен",
+    "min": "Мин",
+    "max": "Макс",
+    "roomCount": "Комнат",
+    "heatingFurniture": "Отопление и мебель",
+    "heatingSelect": "Выбрать отопление",
+    "heating": {
+      "ac": "Кондиционер",
+      "central": "Центральное",
+      "floor": "Тёплый пол",
+      "stove": "Печь",
+      "combi": "Газовый котёл"
+    },
+    "furnished": "С мебелью",
+    "featuresLabel": "Особенности",
+    "features": {
+      "balcony": "Балкон",
+      "parking": "Парковка",
+      "elevator": "Лифт",
+      "security": "Охрана",
+      "pool": "Бассейн"
+    },
+    "areaRange": "Диапазон площади (м²)",
+    "ariaListingType": "Тип объявления"
   }
 }

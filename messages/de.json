@@ -56,7 +56,8 @@
     "listProperty": "Immobilie inserieren",
     "menu": "Menü",
     "privacy": "Datenschutz",
-    "allRightsReserved": "Alle Rechte vorbehalten"
+    "allRightsReserved": "Alle Rechte vorbehalten",
+    "career": "Karriere"
   },
   "HomePage": {
     "heroTitle": "Zyperns",
@@ -158,19 +159,19 @@
       "areaM2": "Fläche (m²)",
       "plotAreaM2": "Grundstücksfläche (m²)",
       "floor": "Etage",
-      "buildingAge": "Baujahr / Alter",
+      "buildingAge": "Gebäudealter",
       "livingRooms": "Wohnzimmer"
     },
     "consultantLabels": {
-      "consultantName": "Name Nachname",
+      "consultantName": "Name des Beraters",
       "consultantPhone": "Telefon",
       "consultantWhatsapp": "WhatsApp",
       "consultantEmail": "E-Mail",
-      "consultantOffice": "Büro / Unternehmen",
-      "consultantPhoto": "Foto (URL)",
-      "consultantOfficeLogo": "Office Logo (URL)",
-      "ratingPlaceholder": "Bewertung (0-5)",
-      "favPlaceholder": "Anzahl Favoriten"
+      "consultantOffice": "Büroname",
+      "consultantPhoto": "Beraterfoto (URL)",
+      "consultantOfficeLogo": "Bürologo (URL)",
+      "ratingPlaceholder": "Bewertung (z. B. 4.8)",
+      "favPlaceholder": "Anzahl der Favoriten"
     },
     "steps": {
       "basic": "Basisinfo",
@@ -219,26 +220,6 @@
     "multilingual": {
       "title": "Mehrsprachiger Inhalt",
       "subtitle": "Hier können Sie Titel und Beschreibungen für andere Sprachen manuell bearbeiten."
-    },
-    "propertyLabels": {
-      "bedrooms": "Schlafzimmer",
-      "bathrooms": "Badezimmer",
-      "areaM2": "Fläche (m²)",
-      "plotAreaM2": "Grundstücksfläche (m²)",
-      "floor": "Etage",
-      "buildingAge": "Gebäudealter",
-      "livingRooms": "Wohnzimmer"
-    },
-    "consultantLabels": {
-      "consultantName": "Name des Beraters",
-      "consultantPhone": "Telefon",
-      "consultantWhatsapp": "WhatsApp",
-      "consultantEmail": "E-Mail",
-      "consultantOffice": "Büroname",
-      "consultantPhoto": "Beraterfoto (URL)",
-      "consultantOfficeLogo": "Bürologo (URL)",
-      "ratingPlaceholder": "Bewertung (z. B. 4.8)",
-      "favPlaceholder": "Anzahl der Favoriten"
     },
     "sections": {
       "basicInfo": "Anzeigeninfo",
@@ -379,5 +360,106 @@
       "GUNLUK_KIRALIK": "Tagesmiete",
       "PROJE": "Projekt"
     }
+  },
+  "Career": {
+    "title": "Karriere bei Alfa Emlak",
+    "subtitle": "Bewerben Sie sich und werden Sie Teil unseres Teams.",
+    "firstName": "Vorname",
+    "lastName": "Nachname",
+    "email": "E-Mail",
+    "phone": "Telefon",
+    "message": "Kurze Nachricht",
+    "messagePlaceholder": "Erzählen Sie kurz von sich (optional)",
+    "cv": "Lebenslauf (CV)",
+    "cvHint": "PDF, DOC oder DOCX • max. 5 MB",
+    "uploadCv": "CV hochladen",
+    "changeCv": "CV ändern",
+    "uploading": "Wird hochgeladen...",
+    "submit": "Bewerbung senden",
+    "submitting": "Wird gesendet...",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "success": "Bewerbung erhalten. Wir melden uns in Kürze.",
+    "errors": {
+      "invalidFile": "Nur PDF- oder Word-Dateien (DOC/DOCX) erlaubt.",
+      "fileTooLarge": "Datei darf max. 5 MB groß sein.",
+      "uploadFailed": "Upload fehlgeschlagen.",
+      "submitFailed": "Senden fehlgeschlagen."
+    }
+  },
+  "HeroSearch": {
+    "tabs": {
+      "sale": "Verkauf",
+      "project": "Projekte",
+      "rent": "Miete",
+      "daily": "Tagesmiete"
+    },
+    "category": "Kategorie",
+    "propertyType": "Immobilientyp",
+    "city": "Stadt",
+    "region": "Region",
+    "selectCategory": "Kategorie wählen",
+    "catKonut": "Wohnen",
+    "catArsa": "Grundstück",
+    "catTicari": "Gewerbe",
+    "catProje": "Projekt",
+    "allSubTypes": "Alle Typen",
+    "selectCategoryFirst": "Zuerst Kategorie wählen",
+    "subTypes": {
+      "villa": "Villa",
+      "daire": "Wohnung",
+      "ikizVilla": "Doppelhaushälfte",
+      "penthouse": "Penthouse",
+      "residence": "Residenz",
+      "bungalow": "Bungalow",
+      "mustakilEv": "Einfamilienhaus",
+      "kompleBina": "Ganzes Gebäude",
+      "devremulk": "Ferienwohnung",
+      "metrukBina": "Abrissgebäude",
+      "yarimInsaat": "Rohbau",
+      "konutImarli": "Wohnbauland",
+      "ticariImarli": "Gewerbebauland",
+      "tarla": "Ackerland",
+      "bagBahce": "Weinberg & Garten",
+      "sanayiArsasi": "Industriegrund",
+      "ofis": "Büro",
+      "dukkan": "Laden",
+      "magaza": "Geschäft",
+      "otel": "Hotel",
+      "restoran": "Restaurant",
+      "depo": "Lager",
+      "fabrika": "Fabrik",
+      "devamEden": "Laufende Projekte",
+      "tamamlanmis": "Abgeschlossene Projekte"
+    },
+    "selectCity": "Stadt wählen",
+    "allRegions": "Alle Regionen",
+    "submit": "Anzeigen ansehen",
+    "advancedShow": "Erweiterte Filter",
+    "advancedHide": "Filter ausblenden",
+    "priceRange": "Preisspanne",
+    "min": "Min",
+    "max": "Max",
+    "roomCount": "Zimmer",
+    "heatingFurniture": "Heizung & Möbel",
+    "heatingSelect": "Heizung wählen",
+    "heating": {
+      "ac": "Klima",
+      "central": "Zentral",
+      "floor": "Fußboden",
+      "stove": "Ofen",
+      "combi": "Kombi"
+    },
+    "furnished": "Möbliert",
+    "featuresLabel": "Ausstattung",
+    "features": {
+      "balcony": "Balkon",
+      "parking": "Parkplatz",
+      "elevator": "Aufzug",
+      "security": "Sicherheit",
+      "pool": "Pool"
+    },
+    "areaRange": "Flächenbereich (m²)",
+    "ariaListingType": "Anzeigentyp"
   }
 }

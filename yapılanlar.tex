@@ -1,0 +1,387 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[turkish]{babel}
+\usepackage{geometry}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+
+\geometry{left=2.2cm,right=2.2cm,top=2.2cm,bottom=2.2cm}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue
+}
+\setlist[itemize]{leftmargin=1.2cm,itemsep=0.25em}
+\setlist[enumerate]{leftmargin=1.2cm,itemsep=0.3em}
+\titleformat{\section}{\Large\bfseries}{\thesection.}{0.6em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection.}{0.6em}{}
+
+\newcommand{\portal}[1]{\textbf{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+
+\begin{document}
+
+\begin{center}
+  {\LARGE \textbf{Alfa Emlak XML Feed Entegrasyon Raporu}}\\[0.4cm]
+  {\large 101evler ve Hangiev Entegrasyon Durumu}\\[0.2cm]
+  {\normalsize Hazırlanma Tarihi: 29 Nisan 2026}
+\end{center}
+
+\vspace{0.5cm}
+
+\section{Belgenin Amacı}
+
+Bu belge, Alfa Emlak web sitesinde 101evler ve Hangiev için yapılan XML feed entegrasyon çalışmalarını açık ve anlaşılır şekilde anlatmak için hazırlanmıştır.
+
+XML feed şu anlama gelir: Alfa Emlak sitesindeki ilanlar belirli bir internet adresinden XML formatında dışarı açılır. İlgili emlak portalı bu adresi belirli aralıklarla ziyaret eder, ilanları okur ve kendi sistemine aktarır. Böylece ilanları tek tek portal paneline girmek yerine, Alfa Emlak panelinden yönetmek mümkün olur.
+
+Bu çalışmada amaç şudur:
+
+\begin{itemize}
+  \item İlanlar Alfa Emlak admin panelinden girilsin.
+  \item Hangi ilanların hangi portala gönderileceği panelden seçilebilsin.
+  \item 101evler ve Hangiev kendi sistemlerinden XML adresini çekerek ilanları okuyabilsin.
+  \item Eksik veya hatalı bilgi varsa sistem bunu admin tarafında anlaşılır şekilde göstersin.
+\end{itemize}
+
+\section{Genel Çalışma Mantığı}
+
+Her iki portal için de benzer bir yapı kurulmuştur. Admin panelde bir ilan oluşturulurken veya düzenlenirken, ilgili portal için ayrı bir bölüm görünür.
+
+\begin{enumerate}
+  \item İlan admin panelden oluşturulur.
+  \item İlanın yayın durumu \code{Yayında} yapılır.
+  \item İlgili portal için \code{Bu ilanı gönder} seçeneği işaretlenir.
+  \item Sistem ilan bilgilerini XML formatına çevirir.
+  \item Portal, kendisine verilen XML feed adresinden ilanları çeker.
+\end{enumerate}
+
+Bu yapı sayesinde ilan yönetimi tek merkezden yapılır. İlan fiyatı, açıklaması, fotoğrafları veya konumu değiştiğinde XML çıktısı da güncel hale gelir.
+
+\section{101evler İçin Yapılanlar}
+
+\subsection{Veritabanı Altyapısı}
+
+101evler için ilan bazında gönderim kontrolü eklendi. Her ilanın 101evler'e gönderilip gönderilmeyeceği ayrı olarak tutulmaktadır.
+
+Eklenen temel alanlar:
+
+\begin{itemize}
+  \item \code{export\_to\_101evler}: İlan 101evler XML feed'ine dahil edilsin mi?
+  \item \code{ext\_101evler}: 101evler'e özel ilan bilgileri burada saklanır.
+  \item \code{site\_settings.ext\_101evler}: 101evler tarafından verilecek genel hesap/danışman ID bilgileri burada saklanır.
+\end{itemize}
+
+\subsection{Admin Panel Entegrasyonu}
+
+İlan ekleme ve düzenleme ekranına \portal{101evler XML Yayını} bölümü eklendi. Bu bölümde kullanıcı, ilanı 101evler'e gönderip göndermeyeceğini seçebilir.
+
+Admin panelde yönetilen başlıca alanlar:
+
+\begin{itemize}
+  \item İlan tipi: Villa, Daire, Arsa, İş Yeri gibi alanlar 101evler'in istediği ID değerlerine çevrilir.
+  \item Bölge: Şehir ve bölge bilgisi 101evler'in \code{area\_id} değerine çevrilir.
+  \item Oda sayısı: Örneğin 2+1, 3+1 gibi bilgiler 101evler oda ID karşılığına çevrilir.
+  \item Bina yaşı.
+  \item Eşya durumu.
+  \item Fiyat tipi: Toplam fiyat veya birim fiyat.
+  \item Referans numarası.
+\end{itemize}
+
+Sistem, mevcut ilan bilgilerinden bu alanları otomatik doldurmaya çalışır. Örneğin emlak tipi \code{Konut} ise sistem bunu varsayılan olarak \code{Daire} şeklinde eşler. Gerekirse kullanıcı bu alanları manuel değiştirebilir.
+
+\subsection{XML Feed Adresi}
+
+101evler için token korumalı bir XML endpoint oluşturuldu:
+
+\begin{quote}
+\code{/api/feeds/101evler.xml?token=<FEED\_101EVLER\_TOKEN>}
+\end{quote}
+
+Kontrol ve test için debug çıktısı alınabilir:
+
+\begin{quote}
+\code{/api/feeds/101evler.xml?token=<FEED\_101EVLER\_TOKEN>\&debug=1}
+\end{quote}
+
+Debug çıktısı, kaç ilanın feed'e dahil edildiğini ve kaç ilanın hangi sebeple atlandığını gösterir.
+
+\subsection{101evler İçin Mevcut Durum}
+
+101evler tarafında entegrasyonun ana altyapısı hazırdır:
+
+\begin{itemize}
+  \item Admin panelde 101evler bölümü vardır.
+  \item İlan bazında 101evler'e gönderim açılıp kapatılabilir.
+  \item XML feed endpoint'i hazırlanmıştır.
+  \item Fotoğraflar XML içinde sıralı olarak gönderilir.
+  \item Her ilan için değişmeyen bir anahtar kullanılır. Bu, portalın aynı ilanı güncelleme olarak algılaması için önemlidir.
+\end{itemize}
+
+\section{Hangiev İçin Yapılanlar}
+
+\subsection{Veritabanı Altyapısı}
+
+Hangiev için de 101evler'e benzer şekilde ayrı bir entegrasyon altyapısı kurulmuştur.
+
+Eklenen temel alanlar:
+
+\begin{itemize}
+  \item \code{export\_to\_hangiev}: İlan Hangiev XML feed'ine dahil edilsin mi?
+  \item \code{ext\_hangiev}: Hangiev'e özel ilan bilgileri burada saklanır.
+  \item \code{site\_settings.ext\_hangiev}: Hangiev tarafından verilecek portal, agent veya office ID bilgileri burada saklanır.
+\end{itemize}
+
+\subsection{Admin Panel Entegrasyonu}
+
+İlan ekleme ve düzenleme ekranına \portal{Hangiev XML Yayını} bölümü eklendi. Bu bölüm 101evler bölümüne benzer çalışır.
+
+Admin panelde yönetilen başlıca alanlar:
+
+\begin{itemize}
+  \item Emlak tipi.
+  \item Bölge.
+  \item Oda sayısı.
+  \item Bina yaşı.
+  \item Eşya durumu.
+  \item Fiyat tipi.
+  \item Referans numarası.
+\end{itemize}
+
+Hangiev dokümanı henüz elimizde olmadığı için bu alanların ID eşleşmeleri geçici ve değiştirilebilir şekilde hazırlanmıştır. Gerçek Hangiev dokümanı geldiğinde sadece eşleme dosyaları güncellenecek, admin panel akışı bozulmayacaktır.
+
+\subsection{XML Feed Adresi}
+
+Hangiev için token korumalı XML endpoint oluşturuldu:
+
+\begin{quote}
+\code{/api/feeds/hangiev.xml?token=<FEED\_HANGIEV\_TOKEN>}
+\end{quote}
+
+Kontrol ve test için debug çıktısı alınabilir:
+
+\begin{quote}
+\code{/api/feeds/hangiev.xml?token=<FEED\_HANGIEV\_TOKEN>\&debug=1}
+\end{quote}
+
+\subsection{Hangiev İçin Mevcut Durum}
+
+Hangiev tarafında altyapı hazırdır; ancak Hangiev'in resmi XML dokümanı henüz olmadığı için XML formatı geçici olarak hazırlanmıştır.
+
+Şu an yapılmış olanlar:
+
+\begin{itemize}
+  \item Admin panelde Hangiev bölümü vardır.
+  \item İlan bazında Hangiev'e gönderim açılıp kapatılabilir.
+  \item Hangiev için ayrı XML endpoint vardır.
+  \item Site ayarlarında Hangiev portal, agent ve office ID alanları vardır.
+  \item XML builder ayrı dosyada tutulmuştur. Bu sayede gerçek format geldiğinde hızlıca uyarlanabilir.
+\end{itemize}
+
+\section{Portallardan Şu An İstenmesi Gereken Bilgiler}
+
+\subsection{101evler'den İstenmesi Gerekenler}
+
+101evler entegrasyonunun canlı ve sorunsuz çalışması için aşağıdaki bilgilerin 101evler tarafından net olarak verilmesi gerekir:
+
+\begin{enumerate}
+  \item \textbf{Realtor ID bilgileri}
+  \begin{itemize}
+    \item Alfa Emlak için \code{first\_realtor\_id} nedir?
+    \item İkinci danışman kullanılacaksa \code{second\_realtor\_id} nedir?
+  \end{itemize}
+
+  \item \textbf{Para birimi kodları}
+  \begin{itemize}
+    \item EUR için kullanılacak \code{currency} kodu nedir?
+    \item GBP için kullanılacak \code{currency} kodu nedir?
+    \item 601 gerçekten TRY, 602 gerçekten USD midir?
+  \end{itemize}
+
+  \item \textbf{Silme veya yayından kaldırma kuralı}
+  \begin{itemize}
+    \item Bir ilan XML feed'den çıkarılırsa 101evler bu ilanı yayından kaldırıyor mu?
+    \item Yoksa ayrıca pasif/silindi bilgisi göndermek gerekiyor mu?
+  \end{itemize}
+
+  \item \textbf{Feed çekme sıklığı}
+  \begin{itemize}
+    \item XML feed kaç dakikada veya kaç saatte bir çekilecek?
+    \item Güncelleme gecikmesi ortalama ne kadar olacak?
+  \end{itemize}
+
+  \item \textbf{Hata bildirimi}
+  \begin{itemize}
+    \item Import sırasında hata olursa Alfa Emlak'a nasıl bildirilecek?
+    \item Reddedilen ilanların listesi paylaşılacak mı?
+  \end{itemize}
+
+  \item \textbf{Test süreci}
+  \begin{itemize}
+    \item Önce test ortamında mı deneme yapılacak?
+    \item Yoksa direkt canlı XML adresi mi kullanılacak?
+  \end{itemize}
+\end{enumerate}
+
+\subsection{Hangiev'den İstenmesi Gerekenler}
+
+Hangiev için en önemli eksik resmi XML dokümanıdır. Bu doküman gelmeden entegrasyon altyapısı hazırlanabilir, ancak portalın ilanları kesin olarak kabul edeceği garanti edilemez.
+
+Hangiev'den istenmesi gereken bilgiler:
+
+\begin{enumerate}
+  \item \textbf{XML dokümanı veya örnek XML}
+  \begin{itemize}
+    \item Beklenen XML root adı nedir?
+    \item Her ilan hangi tag içinde gönderilecek?
+    \item Zorunlu alanlar hangileridir?
+    \item Opsiyonel alanlar hangileridir?
+  \end{itemize}
+
+  \item \textbf{Emlak tipi ID listesi}
+  \begin{itemize}
+    \item Daire, Villa, Arsa, İş Yeri gibi tiplerin Hangiev karşılıkları nedir?
+  \end{itemize}
+
+  \item \textbf{Bölge ID listesi}
+  \begin{itemize}
+    \item Lefkoşa, Girne, Gazimağusa, İskele, Güzelyurt ve Lefke bölgeleri için ID listesi istenmelidir.
+  \end{itemize}
+
+  \item \textbf{Para birimi formatı}
+  \begin{itemize}
+    \item EUR, GBP, USD, TRY doğrudan yazılabiliyor mu?
+    \item Yoksa her para birimi için özel bir ID mi gerekiyor?
+  \end{itemize}
+
+  \item \textbf{Hesap veya danışman ID bilgileri}
+  \begin{itemize}
+    \item Portal ID gerekiyor mu?
+    \item Agent ID gerekiyor mu?
+    \item Office ID gerekiyor mu?
+  \end{itemize}
+
+  \item \textbf{Fotoğraf kuralları}
+  \begin{itemize}
+    \item Fotoğraf URL'leri doğrudan kabul ediliyor mu?
+    \item Maksimum fotoğraf sayısı var mı?
+    \item Kapak fotoğrafı ayrıca belirtilmeli mi?
+  \end{itemize}
+
+  \item \textbf{Güncelleme ve silme kuralı}
+  \begin{itemize}
+    \item Aynı ilan tekrar gönderildiğinde hangi alanla eşleşme yapılacak?
+    \item Feed'den çıkarılan ilanlar yayından kalkacak mı?
+  \end{itemize}
+\end{enumerate}
+
+\section{Şu An Bizim Yapmamız Gerekenler}
+
+\subsection{Teknik Kurulum}
+
+\begin{enumerate}
+  \item Supabase veritabanında migration çalıştırılmalıdır.
+  \item Sunucu ortam değişkenlerine şu tokenlar eklenmelidir:
+  \begin{itemize}
+    \item \code{FEED\_101EVLER\_TOKEN}
+    \item \code{FEED\_HANGIEV\_TOKEN}
+  \end{itemize}
+  \item \code{NEXT\_PUBLIC\_SITE\_URL} canlı site adresi olacak şekilde ayarlanmalıdır:
+  \begin{quote}
+    \code{https://www.alfaemlak.com}
+  \end{quote}
+  \item Proje canlı sunucuya deploy edilmelidir.
+\end{enumerate}
+
+\subsection{Admin Panel Ayarları}
+
+\begin{enumerate}
+  \item Site ayarları bölümünden 101evler realtor ID bilgileri girilmelidir.
+  \item Hangiev portal, agent veya office ID verirse site ayarlarına girilmelidir.
+  \item Test için birkaç ilan seçilip 101evler ve Hangiev gönderim kutuları işaretlenmelidir.
+  \item İlanların yayın durumu \code{Yayında} yapılmalıdır.
+  \item Debug URL'leri açılarak kaç ilanın feed'e girdiği kontrol edilmelidir.
+\end{enumerate}
+
+\subsection{Portallara Verilecek Bilgiler}
+
+101evler'e verilecek canlı URL:
+
+\begin{quote}
+\code{https://www.alfaemlak.com/api/feeds/101evler.xml?token=<GERCEK\_TOKEN>}
+\end{quote}
+
+Hangiev'e verilecek canlı URL:
+
+\begin{quote}
+\code{https://www.alfaemlak.com/api/feeds/hangiev.xml?token=<GERCEK\_TOKEN>}
+\end{quote}
+
+Token değerleri herkese açık paylaşılmamalıdır. Bu bilgiler sadece ilgili portal yetkilileriyle güvenli şekilde paylaşılmalıdır.
+
+\section{Daha Sonra Yapılması Gerekenler}
+
+\subsection{101evler İçin Sonraki İşler}
+
+\begin{itemize}
+  \item EUR ve GBP para birimi kodları netleşince sisteme eklenmelidir.
+  \item 101evler'den ilk import sonucu alınmalıdır.
+  \item Hatalı veya reddedilen ilanlar varsa sebepleri incelenmelidir.
+  \item İlan yayından kaldırma davranışı kesinleştirilmelidir.
+  \item Gerekirse admin panelde 101evler hata/uyarı listesi gösterilebilir.
+\end{itemize}
+
+\subsection{Hangiev İçin Sonraki İşler}
+
+\begin{itemize}
+  \item Hangiev resmi XML dokümanı alınmalıdır.
+  \item Dokümana göre XML tag isimleri ve ID eşleşmeleri güncellenmelidir.
+  \item Hangiev test import sonucu alınmalıdır.
+  \item Kabul edilmeyen ilanlar için eksik alanlar belirlenmelidir.
+  \item Hangiev'in silme/pasife alma kuralına göre sistem gerekirse genişletilmelidir.
+\end{itemize}
+
+\subsection{Genel İyileştirmeler}
+
+\begin{itemize}
+  \item Admin panelde her portal için ``feed'e dahil edildi / eksik alan var'' göstergesi eklenebilir.
+  \item Portal bazlı hata kayıtları tutulabilir.
+  \item Feed'e giren ilan sayısı ve atlanan ilan sayısı dashboard üzerinde gösterilebilir.
+  \item Portal dokümanları değişirse mapping dosyaları güncel tutulmalıdır.
+\end{itemize}
+
+\section{Basit Özet}
+
+\begin{longtable}{|p{3.5cm}|p{5.5cm}|p{5.5cm}|}
+\hline
+\textbf{Konu} & \textbf{101evler} & \textbf{Hangiev} \\
+\hline
+Admin panel alanı & Eklendi & Eklendi \\
+\hline
+İlan bazlı gönderim & Var & Var \\
+\hline
+XML endpoint & Hazır & Hazır \\
+\hline
+Debug kontrolü & Var & Var \\
+\hline
+Resmi doküman durumu & PDF incelendi & Henüz yok \\
+\hline
+Eksik kritik bilgi & Realtor ID, EUR/GBP kodları, silme kuralı & XML dokümanı, ID listeleri, hesap bilgileri \\
+\hline
+Canlıya geçiş durumu & Portal bilgileri tamamlanınca test edilebilir & Doküman geldikten sonra kesinleştirilmeli \\
+\hline
+\end{longtable}
+
+\section{Sonuç}
+
+Alfa Emlak tarafında 101evler ve Hangiev için merkezi XML feed altyapısı kurulmuştur. 101evler için doküman mevcut olduğu için entegrasyon daha ileri seviyededir. Hangiev için ise altyapı hazırdır, ancak gerçek XML formatı ve ID listeleri Hangiev tarafından paylaşılmadan son doğrulama yapılamaz.
+
+Bu aşamada portallardan istenmesi gereken bilgiler tamamlandığında, canlı URL'ler portallara verilecek ve ilk import testleri yapılacaktır. Test sonuçlarına göre küçük eşleme veya format düzenlemeleri yapılması normaldir.
+
+\end{document}

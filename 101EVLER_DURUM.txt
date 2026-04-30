@@ -1,0 +1,279 @@
+================================================================================
+ALFA EMLAK ↔ 101EVLER XML ENTEGRASYONU — DURUM RAPORU
+Tarih: 28 Nisan 2026
+================================================================================
+
+
+1) ŞU ANA KADAR YAPILANLAR
+--------------------------------------------------------------------------------
+
+A. Veritabanı (Supabase)
+   - listings tablosuna iki yeni kolon:
+       * export_to_101evler  (boolean) — bu ilan 101evler'e gönderilsin mi?
+       * ext_101evler        (jsonb)   — type_id, area_id, room_count_id,
+                                          build_age_id, furnishing_id,
+                                          billing_cycle_id, title_type_id,
+                                          price_for, reference_no
+   - listings tablosuna performans için partial index
+       (idx_listings_export_101evler)
+   - site_settings tablosuna ext_101evler (jsonb) kolonu
+       (first_realtor_id, second_realtor_id için)
+
+   Migration dosyası: supabase-migration.sql (sonuna eklendi).
+
+B. Backend / API
+   - Yeni endpoint: GET /api/feeds/101evler.xml?token=<TOKEN>
+       * Token korumalı (yanlış token → 401)
+       * publish_status='PUBLISHED' VE export_to_101evler=true olan ilanları
+         101evler XML şemasına göre üretir.
+       * ?debug=1 parametresi eklersen JSON özeti döner
+         (toplam, dahil edilen, atlanan ilanlar + sebep).
+       * Para birimi sadece TRY/USD desteklenir (PDF'te belgelenenler).
+         EUR/GBP gelirse o ilan "unsupported_currency" sebebiyle atlanır.
+
+   Yeni dosyalar:
+     - lib/feeds/101evler-constants.ts   (PDF'teki tüm lookup tabloları)
+     - lib/feeds/101evler-builder.ts     (XML üretici)
+     - app/api/feeds/101evler.xml/route.ts (HTTP endpoint)
+
+C. Admin paneli
+   - İlan Düzenle ekranına 6. adım eklendi: "101evler"
+     Bu adımda doldurulacak alanlar:
+       [ ] Bu ilanı 101evler'e gönder (checkbox)
+       *   İlan Tipi (type_id)            — ZORUNLU (Villa, Daire, Arsa, …)
+       *   Bölge (area_id)                — ZORUNLU (Girne Merkez, vb.)
+           Şehir filtresi ile bölgeler kısaltılabilir.
+       -   Koçan Türü (title_type_id)
+       -   Oda Sayısı (room_count_id)     — 1+0, 2+1, 3+1, …
+       -   Bina Yaşı (build_age_id)
+       -   Eşya Durumu (furnishing_id)
+       -   Kira Ödeme Dönemi              — sadece kiralık ilanlarda
+       -   Fiyat Tipi (T=Toplam / U=Birim)
+       -   Referans No (boş bırakılırsa ilan numarası kullanılır)
+
+   - Site Ayarları sayfasında "101evler entegrasyonu" bölümü:
+       - First realtor ID, Second realtor ID alanları
+       - Feed URL bilgisi gösterimi
+
+D. .env yapılandırması
+     FEED_101EVLER_TOKEN   — feed URL'inin token'ı
+     NEXT_PUBLIC_SITE_URL  — XML'deki <url> alanı için (örn. ilan linki)
+
+
+2) DURUM: NE ÇALIŞIYOR, NE BEKLİYOR
+--------------------------------------------------------------------------------
+
+ÇALIŞIYOR:
+   [x] Migration kolonları (Supabase'de çalıştırıldı)
+   [x] Admin formuna 101evler adımı eklenmiş durumda
+   [x] Feed endpoint kod olarak hazır
+   [x] TypeScript derlemesi temiz (yeni kodda hata yok)
+
+BEKLİYOR:
+   [ ] Dev server'da .next cache temizlenip yeniden başlatılması
+       (Sen şimdi bunu yapıyordun — Next.js 16 Turbopack font hatası
+       benim kodumdan değil, ortam kaynaklı. Çözüm dökümanın altında.)
+   [ ] 101evler'den realtor_id alınması (aşağıda)
+   [ ] EUR/GBP kur kodlarının teyidi (aşağıda)
+   [ ] İlk gerçek import testinin 101evler tarafında yapılması
+
+
+3) 101EVLER'DEN İSTENECEKLER
+--------------------------------------------------------------------------------
+
+Aşağıdaki bilgiler olmadan feed eksik gönderilir veya bazı ilanlar atlanır.
+101evler hesap yöneticisine yazılı olarak şunları sor:
+
+A) Realtor ID'leri
+   - Alfa Emlak için <first_realtor_id> değeri nedir?
+   - Eğer ikinci bir danışman atayacaksak <second_realtor_id> değeri nedir?
+   (Birden fazla danışman / ofis varsa hepsinin ID listesini iste.)
+
+B) Para birimi kodları
+   PDF'te yalnızca iki örnek var:
+       601 = (muhtemelen) TRY
+       602 = (muhtemelen) USD
+   Sor:
+   - EUR için <currency> kodu nedir?
+   - GBP için <currency> kodu nedir?
+   - Doğrulama: 601 TRY mi, 602 USD mi (yoksa farklı mı)?
+
+   Cevap geldiğinde lib/feeds/101evler-constants.ts içindeki
+   CURRENCY_CODE_MAP'e ekleyeceğim. Şu an EUR/GBP ilanlar feed'den düşüyor.
+
+C) Fotoğraf grup ID'leri (opsiyonel)
+   Şu an her fotoğrafta <group_id> göndermiyoruz (PDF zorunlu olmadığını
+   söylüyor). 101evler bu alanı kullanışlı buluyorsa:
+   - "Kapak fotoğrafı = group_id 1 (Dış Görsel)" yaklaşımı uygun mu?
+   - Yoksa her fotoğraf için ayrı kategorize gerekli mi?
+
+D) Feed çağrı sıklığı ve zaman aralığı
+   - 101evler feed'i ne sıklıkta çekecek? (saatlik, günlük?)
+   - Belirli bir zaman penceresi mi tercih ediyorsunuz?
+     (rate-limit ayarı yapmamız gerekirse bilelim)
+
+E) Hata bildirimi
+   - Import sırasında hata olursa nereye / nasıl bildirilir?
+     (E-posta, dashboard, vs.)
+   - Reddedilen ilanların ad_key listesini paylaşabiliyorlar mı?
+     (Bizde "skipped" listesi tutuyoruz; karşı tarafta "rejected" varsa
+      iki listeyi birleştirip admin paneline gösterebiliriz.)
+
+F) Test ortamı
+   - Canlıya geçmeden önce staging / test feed URL'i kabul ediyor musunuz?
+   - Yoksa direkt prod feed'i mi vereceğiz?
+
+
+4) 101EVLER'E SUNULACAKLAR
+--------------------------------------------------------------------------------
+
+A) Feed URL'i (TEK ŞEY — onlara verilecek olan bu)
+   Format:
+       https://www.alfaemlak.com/api/feeds/101evler.xml?token=<TOKEN>
+
+   - <TOKEN> .env.local içindeki FEED_101EVLER_TOKEN değeridir.
+     (Rastgele 32+ karakter; tahmin edilemez olmalı, e-postayla değil
+      güvenli kanaldan paylaş.)
+   - URL canlı (production) olduğunda 101evler bu URL'i belirledikleri
+     periyotta otomatik çekecek.
+
+B) Yetkili kişi
+   - Alfa Emlak tarafından bir teknik yetkili: ad-soyad, e-posta, telefon
+     (sorun çıkarsa 101evler kime ulaşacak?)
+
+C) İmza / sözleşme süreci
+   - 101evler'in import için ek belge / yetki taahhüdü istemesi olası;
+     onların formatına göre imzalı belge gerekiyorsa hazırla.
+
+
+5) AKIŞ ÖZETİ (SİZİN VE 101EVLER'İN PERSPEKTİFİNDEN)
+--------------------------------------------------------------------------------
+
+Bizim tarafta:
+   1. Admin panelden ilana gir → "101evler" adımı → bilgileri doldur,
+      "Bu ilanı 101evler'e gönder" işaretle, kaydet ve yayınla.
+   2. Feed URL otomatik güncellenir (anlık veritabanı sorgusu yapar,
+      cache 5 dakika).
+   3. İlan üzerinde değişiklik yaptığınız anda updated_at güncellenir;
+      101evler bir sonraki çağrıda lastupdate farklı olduğu için
+      güncellemeyi alır.
+   4. İlanı 101evler'den çekmek için: checkbox'tan işareti kaldır VEYA
+      yayın durumunu HIDDEN/DRAFT yap.
+      (101evler eski kayıtları nasıl temizliyor? D maddesini sor.)
+
+101evler tarafında:
+   1. Verdiğimiz feed URL'ini sistemleri belirli aralıklarla GET çeker.
+   2. <ad_key> ile mevcut ilan eşleşmesi yapar.
+       - Yeni ad_key → yeni ilan oluştur
+       - Aynı ad_key + farklı lastupdate → güncelle
+       - Aynı ad_key + aynı lastupdate → atla
+   3. Hatalar (zorunlu alan eksik, kur tanınmıyor, vs.) onların
+      tarafında loglanır.
+
+
+6) BİLİNEN HATALAR / SORUNLAR VE ÇÖZÜMLER
+--------------------------------------------------------------------------------
+
+(a) Migration: agents_role_check constraint hatası
+    Sebep:    Migration dosyasının üst kısmındaki agents tablo işlemleri
+              eski bir veriyle çakışıyor. Benim eklediğim 101evler
+              satırlarıyla alakasız.
+    Çözüm:    Migration'ın TAMAMINI çalıştırma; sadece sonundaki 4
+              satırlık 101evler bloğunu çalıştır.
+    Durum:    Sen bunu yaptın → 101evler kolonları eklendi.
+
+(b) "ADIM 1 / 5" — yeni 6. adım görünmüyor
+    Sebep:    Dev server eski derlenmiş kodu serve ediyor.
+    Çözüm:    .next klasörünü silip dev server'ı yeniden başlat,
+              tarayıcıda hard refresh (Ctrl+Shift+R).
+    Durum:    Beklemede.
+
+(c) Next.js 16 Turbopack font hatası
+    Hata:     "Module not found: @vercel/turbopack-next/internal/font/
+              google/font"
+    Sebep:    Next.js 16.2.3 + Turbopack'in next/font/google bug'ı.
+              Benim koddan değil, ortam kaynaklı.
+    Çözümler (sırayla dene):
+       1. .next ve node_modules\.cache temizle, yeniden başlat
+       2. İnternet bağlantısını kontrol et (Turbopack font fetch eder)
+       3. package.json'da "dev": "next dev --turbo" varsa --turbo kaldır
+          (webpack'e dön, daha yavaş ama bu bug yok)
+       4. node_modules'u silip npm install
+    Durum:    Beklemede — sen şu an bunu çözmeye çalışıyordun.
+
+
+7) TEST ADIMLARI (FONT HATASI ÇÖZÜLDÜĞÜNDE)
+--------------------------------------------------------------------------------
+
+  1) .env.local içine ekle:
+        FEED_101EVLER_TOKEN=alfa-test-101evler-2026-secret-xyz
+        NEXT_PUBLIC_SITE_URL=http://localhost:3000
+
+  2) Dev server'ı YENİDEN başlat (env değişikliği için zorunlu).
+
+  3) Admin → İlanlar → bir ilana gir → 6. adıma git → bilgileri doldur:
+        - "Bu ilanı 101evler'e gönder" işaretle
+        - type_id: 2 (Daire)
+        - Şehir filtresi: Girne, area_id: 44 (Girne Merkez)
+        - Para birimi: TRY veya USD (geçici — EUR/GBP feed'den düşer)
+     Yayınla.
+
+  4) Tarayıcıda:
+        http://localhost:3000/api/feeds/101evler.xml?token=alfa-test-101evler-2026-secret-xyz&debug=1
+
+     Beklenen JSON çıktı:
+        {
+          "total": <N>,
+          "included": <M>,
+          "skipped": [{ "listingId": "...", "reason": "..." }, ...]
+        }
+
+  5) Asıl XML'i görmek için debug=1'i kaldır. Tarayıcının "View Source"
+     ile içeriği oku.
+
+  6) (Opsiyonel) xmllint ile XML doğrulama:
+        curl "http://localhost:3000/api/feeds/101evler.xml?token=..." -o feed.xml
+        xmllint --noout feed.xml && echo OK
+
+
+8) PRODUCTION'A ÇIKARKEN
+--------------------------------------------------------------------------------
+
+  - .env.production veya hosting paneline:
+        FEED_101EVLER_TOKEN=<gerçek 32+ karakter rastgele token>
+        NEXT_PUBLIC_SITE_URL=https://www.alfaemlak.com
+
+  - 101evler'e verilecek URL:
+        https://www.alfaemlak.com/api/feeds/101evler.xml?token=<TOKEN>
+
+  - Token'ı 101evler ile güvenli kanaldan paylaş (PGP, parola yöneticisi,
+    veya özel mesaj — e-posta yetersiz).
+
+  - Site Ayarları'ndan realtor_id'leri gir (101evler atadığında).
+
+  - İlk birkaç gün debug endpoint'ini düzenli kontrol et:
+        /api/feeds/101evler.xml?token=...&debug=1
+    "skipped" listesi büyük çıkarsa eksik alanları doldur.
+
+
+9) KOD DOSYALARI
+--------------------------------------------------------------------------------
+
+Yeni eklenenler:
+   lib/feeds/101evler-constants.ts        (lookup tabloları)
+   lib/feeds/101evler-builder.ts          (XML üretici)
+   app/api/feeds/101evler.xml/route.ts    (HTTP endpoint)
+   101EVLER_DURUM.txt                     (bu dosya)
+
+Düzenlenenler:
+   supabase-migration.sql                 (4 satırlık 101evler bloğu)
+   .env.example                           (yeni env değişkenleri)
+   components/admin/ListingEditor.tsx     (6. wizard adımı)
+   app/karealfaadmin/(panel)/ayarlar/page.tsx
+   app/karealfaadmin/actions.ts
+   lib/listing-normalize.ts
+
+
+================================================================================
+SON
+================================================================================

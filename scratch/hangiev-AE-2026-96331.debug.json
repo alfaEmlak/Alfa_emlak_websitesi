@@ -1,0 +1,48 @@
+{
+  "feed": "hangiev",
+  "listing_id": "AE-2026-96331",
+  "total": 1,
+  "included": 0,
+  "skipped": [
+    {
+      "listingId": "AE-2026-96331",
+      "reason": "missing_property_type_id"
+    }
+  ],
+  "account": {
+    "portal_id": null,
+    "agent_id": null,
+    "office_id": null
+  },
+  "siteUrl": "https://www.alfaemlak.com",
+  "meta": {
+    "publish_status": "PUBLISHED",
+    "export_to_101evler": true,
+    "export_to_hangiev": false,
+    "ext_101evler": {
+      "area_id": 70,
+      "type_id": 2,
+      "price_for": "T",
+      "build_age_id": 5,
+      "reference_no": "AE-2026-96331",
+      "furnishing_id": 3,
+      "room_count_id": 11,
+      "title_type_id": 2,
+      "billing_cycle_id": null
+    },
+    "ext_hangiev": {
+      "area_id": null,
+      "price_for": "T",
+      "build_age_id": null,
+      "reference_no": null,
+      "furnishing_id": null,
+      "room_count_id": null,
+      "property_type_id": null
+    },
+    "currency": "TRY",
+    "kind": "SATILIK",
+    "price": 100000000,
+    "updated_at": "2026-04-29T23:03:21.2181+00:00",
+    "image_count": 3
+  }
+}

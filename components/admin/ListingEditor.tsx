@@ -13,16 +13,7 @@ import {
   type NearbyPoiCategoryId,
 } from "@/lib/nearby-poi";
 import { parseLatLngPair, parseNearby, parseStringArray } from "@/lib/listing-utils";
-import {
-  TYPE_ID_OPTIONS,
-  AREA_ID_OPTIONS,
-  TITLE_TYPE_OPTIONS,
-  ROOM_COUNT_OPTIONS,
-  BUILD_AGE_OPTIONS,
-  FURNISHING_OPTIONS,
-  BILLING_CYCLE_OPTIONS,
-  CURRENCY_CODE_MAP,
-} from "@/lib/feeds/101evler-constants";
+import { type FeedLookups, type LookupOption, groupAreasByCity } from "@/lib/feeds/lookup-types";
 import { AdminIcon, type AdminIconName } from "@/components/admin/AdminIcon";
 import { NearbyPoiAdminPreview } from "@/components/admin/NearbyPoiAdminPreview";
 import dynamic from "next/dynamic";
@@ -81,17 +72,46 @@ type Ext101evler = {
   reference_no?: string | null;
 };
 
+type ExtHangiev = {
+  property_type_id?: number | string | null;
+  area_id?: number | string | null;
+  room_count_id?: number | string | null;
+  build_age_id?: number | string | null;
+  furnishing_id?: number | string | null;
+  price_for?: "T" | "U" | null;
+  reference_no?: string | null;
+};
+
 type Props = {
   listing:
     | ((Listing & { images: ListingImage[] }) & {
         translations?: string | null;
         exportTo101evler?: boolean | null;
         ext101evler?: Ext101evler | string | null;
+        exportToHangiev?: boolean | null;
+        extHangiev?: ExtHangiev | string | null;
+        type_id_101?: number | null;
+        area_id_101?: number | null;
+        title_type_id_101?: number | null;
+        room_count_id_101?: number | null;
+        build_age_id_101?: number | null;
+        furnishing_id_101?: number | null;
+        billing_cycle_id_101?: number | null;
+        price_for_101?: string | null;
+        reference_no_101?: string | null;
+        property_type_id_hg?: number | null;
+        area_id_hg?: number | null;
+        room_count_id_hg?: number | null;
+        build_age_id_hg?: number | null;
+        furnishing_id_hg?: number | null;
+        price_for_hg?: string | null;
+        reference_no_hg?: string | null;
       })
     | null;
   suggestedId: string;
   agents?: { id: string; name: string; email: string; phone: string | null; photo: string | null; title: string | null; is_active?: boolean }[];
   viewerRole: "ADMIN" | "CONSULTANT";
+  lookups: FeedLookups;
 };
 
 function parseExt101(v: unknown): Ext101evler {
@@ -103,7 +123,16 @@ function parseExt101(v: unknown): Ext101evler {
   return {};
 }
 
-const CITY_VALUE_TO_101_LABEL: Record<string, keyof typeof AREA_ID_OPTIONS> = {
+function parseExtHangiev(v: unknown): ExtHangiev {
+  if (!v) return {};
+  if (typeof v === "string") {
+    try { return JSON.parse(v) as ExtHangiev; } catch { return {}; }
+  }
+  if (typeof v === "object") return v as ExtHangiev;
+  return {};
+}
+
+const CITY_VALUE_TO_101_LABEL: Record<string, string> = {
   lefkosa: "Lefkoşa",
   girne: "Girne",
   gazimagusa: "Gazimağusa",
@@ -131,20 +160,31 @@ function normalize101Text(value: string): string {
     .replace(/[^a-z0-9]/g, "");
 }
 
-function infer101TypeId(propertyType: string): string {
-  const key = propertyType.trim().toLowerCase();
-  if (key === "arsa") return "5";
-  if (key === "ticari") return "12";
-  if (key === "konut") return "2";
-  return "";
+function inferTypeIdFromOptions(propertyType: string, options: LookupOption[]): string {
+  const key = propertyType.trim().toLocaleLowerCase("tr-TR");
+  if (!key) return "";
+  if (key === "arsa") return findId(options, "Arsa");
+  if (key === "ticari") return findId(options, "İş Yeri");
+  if (key === "konut") return findId(options, "Daire");
+  return findId(options, propertyType);
 }
 
-function infer101AreaCity(cityValue: string): string {
+function findId(options: LookupOption[], label: string): string {
+  const target = normalize101Text(label);
+  const match = options.find((o) => normalize101Text(o.label) === target);
+  return match ? String(match.id) : "";
+}
+
+function inferAreaCity(cityValue: string): string {
   return CITY_VALUE_TO_101_LABEL[cityValue] ?? "";
 }
 
-function infer101AreaId(cityValue: string, regionValue: string): string {
-  const cityLabel = infer101AreaCity(cityValue);
+function inferAreaId(
+  cityValue: string,
+  regionValue: string,
+  groupedAreas: Record<string, LookupOption[]>,
+): string {
+  const cityLabel = inferAreaCity(cityValue);
   if (!cityLabel || !regionValue) return "";
 
   const regionLabel =
@@ -153,11 +193,11 @@ function infer101AreaId(cityValue: string, regionValue: string): string {
     regionValue;
 
   const target = normalize101Text(regionLabel);
-  const match = AREA_ID_OPTIONS[cityLabel]?.find((option) => normalize101Text(option.label) === target);
+  const match = groupedAreas[cityLabel]?.find((option) => normalize101Text(option.label) === target);
   return match ? String(match.id) : "";
 }
 
-function infer101RoomCountId(bedrooms: string, livingRooms: string): string {
+function inferRoomCountId(bedrooms: string, livingRooms: string, options: LookupOption[]): string {
   const bedroomCount = Number.parseInt(bedrooms, 10);
   if (!Number.isFinite(bedroomCount)) return "";
 
@@ -166,11 +206,10 @@ function infer101RoomCountId(bedrooms: string, livingRooms: string): string {
     ? `${bedroomCount}+${livingRoomCount}`
     : String(bedroomCount);
 
-  const match = ROOM_COUNT_OPTIONS.find((option) => normalize101Text(option.label) === normalize101Text(label));
-  return match ? String(match.id) : "";
+  return findId(options, label);
 }
 
-function infer101BuildAgeId(buildingAge: string): string {
+function inferBuildAgeIdFromValue(buildingAge: string): string {
   const normalized = buildingAge.trim().toLocaleLowerCase("tr-TR");
   if (!normalized) return "";
   if (normalized.includes("proje")) return "12";
@@ -200,13 +239,60 @@ function getInitialRegion(cityVal: string, val?: string | null) {
   return match ? match.v : val;
 }
 
-export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Props) {
+export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookups }: Props) {
   const t = useTranslations("Wizard");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const [wizardStep, setWizardStep] = useState(0);
   const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
+
+  // ── DB lookup'lar (101evler & Hangiev) ─────────────────────────────
+  const TYPE_ID_OPTIONS = lookups.ext101.types;
+  const TITLE_TYPE_OPTIONS = lookups.ext101.titleTypes;
+  const ROOM_COUNT_OPTIONS = lookups.ext101.roomCounts;
+  const BUILD_AGE_OPTIONS = lookups.ext101.buildAges;
+  const FURNISHING_OPTIONS = lookups.ext101.furnishing;
+  const BILLING_CYCLE_OPTIONS = lookups.ext101.billingCycles;
+  const AREA_ID_OPTIONS = useMemo(() => groupAreasByCity(lookups.ext101.areas), [lookups.ext101.areas]);
+  const HANGIEV_PROPERTY_TYPE_OPTIONS = lookups.hangiev.propertyTypes;
+  const HANGIEV_ROOM_COUNT_OPTIONS = lookups.hangiev.roomCounts;
+  const HANGIEV_BUILD_AGE_OPTIONS = lookups.hangiev.buildAges;
+  const HANGIEV_FURNISHING_OPTIONS = lookups.hangiev.furnishing;
+  const HANGIEV_AREA_ID_OPTIONS = useMemo(() => groupAreasByCity(lookups.hangiev.areas), [lookups.hangiev.areas]);
+
+  const CURRENCY_CODE_MAP = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const c of lookups.ext101.currencies) {
+      const num = typeof c.code === "number" ? c.code : Number(c.code);
+      if (Number.isFinite(num)) map[c.iso] = num;
+    }
+    return map;
+  }, [lookups.ext101.currencies]);
+
+  const HANGIEV_CURRENCY_CODE_MAP = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const c of lookups.hangiev.currencies) map[c.iso] = String(c.code);
+    return map;
+  }, [lookups.hangiev.currencies]);
+
+  // ── infer wrapper'lar (eski API'yi koruyor, içte DB lookup'larını kullanıyor)
+  const infer101TypeId = (propertyType: string) => inferTypeIdFromOptions(propertyType, TYPE_ID_OPTIONS);
+  const infer101AreaCity = (cityValue: string) => inferAreaCity(cityValue);
+  const infer101AreaId = (cityValue: string, regionValue: string) =>
+    inferAreaId(cityValue, regionValue, AREA_ID_OPTIONS);
+  const infer101RoomCountId = (bedrooms: string, livingRooms: string) =>
+    inferRoomCountId(bedrooms, livingRooms, ROOM_COUNT_OPTIONS);
+  const infer101BuildAgeId = (buildingAge: string) => inferBuildAgeIdFromValue(buildingAge);
+
+  const inferHangievPropertyTypeId = (propertyType: string) =>
+    inferTypeIdFromOptions(propertyType, HANGIEV_PROPERTY_TYPE_OPTIONS);
+  const inferHangievAreaCity = (cityValue: string) => inferAreaCity(cityValue);
+  const inferHangievAreaId = (cityValue: string, regionValue: string) =>
+    inferAreaId(cityValue, regionValue, HANGIEV_AREA_ID_OPTIONS);
+  const inferHangievRoomCountId = (bedrooms: string, livingRooms: string) =>
+    inferRoomCountId(bedrooms, livingRooms, HANGIEV_ROOM_COUNT_OPTIONS);
+  const inferHangievBuildAgeId = (buildingAge: string) => inferBuildAgeIdFromValue(buildingAge);
 
   const PROPERTY_LABELS: Record<string, string> = {
     bedrooms: t("propertyLabels.bedrooms"),
@@ -242,7 +328,29 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
   const initialCity = getInitialCity(listing?.city);
   const initialRegion = getInitialRegion(initialCity, listing?.region);
 
-  const initialExt101 = parseExt101(listing?.ext101evler ?? null);
+  // Yeni `*_101` / `*_hg` kolonları öncelikli, JSONB ext_*  fallback olarak okunur.
+  const ext101FromJson = parseExt101(listing?.ext101evler ?? null);
+  const extHangievFromJson = parseExtHangiev(listing?.extHangiev ?? null);
+  const initialExt101: Ext101evler = {
+    type_id: listing?.type_id_101 ?? ext101FromJson.type_id ?? null,
+    area_id: listing?.area_id_101 ?? ext101FromJson.area_id ?? null,
+    title_type_id: listing?.title_type_id_101 ?? ext101FromJson.title_type_id ?? null,
+    room_count_id: listing?.room_count_id_101 ?? ext101FromJson.room_count_id ?? null,
+    build_age_id: listing?.build_age_id_101 ?? ext101FromJson.build_age_id ?? null,
+    furnishing_id: listing?.furnishing_id_101 ?? ext101FromJson.furnishing_id ?? null,
+    billing_cycle_id: listing?.billing_cycle_id_101 ?? ext101FromJson.billing_cycle_id ?? null,
+    price_for: (listing?.price_for_101 as "T" | "U" | null | undefined) ?? ext101FromJson.price_for ?? null,
+    reference_no: listing?.reference_no_101 ?? ext101FromJson.reference_no ?? null,
+  };
+  const initialExtHangiev: ExtHangiev = {
+    property_type_id: listing?.property_type_id_hg ?? extHangievFromJson.property_type_id ?? null,
+    area_id: listing?.area_id_hg ?? extHangievFromJson.area_id ?? null,
+    room_count_id: listing?.room_count_id_hg ?? extHangievFromJson.room_count_id ?? null,
+    build_age_id: listing?.build_age_id_hg ?? extHangievFromJson.build_age_id ?? null,
+    furnishing_id: listing?.furnishing_id_hg ?? extHangievFromJson.furnishing_id ?? null,
+    price_for: (listing?.price_for_hg as "T" | "U" | null | undefined) ?? extHangievFromJson.price_for ?? null,
+    reference_no: listing?.reference_no_hg ?? extHangievFromJson.reference_no ?? null,
+  };
 
   const [form, setForm] = useState({
     listingId: listing?.listingId ?? suggestedId,
@@ -314,6 +422,15 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
     ext101_price_for: (initialExt101.price_for as string | null | undefined) ?? "T",
     ext101_reference_no: initialExt101.reference_no ?? "",
     ext101_area_city: infer101AreaCity(initialCity),
+    exportToHangiev: listing?.exportToHangiev ?? false,
+    hangiev_property_type_id: initialExtHangiev.property_type_id != null ? String(initialExtHangiev.property_type_id) : "",
+    hangiev_area_id: initialExtHangiev.area_id != null ? String(initialExtHangiev.area_id) : "",
+    hangiev_room_count_id: initialExtHangiev.room_count_id != null ? String(initialExtHangiev.room_count_id) : "",
+    hangiev_build_age_id: initialExtHangiev.build_age_id != null ? String(initialExtHangiev.build_age_id) : "",
+    hangiev_furnishing_id: initialExtHangiev.furnishing_id != null ? String(initialExtHangiev.furnishing_id) : "",
+    hangiev_price_for: (initialExtHangiev.price_for as string | null | undefined) ?? "T",
+    hangiev_reference_no: initialExtHangiev.reference_no ?? "",
+    hangiev_area_city: inferHangievAreaCity(initialCity),
   });
 
   function with101Defaults(current: typeof form, overwrite = false): typeof form {
@@ -343,6 +460,33 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
     setForm((current) => with101Defaults(current, true));
   }
 
+  function withHangievDefaults(current: typeof form, overwrite = false): typeof form {
+    const apply = (existing: string, inferred: string) => (overwrite ? inferred || existing : existing || inferred);
+
+    return {
+      ...current,
+      hangiev_property_type_id: apply(current.hangiev_property_type_id, inferHangievPropertyTypeId(current.propertyType)),
+      hangiev_area_city: apply(current.hangiev_area_city, inferHangievAreaCity(current.city)),
+      hangiev_area_id: apply(current.hangiev_area_id, inferHangievAreaId(current.city, current.region)),
+      hangiev_room_count_id: apply(current.hangiev_room_count_id, inferHangievRoomCountId(current.bedrooms, current.livingRooms)),
+      hangiev_build_age_id: apply(current.hangiev_build_age_id, inferHangievBuildAgeId(current.buildingAge)),
+      hangiev_furnishing_id: apply(current.hangiev_furnishing_id, current.furnished ? "3" : "1"),
+      hangiev_price_for: current.hangiev_price_for || "T",
+      hangiev_reference_no: current.hangiev_reference_no || current.listingId,
+    };
+  }
+
+  function setExportToHangiev(enabled: boolean) {
+    setForm((current) => {
+      const next = { ...current, exportToHangiev: enabled };
+      return enabled ? withHangievDefaults(next) : next;
+    });
+  }
+
+  function refreshHangievDefaults() {
+    setForm((current) => withHangievDefaults(current, true));
+  }
+
   const translations = useMemo(() => {
     try {
       return JSON.parse(form.translations) as Record<
@@ -363,23 +507,42 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
 
   const set = (k: keyof typeof form, v: string | boolean | number) =>
     setForm((f) => {
-      const next = { ...f, [k]: v } as typeof form;
-      if (!next.exportTo101evler) return next;
+      let next = { ...f, [k]: v } as typeof form;
 
-      if (k === "propertyType") {
-        return { ...next, ext101_type_id: infer101TypeId(next.propertyType) };
+      if (next.exportTo101evler) {
+        if (k === "propertyType") {
+          next = { ...next, ext101_type_id: infer101TypeId(next.propertyType) };
+        }
+        if (k === "bedrooms" || k === "livingRooms") {
+          next = { ...next, ext101_room_count_id: infer101RoomCountId(next.bedrooms, next.livingRooms) };
+        }
+        if (k === "buildingAge") {
+          next = { ...next, ext101_build_age_id: infer101BuildAgeId(next.buildingAge) };
+        }
+        if (k === "furnished") {
+          next = { ...next, ext101_furnishing_id: next.furnished ? "3" : "1" };
+        }
+        if (k === "listingId" && !next.ext101_reference_no) {
+          next = { ...next, ext101_reference_no: next.listingId };
+        }
       }
-      if (k === "bedrooms" || k === "livingRooms") {
-        return { ...next, ext101_room_count_id: infer101RoomCountId(next.bedrooms, next.livingRooms) };
-      }
-      if (k === "buildingAge") {
-        return { ...next, ext101_build_age_id: infer101BuildAgeId(next.buildingAge) };
-      }
-      if (k === "furnished") {
-        return { ...next, ext101_furnishing_id: next.furnished ? "3" : "1" };
-      }
-      if (k === "listingId" && !next.ext101_reference_no) {
-        return { ...next, ext101_reference_no: next.listingId };
+
+      if (next.exportToHangiev) {
+        if (k === "propertyType") {
+          next = { ...next, hangiev_property_type_id: inferHangievPropertyTypeId(next.propertyType) };
+        }
+        if (k === "bedrooms" || k === "livingRooms") {
+          next = { ...next, hangiev_room_count_id: inferHangievRoomCountId(next.bedrooms, next.livingRooms) };
+        }
+        if (k === "buildingAge") {
+          next = { ...next, hangiev_build_age_id: inferHangievBuildAgeId(next.buildingAge) };
+        }
+        if (k === "furnished") {
+          next = { ...next, hangiev_furnishing_id: next.furnished ? "3" : "1" };
+        }
+        if (k === "listingId" && !next.hangiev_reference_no) {
+          next = { ...next, hangiev_reference_no: next.listingId };
+        }
       }
 
       return next;
@@ -452,7 +615,10 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
           updates.region = regionParts;
         }
       }
-      return updates.exportTo101evler ? with101Defaults(updates) : updates;
+      let next = updates;
+      if (next.exportTo101evler) next = with101Defaults(next);
+      if (next.exportToHangiev) next = withHangievDefaults(next);
+      return next;
     });
   }
 
@@ -592,9 +758,35 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
   async function doSave(statusOverride?: string) {
     setMessage(null);
     setMessageType(null);
-    const preparedForm = form.exportTo101evler ? with101Defaults(form) : form;
+    let preparedForm = form;
+    if (preparedForm.exportTo101evler) preparedForm = with101Defaults(preparedForm);
+    if (preparedForm.exportToHangiev) preparedForm = withHangievDefaults(preparedForm);
     if (preparedForm !== form) {
       setForm(preparedForm);
+    }
+
+    // Step 2 sayısal alan validasyonu (101evler ve Hangiev'in min/max sınırlarına uyum)
+    const numericLimits: { key: keyof typeof preparedForm; min: number; max: number; label: string }[] = [
+      { key: "bedrooms", min: 0, max: 20, label: PROPERTY_LABELS.bedrooms },
+      { key: "bathrooms", min: 0, max: 10, label: PROPERTY_LABELS.bathrooms },
+      { key: "floor", min: -5, max: 100, label: PROPERTY_LABELS.floor },
+      { key: "buildingAge", min: 0, max: 120, label: PROPERTY_LABELS.buildingAge },
+      { key: "livingRooms", min: 0, max: 10, label: PROPERTY_LABELS.livingRooms },
+    ];
+    const violations: string[] = [];
+    for (const { key, min, max, label } of numericLimits) {
+      const raw = String(preparedForm[key] ?? "").trim();
+      if (raw === "") continue;
+      const num = Number(raw);
+      if (!Number.isFinite(num) || num < min || num > max) {
+        violations.push(`${label} (${min}-${max} arasında olmalı, girilen: ${raw})`);
+      }
+    }
+    if (violations.length > 0) {
+      setMessage(`Geçersiz emlak özelliği değerleri: ${violations.join("; ")}.`);
+      setMessageType("error");
+      setWizardStep(2);
+      return;
     }
 
     if (preparedForm.exportTo101evler) {
@@ -610,6 +802,23 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
         setMessage(`101evler'e gönderim için eksik/uyumsuz alanlar: ${missing101.join(", ")}. Lütfen 101evler adımını kontrol edin.`);
         setMessageType("error");
         setWizardStep(missing101.includes("101evler para birimi kodu") || missing101.includes("Fiyat") ? 0 : 5);
+        return;
+      }
+    }
+
+    if (preparedForm.exportToHangiev) {
+      const missingHangiev: string[] = [];
+      if (!preparedForm.hangiev_property_type_id) missingHangiev.push("Emlak Tipi");
+      if (!preparedForm.hangiev_area_id) missingHangiev.push("Bölge");
+      if (!Object.prototype.hasOwnProperty.call(HANGIEV_CURRENCY_CODE_MAP, preparedForm.currency.toUpperCase())) {
+        missingHangiev.push("Hangiev para birimi kodu");
+      }
+      if (!preparedForm.price || Number(preparedForm.price) <= 0) missingHangiev.push("Fiyat");
+
+      if (missingHangiev.length > 0) {
+        setMessage(`Hangiev'e gönderim için eksik/uyumsuz alanlar: ${missingHangiev.join(", ")}. Lütfen Hangiev adımını kontrol edin.`);
+        setMessageType("error");
+        setWizardStep(missingHangiev.includes("Hangiev para birimi kodu") || missingHangiev.includes("Fiyat") ? 0 : 6);
         return;
       }
     }
@@ -636,6 +845,7 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
 
     const payload: ListingSavePayload = {
       id: listing?.id,
+      originalListingId: listing?.listingId,
       listingId: f.listingId,
       title: f.title,
       kind: f.kind,
@@ -707,6 +917,16 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
         price_for: (f.ext101_price_for === "U" ? "U" : "T") as "T" | "U",
         reference_no: f.ext101_reference_no?.trim() || null,
       },
+      exportToHangiev: f.exportToHangiev,
+      extHangiev: {
+        property_type_id: f.hangiev_property_type_id ? Number(f.hangiev_property_type_id) : null,
+        area_id: f.hangiev_area_id ? Number(f.hangiev_area_id) : null,
+        room_count_id: f.hangiev_room_count_id ? Number(f.hangiev_room_count_id) : null,
+        build_age_id: f.hangiev_build_age_id ? Number(f.hangiev_build_age_id) : null,
+        furnishing_id: f.hangiev_furnishing_id ? Number(f.hangiev_furnishing_id) : null,
+        price_for: (f.hangiev_price_for === "U" ? "U" : "T") as "T" | "U",
+        reference_no: f.hangiev_reference_no?.trim() || null,
+      },
     };
 
     try {
@@ -746,6 +966,7 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
     { icon: "photo_library" as AdminIconName, label: "Medya" },
     { icon: "person" as AdminIconName, label: "Danışman & Yayın" },
     { icon: "settings" as AdminIconName, label: "101evler" },
+    { icon: "settings" as AdminIconName, label: "Hangiev" },
   ];
 
   return (
@@ -903,11 +1124,14 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
                     const newCity = e.target.value;
                     setForm((f) => {
                       const next = { ...f, city: newCity, region: "" };
-                      if (!next.exportTo101evler) return next;
                       return {
                         ...next,
-                        ext101_area_city: infer101AreaCity(newCity),
-                        ext101_area_id: "",
+                        ...(next.exportTo101evler
+                          ? { ext101_area_city: infer101AreaCity(newCity), ext101_area_id: "" }
+                          : {}),
+                        ...(next.exportToHangiev
+                          ? { hangiev_area_city: inferHangievAreaCity(newCity), hangiev_area_id: "" }
+                          : {}),
                       };
                     });
                   }}
@@ -927,11 +1151,20 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
                       const newRegion = e.target.value;
                       setForm((f) => {
                         const next = { ...f, region: newRegion };
-                        if (!next.exportTo101evler) return next;
                         return {
                           ...next,
-                          ext101_area_city: infer101AreaCity(next.city),
-                          ext101_area_id: infer101AreaId(next.city, newRegion),
+                          ...(next.exportTo101evler
+                            ? {
+                                ext101_area_city: infer101AreaCity(next.city),
+                                ext101_area_id: infer101AreaId(next.city, newRegion),
+                              }
+                            : {}),
+                          ...(next.exportToHangiev
+                            ? {
+                                hangiev_area_city: inferHangievAreaCity(next.city),
+                                hangiev_area_id: inferHangievAreaId(next.city, newRegion),
+                              }
+                            : {}),
                         };
                       });
                     }}
@@ -950,11 +1183,20 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
                       const newRegion = e.target.value;
                       setForm((f) => {
                         const next = { ...f, region: newRegion };
-                        if (!next.exportTo101evler) return next;
                         return {
                           ...next,
-                          ext101_area_city: infer101AreaCity(next.city),
-                          ext101_area_id: infer101AreaId(next.city, newRegion),
+                          ...(next.exportTo101evler
+                            ? {
+                                ext101_area_city: infer101AreaCity(next.city),
+                                ext101_area_id: infer101AreaId(next.city, newRegion),
+                              }
+                            : {}),
+                          ...(next.exportToHangiev
+                            ? {
+                                hangiev_area_city: inferHangievAreaCity(next.city),
+                                hangiev_area_id: inferHangievAreaId(next.city, newRegion),
+                              }
+                            : {}),
                         };
                       });
                     }}
@@ -1029,12 +1271,49 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
           <h2 className="text-lg font-bold text-zinc-800">Emlak Özellikleri</h2>
           <p className="mt-1 text-sm text-zinc-500">Oda sayısı, metrekare ve diğer özellikleri girin</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {(["bedrooms", "bathrooms", "areaM2", "plotAreaM2", "floor", "buildingAge", "livingRooms"] as const).map((k) => (
-              <label key={k} className="block text-sm font-medium text-zinc-700">
-                {PROPERTY_LABELS[k]}
-                <input className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" value={form[k]} onChange={(e) => set(k, e.target.value)} />
-              </label>
-            ))}
+            {(
+              [
+                { key: "bedrooms", min: 0, max: 20, step: 1, hint: "0-20" },
+                { key: "bathrooms", min: 0, max: 10, step: 1, hint: "0-10" },
+                { key: "areaM2", min: 0, max: 100000, step: 1, hint: "m²" },
+                { key: "plotAreaM2", min: 0, max: 1000000, step: 1, hint: "m²" },
+                { key: "floor", min: -5, max: 100, step: 1, hint: "-5 ile 100" },
+                { key: "buildingAge", min: 0, max: 120, step: 1, hint: "0-120 (yıl)" },
+                { key: "livingRooms", min: 0, max: 10, step: 1, hint: "0-10" },
+              ] as const
+            ).map(({ key, min, max, step, hint }) => {
+              const raw = form[key];
+              const num = raw === "" ? null : Number(raw);
+              const invalid =
+                num !== null && (!Number.isFinite(num) || num < min || num > max);
+              return (
+                <label key={key} className="block text-sm font-medium text-zinc-700">
+                  <span className="flex items-center justify-between">
+                    <span>{PROPERTY_LABELS[key]}</span>
+                    <span className="text-[11px] font-normal text-zinc-400">{hint}</span>
+                  </span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={min}
+                    max={max}
+                    step={step}
+                    className={`mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-2 text-sm outline-none focus:ring-2 ${
+                      invalid
+                        ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500/20"
+                        : "border-zinc-200 focus:border-emerald-500 focus:ring-emerald-500/20"
+                    }`}
+                    value={raw}
+                    onChange={(e) => set(key, e.target.value)}
+                  />
+                  {invalid && (
+                    <span className="mt-1 block text-xs text-rose-600">
+                      Lütfen {min} ile {max} arasında bir değer girin.
+                    </span>
+                  )}
+                </label>
+              );
+            })}
           </div>
           <div className="mt-4 flex flex-wrap gap-4">
             {([
@@ -1534,6 +1813,176 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole }: Prop
               <li>İlan 101evler&apos;e gitmesi için <strong>Yayın Durumu = Yayında</strong> olmalı.</li>
               <li>Para birimi sadece TRY ve USD desteklenir; EUR/GBP ilanlar feed&apos;e girmez (101evler kur kodları teyit edildiğinde eklenecek).</li>
               <li>type_id veya area_id boş olan ilanlar feed&apos;den otomatik düşer.</li>
+            </ul>
+          </div>
+        </section>
+      )}
+
+      {/* STEP 6: Hangiev XML Yayını */}
+      {wizardStep === 6 && (
+        <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-bold text-zinc-800">Hangiev XML Yayını</h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            Bu ilanı Hangiev.com üzerinde yayınlamak için aşağıdaki bilgileri eksiksiz doldurun.
+            <code>property_type_id</code> ve <code>area_id</code> zorunludur, eksikse ilan feed&apos;e dahil edilmez.
+          </p>
+
+          <label className="mt-4 flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50/50 px-4 py-3 text-sm font-medium">
+            <input
+              type="checkbox"
+              checked={form.exportToHangiev}
+              onChange={(e) => setExportToHangiev(e.target.checked)}
+              className="h-4 w-4 rounded border-zinc-300 text-sky-600 focus:ring-sky-500/20"
+            />
+            <span className="font-semibold text-sky-800">Bu ilanı Hangiev&apos;e gönder</span>
+          </label>
+
+          <fieldset disabled={!form.exportToHangiev} className={form.exportToHangiev ? "" : "opacity-60"}>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm">
+              <p className="text-zinc-600">
+                Sistem; emlak tipi, şehir/bölge, oda sayısı, bina yaşı ve eşya durumundan Hangiev ID&apos;lerini otomatik önerir.
+              </p>
+              <button
+                type="button"
+                onClick={refreshHangievDefaults}
+                className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-xs font-bold text-sky-700 hover:bg-sky-50"
+              >
+                Bilgilerden otomatik doldur
+              </button>
+            </div>
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <label className="block text-sm font-medium text-zinc-700">
+                Emlak Tipi (property_type_id) *
+                <select
+                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+                  value={form.hangiev_property_type_id}
+                  onChange={(e) => set("hangiev_property_type_id", e.target.value)}
+                >
+                  <option value="">- Seçiniz -</option>
+                  {HANGIEV_PROPERTY_TYPE_OPTIONS.map((o) => (
+                    <option key={o.id} value={o.id}>{o.id} - {o.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block text-sm font-medium text-zinc-700">
+                Şehir (area filtresi)
+                <select
+                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+                  value={form.hangiev_area_city}
+                  onChange={(e) => set("hangiev_area_city", e.target.value)}
+                >
+                  <option value="">- Tümü -</option>
+                  {Object.keys(HANGIEV_AREA_ID_OPTIONS).map((city) => (
+                    <option key={city} value={city}>{city}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block text-sm font-medium text-zinc-700 sm:col-span-2">
+                Bölge (area_id) *
+                <select
+                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+                  value={form.hangiev_area_id}
+                  onChange={(e) => set("hangiev_area_id", e.target.value)}
+                >
+                  <option value="">- Seçiniz -</option>
+                  {(form.hangiev_area_city
+                    ? HANGIEV_AREA_ID_OPTIONS[form.hangiev_area_city] ?? []
+                    : Object.entries(HANGIEV_AREA_ID_OPTIONS).flatMap(([c, opts]) => opts.map((o) => ({ ...o, label: `${c} - ${o.label}` })))
+                  ).map((o) => (
+                    <option key={o.id} value={o.id}>{o.id} - {o.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block text-sm font-medium text-zinc-700">
+                Oda Sayısı (room_count_id)
+                <select
+                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+                  value={form.hangiev_room_count_id}
+                  onChange={(e) => set("hangiev_room_count_id", e.target.value)}
+                >
+                  <option value="">-</option>
+                  {HANGIEV_ROOM_COUNT_OPTIONS.map((o) => (
+                    <option key={o.id} value={o.id}>{o.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block text-sm font-medium text-zinc-700">
+                Bina Yaşı (build_age_id)
+                <select
+                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+                  value={form.hangiev_build_age_id}
+                  onChange={(e) => set("hangiev_build_age_id", e.target.value)}
+                >
+                  <option value="">-</option>
+                  {HANGIEV_BUILD_AGE_OPTIONS.map((o) => (
+                    <option key={o.id} value={o.id}>{o.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block text-sm font-medium text-zinc-700">
+                Eşya Durumu (furnishing_id)
+                <select
+                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+                  value={form.hangiev_furnishing_id}
+                  onChange={(e) => set("hangiev_furnishing_id", e.target.value)}
+                >
+                  <option value="">-</option>
+                  {HANGIEV_FURNISHING_OPTIONS.map((o) => (
+                    <option key={o.id} value={o.id}>{o.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block text-sm font-medium text-zinc-700">
+                Fiyat Tipi (price_for)
+                <div className="mt-1 flex gap-3">
+                  <label className="flex items-center gap-1.5 text-sm">
+                    <input
+                      type="radio"
+                      name="hangiev_price_for"
+                      value="T"
+                      checked={form.hangiev_price_for === "T"}
+                      onChange={() => set("hangiev_price_for", "T")}
+                    />
+                    Toplam
+                  </label>
+                  <label className="flex items-center gap-1.5 text-sm">
+                    <input
+                      type="radio"
+                      name="hangiev_price_for"
+                      value="U"
+                      checked={form.hangiev_price_for === "U"}
+                      onChange={() => set("hangiev_price_for", "U")}
+                    />
+                    Birim (m²)
+                  </label>
+                </div>
+              </label>
+
+              <label className="block text-sm font-medium text-zinc-700">
+                Referans No (reference_no)
+                <input
+                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+                  placeholder="Boş bırakılırsa İlan No kullanılır"
+                  value={form.hangiev_reference_no}
+                  onChange={(e) => set("hangiev_reference_no", e.target.value)}
+                />
+              </label>
+            </div>
+          </fieldset>
+
+          <div className="mt-6 rounded-xl border border-sky-200 bg-sky-50 p-4 text-xs text-sky-800">
+            <p className="font-semibold">Not</p>
+            <ul className="mt-1 list-disc space-y-1 pl-5">
+              <li>İlan Hangiev&apos;e gitmesi için <strong>Yayın Durumu = Yayında</strong> olmalı.</li>
+              <li>Hangiev XML şeması doküman gelene kadar 101evler benzeri geçici formatla üretilir.</li>
+              <li>property_type_id veya area_id boş olan ilanlar feed&apos;den otomatik düşer.</li>
             </ul>
           </div>
         </section>

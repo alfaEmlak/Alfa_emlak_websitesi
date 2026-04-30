@@ -26,7 +26,10 @@ const navGroups: NavGroup[] = [
   },
   {
     title: "İLETİŞİM",
-    items: [{ href: "/karealfaadmin/mesajlar", label: "Gelen Kutusu", icon: "mail", match: "prefix", adminOnly: true }],
+    items: [
+      { href: "/karealfaadmin/mesajlar", label: "Gelen Kutusu", icon: "mail", match: "prefix", adminOnly: true },
+      { href: "/karealfaadmin/kariyer", label: "Kariyer Başvuruları", icon: "person_add", match: "prefix", adminOnly: true },
+    ],
   },
   {
     title: "İÇERİK",
@@ -40,6 +43,7 @@ const navGroups: NavGroup[] = [
     title: "YÖNETİM",
     items: [
       { href: "/karealfaadmin/danismanlar", label: "Danışmanlar", icon: "group", match: "prefix", adminOnly: true },
+      { href: "/karealfaadmin/lookups", label: "İlan Lookup'ları", icon: "list", match: "prefix", adminOnly: true },
       { href: "/karealfaadmin/ayarlar", label: "Site Ayarları", icon: "settings", match: "prefix", adminOnly: true },
     ],
   },

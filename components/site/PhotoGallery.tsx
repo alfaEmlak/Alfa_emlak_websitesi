@@ -118,30 +118,44 @@ export function PhotoGallery({
       </div>
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-surface p-4 sm:p-8 animate-in fade-in duration-300">
-          <div className="mx-auto flex w-full max-w-5xl justify-between pb-4">
-            <h3 className="font-headline text-lg font-bold text-primary">Fotoğraf Galerisi</h3>
+        <div
+          className="fixed inset-0 z-[100] flex flex-col bg-black/95"
+          onClick={handleClose}
+        >
+          <div className="flex items-center justify-between px-4 py-3 sm:px-6">
+            <h3 className="font-headline text-base font-bold text-white sm:text-lg">
+              Fotoğraf Galerisi ({displayImages.length})
+            </h3>
             <button
-              onClick={handleClose}
-              className="flex items-center justify-center rounded-full bg-surface-high p-2 text-primary hover:bg-surface-highest hover:text-secondary transition"
+              type="button"
+              onClick={(e) => { e.stopPropagation(); handleClose(); }}
+              aria-label="Kapat"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition"
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 6L6 18M6 6l12 12" />
               </svg>
             </button>
           </div>
-          
-          <div className="flex-1 overflow-x-auto overflow-y-hidden snap-x snap-mandatory flex items-center md:items-start md:overflow-y-auto md:overflow-x-hidden md:flex-col md:pb-10 no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-            <div className="flex flex-row md:flex-col gap-4 sm:gap-10 md:mx-auto md:max-w-4xl px-4 md:px-0">
+
+          <div
+            className="flex-1 overflow-y-auto px-4 pb-8 sm:px-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto flex max-w-5xl flex-col gap-4 sm:gap-6">
               {displayImages.map((img, idx) => (
-                <div key={img.id || idx} className="snap-center shrink-0 relative w-[85vw] md:w-full shadow-lg rounded-2xl overflow-hidden aspect-[4/3] sm:aspect-[16/9] lg:aspect-[3/2]">
-                  <Image 
-                    src={img.url || safePrimaryImage} 
-                    alt={`Photo ${idx + 1}`} 
-                    fill 
-                    className="object-cover" 
-                    sizes="(max-width:1200px) 100vw, 1200px" 
-                    unoptimized 
+                <div
+                  key={img.id || idx}
+                  className="relative w-full overflow-hidden rounded-xl bg-black"
+                  style={{ aspectRatio: "16 / 10" }}
+                >
+                  <Image
+                    src={img.url || safePrimaryImage}
+                    alt={`Photo ${idx + 1}`}
+                    fill
+                    className="object-contain"
+                    sizes="(max-width:1024px) 100vw, 1024px"
+                    unoptimized
                   />
                 </div>
               ))}

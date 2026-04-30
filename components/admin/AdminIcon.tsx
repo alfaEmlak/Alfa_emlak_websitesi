@@ -16,6 +16,7 @@ import {
   Info,
   Languages,
   LayoutDashboard,
+  List,
   Mail,
   Mails,
   MapPinned,
@@ -73,7 +74,8 @@ export type AdminIconName =
   | "cancel"
   | "fiber_new"
   | "slideshow"
-  | "image";
+  | "image"
+  | "list";
 
 const ICONS: Record<AdminIconName, LucideIcon> = {
   dashboard: LayoutDashboard,
@@ -111,6 +113,7 @@ const ICONS: Record<AdminIconName, LucideIcon> = {
   fiber_new: Sparkles,
   slideshow: Presentation,
   image: ImageIcon,
+  list: List,
 };
 
 type AdminIconProps = {

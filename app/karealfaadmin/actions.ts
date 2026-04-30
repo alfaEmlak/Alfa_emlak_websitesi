@@ -7,11 +7,18 @@ import { getPanelSession, requireAdmin, requirePanelUser } from "@/lib/panel-aut
 import { defaultMegaMenu } from "@/lib/default-menu";
 import { menuTopItemsSchema } from "@/lib/menu-schema";
 import { verifyPassword } from "@/lib/password";
+import { isUuidString } from "@/lib/listing-identity";
 import { customAlphabet } from "nanoid";
 
 const CONSULTANT_ROLES = ["CONSULTANT", "AGENT"];
 const LISTING_STATUSES = ["DRAFT", "PENDING_APPROVAL", "PUBLISHED", "HIDDEN", "REJECTED"] as const;
 type ListingStatus = (typeof LISTING_STATUSES)[number];
+type ExistingListingForSave = {
+  id: string;
+  publish_status: string;
+  created_by_agent_id: string | null;
+  created_by_name: string | null;
+};
 
 type ActiveConsultantAccount = {
   id: string;
@@ -21,8 +28,6 @@ type ActiveConsultantAccount = {
 };
 
 async function findConsultantByPassword(password: string) {
-  const fallbackPassword = process.env.CONSULTANT_PASSWORD?.trim();
-  const fallbackName = process.env.CONSULTANT_NAME?.trim() || "Panel Danışmanı";
   const { data, error } = await supabaseAdmin
     .from("agents")
     .select("id, name, role, password_hash")
@@ -96,6 +101,7 @@ export async function logoutAdmin() {
 
 export type ListingSavePayload = {
   id?: string;
+  originalListingId?: string;
   listingId: string;
   title: string;
   kind: string;
@@ -165,6 +171,16 @@ export type ListingSavePayload = {
     build_age_id?: number | null;
     furnishing_id?: number | null;
     billing_cycle_id?: number | null;
+    price_for?: "T" | "U" | null;
+    reference_no?: string | null;
+  };
+  exportToHangiev?: boolean;
+  extHangiev?: {
+    property_type_id?: number | null;
+    area_id?: number | null;
+    room_count_id?: number | null;
+    build_age_id?: number | null;
+    furnishing_id?: number | null;
     price_for?: "T" | "U" | null;
     reference_no?: string | null;
   };
@@ -276,6 +292,74 @@ async function notifyAdminForApproval(input: {
   });
 }
 
+type ExistingListingRow = Record<string, unknown> & { id?: string | null };
+
+async function findExistingListingForSave(payload: ListingSavePayload): Promise<{
+  data: ExistingListingForSave | null;
+  error: { message: string; code?: string } | null;
+}> {
+  const candidates: Array<{ column: "id" | "listing_id"; value: string }> = [];
+  const payloadId = payload.id?.trim();
+  const publicListingId = payload.listingId?.trim();
+  const originalListingId = payload.originalListingId?.trim();
+
+  if (payloadId) {
+    if (isUuidString(payloadId)) {
+      candidates.push({ column: "id", value: payloadId });
+    }
+    candidates.push({ column: "listing_id", value: payloadId });
+  }
+
+  if (publicListingId && publicListingId !== payloadId) {
+    candidates.push({ column: "listing_id", value: publicListingId });
+  }
+
+  if (originalListingId && originalListingId !== payloadId && originalListingId !== publicListingId) {
+    candidates.push({ column: "listing_id", value: originalListingId });
+  }
+
+  const baseSelect = "id, publish_status";
+  const richSelect = "id, publish_status, created_by_agent_id, created_by_name";
+  let lastError: { message: string; code?: string } | null = null;
+
+  for (const candidate of candidates) {
+    let result = await supabaseAdmin
+      .from("listings")
+      .select(richSelect)
+      .eq(candidate.column, candidate.value)
+      .maybeSingle();
+
+    if (result.error && result.error.code === "42703") {
+      result = await supabaseAdmin
+        .from("listings")
+        .select(baseSelect)
+        .eq(candidate.column, candidate.value)
+        .maybeSingle();
+    }
+
+    if (result.data) {
+      const row = result.data as ExistingListingRow;
+      return {
+        data: {
+          id: String(row.id ?? ""),
+          publish_status: String(row.publish_status ?? ""),
+          created_by_agent_id:
+            typeof row.created_by_agent_id === "string" ? row.created_by_agent_id : null,
+          created_by_name:
+            typeof row.created_by_name === "string" ? row.created_by_name : null,
+        },
+        error: null,
+      };
+    }
+
+    if (result.error) {
+      lastError = { message: result.error.message, code: result.error.code };
+    }
+  }
+
+  return { data: null, error: lastError };
+}
+
 export async function saveListing(payload: ListingSavePayload) {
   const user = await requirePanelUser();
   const requestedStatus = normalizeRequestedStatus(payload.publishStatus);
@@ -290,23 +374,16 @@ export async function saveListing(payload: ListingSavePayload) {
   const gallery = payload.gallery.filter((g) => g.url.trim() !== "");
   const now = new Date().toISOString();
 
-  let existingListing:
-    | {
-        id: string;
-        publish_status: string;
-        created_by_agent_id: string | null;
-        created_by_name: string | null;
+  let existingListing: ExistingListingForSave | null = null;
+
+  if (payload.id || payload.originalListingId) {
+    const { data, error } = await findExistingListingForSave(payload);
+
+    if (!data) {
+      if (error) {
+        console.error("[saveListing] findExistingListingForSave error:", error);
+        throw new Error(`İlan bulunamadı (${error.message}).`);
       }
-    | null = null;
-
-  if (payload.id) {
-    const { data, error } = await supabaseAdmin
-      .from("listings")
-      .select("id, publish_status, created_by_agent_id, created_by_name")
-      .eq("id", payload.id)
-      .single();
-
-    if (error || !data) {
       throw new Error("İlan bulunamadı.");
     }
 
@@ -385,12 +462,33 @@ export async function saveListing(payload: ListingSavePayload) {
     rejected_by_name: finalStatus === "REJECTED" && canPublishDirectly(user.role) ? user.name : null,
     export_to_101evler: payload.exportTo101evler ?? false,
     ext_101evler: payload.ext101evler ?? {},
+    export_to_hangiev: payload.exportToHangiev ?? false,
+    ext_hangiev: payload.extHangiev ?? {},
+    // 101evler & Hangiev: yeni FK kolonları (lookup-driven)
+    type_id_101: payload.ext101evler?.type_id ?? null,
+    area_id_101: payload.ext101evler?.area_id ?? null,
+    title_type_id_101: payload.ext101evler?.title_type_id ?? null,
+    room_count_id_101: payload.ext101evler?.room_count_id ?? null,
+    build_age_id_101: payload.ext101evler?.build_age_id ?? null,
+    furnishing_id_101: payload.ext101evler?.furnishing_id ?? null,
+    billing_cycle_id_101: payload.ext101evler?.billing_cycle_id ?? null,
+    price_for_101: (payload.ext101evler?.price_for as string | null | undefined) ?? null,
+    reference_no_101: payload.ext101evler?.reference_no ?? null,
+    property_type_id_hg: payload.extHangiev?.property_type_id ?? null,
+    area_id_hg: payload.extHangiev?.area_id ?? null,
+    room_count_id_hg: payload.extHangiev?.room_count_id ?? null,
+    build_age_id_hg: payload.extHangiev?.build_age_id ?? null,
+    furnishing_id_hg: payload.extHangiev?.furnishing_id ?? null,
+    price_for_hg: (payload.extHangiev?.price_for as string | null | undefined) ?? null,
+    reference_no_hg: payload.extHangiev?.reference_no ?? null,
     updated_at: now,
   };
 
-  if (payload.id) {
+  if (payload.id || payload.originalListingId) {
+    const listingDbId = existingListing?.id ?? payload.id;
+
     // Update existing listing
-    const { error } = await updateListingWithCompat(payload.id, data);
+    const { error } = await updateListingWithCompat(listingDbId, data);
     
     if (error) {
       console.error("[saveListing] Update error:", error);
@@ -401,7 +499,7 @@ export async function saveListing(payload: ListingSavePayload) {
     const { error: deleteImgError } = await supabaseAdmin
       .from("listing_images")
       .delete()
-      .eq("listing_id", payload.id);
+      .eq("listing_id", listingDbId);
 
     if (deleteImgError) {
       console.error("[saveListing] Delete images error:", deleteImgError);
@@ -410,7 +508,7 @@ export async function saveListing(payload: ListingSavePayload) {
     // Insert new images
     if (gallery.length > 0) {
       const images = gallery.map(g => ({
-        listing_id: payload.id,
+        listing_id: listingDbId,
         url: g.url,
         sort_order: g.sortOrder,
         is_primary: g.isPrimary,
@@ -614,6 +712,15 @@ export async function saveSiteSettings(formData: FormData) {
     second_realtor_id: ext101SecondRaw ? Number(ext101SecondRaw) : null,
   };
 
+  const extHangievPortalRaw = String(formData.get("exthangiev_portal_id") ?? "").trim();
+  const extHangievAgentRaw = String(formData.get("exthangiev_agent_id") ?? "").trim();
+  const extHangievOfficeRaw = String(formData.get("exthangiev_office_id") ?? "").trim();
+  const extHangiev = {
+    portal_id: extHangievPortalRaw || null,
+    agent_id: extHangievAgentRaw || null,
+    office_id: extHangievOfficeRaw || null,
+  };
+
   const settingsData = {
     site_name: String(formData.get("siteName") ?? "ALFA EMLAK"),
     logo_url: String(formData.get("logoUrl") ?? "").trim() || null,
@@ -630,6 +737,7 @@ export async function saveSiteSettings(formData: FormData) {
     menu_json: JSON.stringify(defaultMegaMenu),
     translations: Object.keys(translations).length > 0 ? JSON.stringify(translations) : null,
     ext_101evler: ext101,
+    ext_hangiev: extHangiev,
     updated_at: new Date().toISOString(),
   };
 

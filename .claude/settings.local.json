@@ -23,7 +23,9 @@
       "Bash(cmd //c \"taskkill /PID 22252 /F\")",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/karealfaadmin/ilanlar/yeni)",
       "Bash(node -e \"for\\(const l of ['tr','en','de','ru','fa']\\){const j=require\\('./messages/'+l+'.json'\\);console.log\\(l,'->',JSON.stringify\\(j.Wizard?.labels?j.Wizard.labels:'NO labels'\\)\\)}\")",
-      "Bash(node -e \"const fs=require\\('fs'\\);const p='components/admin/ListingEditor.tsx';let s=fs.readFileSync\\(p,'utf8'\\);s=s.split\\('labels.shortDesc'\\).join\\('labels.shortDescription'\\).split\\('labels.longDesc'\\).join\\('labels.longDescription'\\);fs.writeFileSync\\(p,s\\);console.log\\('ok'\\)\")"
+      "Bash(node -e \"const fs=require\\('fs'\\);const p='components/admin/ListingEditor.tsx';let s=fs.readFileSync\\(p,'utf8'\\);s=s.split\\('labels.shortDesc'\\).join\\('labels.shortDescription'\\).split\\('labels.longDesc'\\).join\\('labels.longDescription'\\);fs.writeFileSync\\(p,s\\);console.log\\('ok'\\)\")",
+      "Bash(git pull *)",
+      "Bash(npx tsc *)"
     ]
   }
 }

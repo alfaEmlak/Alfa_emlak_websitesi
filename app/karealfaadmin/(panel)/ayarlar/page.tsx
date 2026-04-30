@@ -4,6 +4,17 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getDefaultConsultant, getSocialLinks } from "@/lib/site-settings";
 import { MultiLangSettingsFields } from "@/components/admin/MultiLangSettingsFields";
 
+type Ext101Settings = {
+  first_realtor_id?: number | string | null;
+  second_realtor_id?: number | string | null;
+};
+
+type ExtHangievSettings = {
+  portal_id?: number | string | null;
+  agent_id?: number | string | null;
+  office_id?: number | string | null;
+};
+
 export default async function AdminSettingsPage() {
   await requireAdmin();
   const { data: s, error } = await supabaseAdmin
@@ -23,13 +34,27 @@ export default async function AdminSettingsPage() {
   const ext101 = (() => {
     const raw = s?.ext_101evler;
     if (!raw) return { first_realtor_id: "", second_realtor_id: "" };
-    let parsed: any = raw;
+    let parsed: Ext101Settings = raw as Ext101Settings;
     if (typeof raw === "string") {
       try { parsed = JSON.parse(raw); } catch { parsed = {}; }
     }
     return {
       first_realtor_id: parsed?.first_realtor_id ?? "",
       second_realtor_id: parsed?.second_realtor_id ?? "",
+    };
+  })();
+
+  const extHangiev = (() => {
+    const raw = s?.ext_hangiev;
+    if (!raw) return { portal_id: "", agent_id: "", office_id: "" };
+    let parsed: ExtHangievSettings = raw as ExtHangievSettings;
+    if (typeof raw === "string") {
+      try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+    }
+    return {
+      portal_id: parsed?.portal_id ?? "",
+      agent_id: parsed?.agent_id ?? "",
+      office_id: parsed?.office_id ?? "",
     };
   })();
 
@@ -116,7 +141,7 @@ export default async function AdminSettingsPage() {
         <section className="admin-card space-y-3 p-6">
           <h2 className="label-sm text-(--primary)/55">101evler entegrasyonu</h2>
           <p className="text-xs text-(--on-surface)/55">
-            101evler size atadığında <code>realtor_id</code>'leri buraya girin. ID girilmeden gönderilen XML'de bu alanlar boş kalır.
+            101evler size atadığında <code>realtor_id</code>&apos;leri buraya girin. ID girilmeden gönderilen XML&apos;de bu alanlar boş kalır.
           </p>
           <label className="block text-sm">
             First realtor ID
@@ -144,7 +169,48 @@ export default async function AdminSettingsPage() {
             <p className="font-semibold">Feed URL</p>
             <code className="mt-1 block break-all">/api/feeds/101evler.xml?token=&lt;FEED_101EVLER_TOKEN&gt;</code>
             <p className="mt-2 text-(--on-surface)/55">
-              Token <code>.env.local</code> dosyasındaki <code>FEED_101EVLER_TOKEN</code> değerinden alınır. Bu URL'i 101evler hesap yöneticisine verin.
+              Token <code>.env.local</code> dosyasındaki <code>FEED_101EVLER_TOKEN</code> değerinden alınır. Bu URL&apos;i 101evler hesap yöneticisine verin.
+            </p>
+          </div>
+        </section>
+
+        <section className="admin-card space-y-3 p-6">
+          <h2 className="label-sm text-(--primary)/55">Hangiev entegrasyonu</h2>
+          <p className="text-xs text-(--on-surface)/55">
+            Hangiev size portal, agent veya office ID atarsa buraya girin. Doküman gelene kadar bu alanlar opsiyonel tutulur.
+          </p>
+          <label className="block text-sm">
+            Portal ID
+            <input
+              name="exthangiev_portal_id"
+              defaultValue={String(extHangiev.portal_id ?? "")}
+              placeholder="Opsiyonel"
+              className="mt-1 w-full rounded-xl border border-(--ghost-outline) bg-(--surface) px-3 py-2 text-sm outline-none focus:border-(--secondary) focus:ring-2 focus:ring-(--secondary)/20"
+            />
+          </label>
+          <label className="block text-sm">
+            Agent ID
+            <input
+              name="exthangiev_agent_id"
+              defaultValue={String(extHangiev.agent_id ?? "")}
+              placeholder="Opsiyonel"
+              className="mt-1 w-full rounded-xl border border-(--ghost-outline) bg-(--surface) px-3 py-2 text-sm outline-none focus:border-(--secondary) focus:ring-2 focus:ring-(--secondary)/20"
+            />
+          </label>
+          <label className="block text-sm">
+            Office ID
+            <input
+              name="exthangiev_office_id"
+              defaultValue={String(extHangiev.office_id ?? "")}
+              placeholder="Opsiyonel"
+              className="mt-1 w-full rounded-xl border border-(--ghost-outline) bg-(--surface) px-3 py-2 text-sm outline-none focus:border-(--secondary) focus:ring-2 focus:ring-(--secondary)/20"
+            />
+          </label>
+          <div className="rounded-lg bg-(--surface)/50 p-3 text-xs text-(--on-surface)/70">
+            <p className="font-semibold">Feed URL</p>
+            <code className="mt-1 block break-all">/api/feeds/hangiev.xml?token=&lt;FEED_HANGIEV_TOKEN&gt;</code>
+            <p className="mt-2 text-(--on-surface)/55">
+              Token <code>.env.local</code> dosyasındaki <code>FEED_HANGIEV_TOKEN</code> değerinden alınır. Bu URL&apos;i Hangiev hesap yöneticisine verin.
             </p>
           </div>
         </section>

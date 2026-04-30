@@ -1,8 +1,27 @@
 /**
  * Normalize Supabase snake_case data to camelCase for frontend use
  */
-export function normalizeListing(row: any): any {
+type ListingRow = Record<string, unknown>;
+
+function parseObject(value: unknown): Record<string, unknown> {
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? parsed as Record<string, unknown>
+        : {};
+    } catch {
+      return {};
+    }
+  }
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+export function normalizeListing<T extends ListingRow>(row: T | null): (T & ListingRow) | null {
   if (!row) return null;
+  const badges = parseObject(row.badges);
   
   return {
     ...row,
@@ -72,12 +91,12 @@ export function normalizeListing(row: any): any {
     rejectedAt: row.rejected_at ?? row.rejectedAt,
     
     // Badges (stored as JSON string)
-    badgeFeatured: typeof row.badges === "string" ? JSON.parse(row.badges).featured : row.badges?.featured ?? row.badgeFeatured,
-    badgeExclusive: typeof row.badges === "string" ? JSON.parse(row.badges).exclusive : row.badges?.exclusive ?? row.badgeExclusive,
-    badgeVirtualTour: typeof row.badges === "string" ? JSON.parse(row.badges).virtualTour : row.badges?.virtualTour ?? row.badgeVirtualTour,
-    badgeVideo: typeof row.badges === "string" ? JSON.parse(row.badges).video : row.badges?.video ?? row.badgeVideo,
-    badgeNew: typeof row.badges === "string" ? JSON.parse(row.badges).new : row.badges?.new ?? row.badgeNew,
-    badgePriceDrop: typeof row.badges === "string" ? JSON.parse(row.badges).priceDrop : row.badges?.priceDrop ?? row.badgePriceDrop,
+    badgeFeatured: badges.featured ?? row.badgeFeatured,
+    badgeExclusive: badges.exclusive ?? row.badgeExclusive,
+    badgeVirtualTour: badges.virtualTour ?? row.badgeVirtualTour,
+    badgeVideo: badges.video ?? row.badgeVideo,
+    badgeNew: badges.new ?? row.badgeNew,
+    badgePriceDrop: badges.priceDrop ?? row.badgePriceDrop,
     
     // Features (stored as JSON array)
     features: Array.isArray(row.features) ? JSON.stringify(row.features) : row.features,
@@ -85,9 +104,13 @@ export function normalizeListing(row: any): any {
     // 101evler XML feed entegrasyonu
     exportTo101evler: row.export_to_101evler ?? row.exportTo101evler ?? false,
     ext101evler: row.ext_101evler ?? row.ext101evler ?? null,
-  };
+
+    // Hangiev XML feed entegrasyonu
+    exportToHangiev: row.export_to_hangiev ?? row.exportToHangiev ?? false,
+    extHangiev: row.ext_hangiev ?? row.extHangiev ?? null,
+  } as T & ListingRow;
 }
 
-export function normalizeListings(rows: any[]): any[] {
-  return rows.map(normalizeListing);
+export function normalizeListings<T extends ListingRow>(rows: T[]): Array<T & ListingRow> {
+  return rows.map((row) => normalizeListing(row) as T & ListingRow);
 }

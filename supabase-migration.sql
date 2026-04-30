@@ -153,6 +153,25 @@ create index if not exists idx_listings_export_101evler
 alter table site_settings add column if not exists ext_101evler jsonb;
 
 -- ============================================================================
+-- Hangiev XML feed entegrasyonu
+-- ============================================================================
+
+-- Bu ilan Hangiev feed'ine dahil edilsin mi?
+alter table listings add column if not exists export_to_hangiev boolean not null default false;
+
+-- Hangiev-spesifik alanlar (property_type_id, area_id, room_count_id,
+-- build_age_id, furnishing_id, price_for, reference_no)
+alter table listings add column if not exists ext_hangiev jsonb not null default '{}'::jsonb;
+
+-- Feed sorgusu için partial index
+create index if not exists idx_listings_export_hangiev
+  on listings(export_to_hangiev)
+  where export_to_hangiev = true;
+
+-- Site genel Hangiev ayarları (portal/agent/office ID alanları)
+alter table site_settings add column if not exists ext_hangiev jsonb;
+
+-- ============================================================================
 -- Kariyer başvuruları
 -- ============================================================================
 create table if not exists career_applications (

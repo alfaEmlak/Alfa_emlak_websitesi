@@ -54,6 +54,7 @@
     "bedroomsShort": "yatak",
     "video": "Video",
     "listProperty": "İlan Ver",
+    "career": "Kariyer",
     "menu": "Menü",
     "privacy": "Gizlilik Politikası",
     "allRightsReserved": "Tüm hakları saklıdır"
@@ -157,19 +158,19 @@
       "bathrooms": "Banyo",
       "areaM2": "Alan (m²)",
       "plotAreaM2": "Arsa Alanı (m²)",
-      "floor": "Bulunduğu Kat",
+      "floor": "Kat",
       "buildingAge": "Bina Yaşı",
-      "livingRooms": "Salon Sayısı"
+      "livingRooms": "Salon"
     },
     "consultantLabels": {
-      "consultantName": "Ad Soyad",
+      "consultantName": "Danışman Adı",
       "consultantPhone": "Telefon",
       "consultantWhatsapp": "WhatsApp",
       "consultantEmail": "E-posta",
-      "consultantOffice": "Ofis / Şirket",
-      "consultantPhoto": "Fotoğraf (URL)",
+      "consultantOffice": "Ofis Adı",
+      "consultantPhoto": "Danışman Fotoğrafı (URL)",
       "consultantOfficeLogo": "Ofis Logosu (URL)",
-      "ratingPlaceholder": "Puan (0-5)",
+      "ratingPlaceholder": "Puan (örn. 4.8)",
       "favPlaceholder": "Favori sayısı"
     },
     "steps": {
@@ -222,26 +223,6 @@
     "multilingual": {
       "title": "Çok Dilli İçerik",
       "subtitle": "Diğer diller için başlık ve açıklamaları buradan manuel olarak düzenleyebilirsiniz."
-    },
-    "propertyLabels": {
-      "bedrooms": "Yatak Odası",
-      "bathrooms": "Banyo",
-      "areaM2": "Alan (m²)",
-      "plotAreaM2": "Arsa Alanı (m²)",
-      "floor": "Kat",
-      "buildingAge": "Bina Yaşı",
-      "livingRooms": "Salon"
-    },
-    "consultantLabels": {
-      "consultantName": "Danışman Adı",
-      "consultantPhone": "Telefon",
-      "consultantWhatsapp": "WhatsApp",
-      "consultantEmail": "E-posta",
-      "consultantOffice": "Ofis Adı",
-      "consultantPhoto": "Danışman Fotoğrafı (URL)",
-      "consultantOfficeLogo": "Ofis Logosu (URL)",
-      "ratingPlaceholder": "Puan (örn. 4.8)",
-      "favPlaceholder": "Favori sayısı"
     },
     "sections": {
       "basicInfo": "İlan bilgileri",
@@ -388,5 +369,106 @@
       "dailyRent": "Günlük kiralık",
       "project": "Proje"
     }
+  },
+  "Career": {
+    "title": "Alfa Emlak'ta Kariyer",
+    "subtitle": "Bize başvurun, ekibimize katılın.",
+    "firstName": "Ad",
+    "lastName": "Soyad",
+    "email": "E-posta",
+    "phone": "Telefon",
+    "message": "Kısa Mesaj",
+    "messagePlaceholder": "Kendinizden kısaca bahsedin (opsiyonel)",
+    "cv": "Özgeçmiş (CV)",
+    "cvHint": "PDF, DOC veya DOCX • max 5 MB",
+    "uploadCv": "CV Yükle",
+    "changeCv": "CV'yi Değiştir",
+    "uploading": "Yükleniyor...",
+    "submit": "Başvuruyu Gönder",
+    "submitting": "Gönderiliyor...",
+    "cancel": "Vazgeç",
+    "close": "Kapat",
+    "success": "Başvurunuz alındı. En kısa sürede size dönüş yapacağız.",
+    "errors": {
+      "invalidFile": "Sadece PDF veya Word (DOC/DOCX) dosyası yükleyebilirsiniz.",
+      "fileTooLarge": "Dosya 5 MB'dan büyük olamaz.",
+      "uploadFailed": "Yükleme başarısız.",
+      "submitFailed": "Gönderim başarısız."
+    }
+  },
+  "HeroSearch": {
+    "tabs": {
+      "sale": "Satılık",
+      "project": "Projeler",
+      "rent": "Kiralık",
+      "daily": "Günlük"
+    },
+    "category": "Kategori",
+    "propertyType": "Emlak Tipi",
+    "city": "Şehir",
+    "region": "Bölge",
+    "selectCategory": "Kategori Seçin",
+    "catKonut": "Konut",
+    "catArsa": "Arsa",
+    "catTicari": "Ticari",
+    "catProje": "Proje",
+    "allSubTypes": "Tüm Tipler",
+    "selectCategoryFirst": "Önce kategori seçiniz",
+    "subTypes": {
+      "villa": "Villa",
+      "daire": "Daire",
+      "ikizVilla": "İkiz Villa",
+      "penthouse": "Penthouse",
+      "residence": "Residence",
+      "bungalow": "Bungalow",
+      "mustakilEv": "Müstakil Ev",
+      "kompleBina": "Komple Bina",
+      "devremulk": "Devremülk",
+      "metrukBina": "Metruk Bina",
+      "yarimInsaat": "Yarım İnşaat",
+      "konutImarli": "Konut İmarlı",
+      "ticariImarli": "Ticari İmarlı",
+      "tarla": "Tarla",
+      "bagBahce": "Bağ & Bahçe",
+      "sanayiArsasi": "Sanayi Arsası",
+      "ofis": "Ofis",
+      "dukkan": "Dükkân",
+      "magaza": "Mağaza",
+      "otel": "Otel",
+      "restoran": "Restoran",
+      "depo": "Depo",
+      "fabrika": "Fabrika",
+      "devamEden": "Devam Eden Projeler",
+      "tamamlanmis": "Tamamlanmış Projeler"
+    },
+    "selectCity": "Şehir seçin",
+    "allRegions": "Tüm Bölgeler",
+    "submit": "İlanları Gör",
+    "advancedShow": "Gelişmiş Filtreler",
+    "advancedHide": "Gelişmiş Filtreleri Gizle",
+    "priceRange": "Fiyat Aralığı",
+    "min": "Min",
+    "max": "Max",
+    "roomCount": "Oda Sayısı",
+    "heatingFurniture": "Isınma & Eşya",
+    "heatingSelect": "Isıtma Seç",
+    "heating": {
+      "ac": "Klima",
+      "central": "Merkezi",
+      "floor": "Yerden Isıtma",
+      "stove": "Soba",
+      "combi": "Kombi"
+    },
+    "furnished": "Eşyalı",
+    "featuresLabel": "Özellikler",
+    "features": {
+      "balcony": "Balkon",
+      "parking": "Otopark",
+      "elevator": "Asansör",
+      "security": "Güvenlik",
+      "pool": "Havuz"
+    },
+    "areaRange": "Metrekare Aralığı",
+    "ariaListingType": "İlan türü"
   }
 }

@@ -56,7 +56,8 @@
     "listProperty": "ثبت ملک",
     "menu": "منو",
     "privacy": "حریم خصوصی",
-    "allRightsReserved": "تمامی حقوق محفوظ است"
+    "allRightsReserved": "تمامی حقوق محفوظ است",
+    "career": "فرصت‌های شغلی"
   },
   "HomePage": {
     "heroTitle": "معتبرترین",
@@ -154,22 +155,22 @@
   "Wizard": {
     "propertyLabels": {
       "bedrooms": "اتاق خواب",
-      "bathrooms": "سرویس بهداشتی",
-      "areaM2": "متراژ بنا (m²)",
-      "plotAreaM2": "متراژ زمین (m²)",
+      "bathrooms": "حمام",
+      "areaM2": "متراژ (مترمربع)",
+      "plotAreaM2": "متراژ زمین (مترمربع)",
       "floor": "طبقه",
       "buildingAge": "سن بنا",
-      "livingRooms": "تعداد پذیرایی"
+      "livingRooms": "پذیرایی"
     },
     "consultantLabels": {
-      "consultantName": "نام و نام خانوادگی",
-      "consultantPhone": "تلفن مستقیم",
+      "consultantName": "نام مشاور",
+      "consultantPhone": "تلفن",
       "consultantWhatsapp": "واتس‌اپ",
       "consultantEmail": "ایمیل",
-      "consultantOffice": "دفتر / شرکت",
-      "consultantPhoto": "عکس پرسنلی (URL)",
+      "consultantOffice": "نام دفتر",
+      "consultantPhoto": "عکس مشاور (URL)",
       "consultantOfficeLogo": "لوگوی دفتر (URL)",
-      "ratingPlaceholder": "امتیاز (۰-۵)",
+      "ratingPlaceholder": "امتیاز (مثلاً ۴.۸)",
       "favPlaceholder": "تعداد علاقه‌مندی‌ها"
     },
     "steps": {
@@ -219,26 +220,6 @@
     "multilingual": {
       "title": "محتوای چندزبانه",
       "subtitle": "در اینجا می‌توانید عنوان‌ها و توضیحات را برای زبان‌های دیگر به صورت دستی ویرایش کنید."
-    },
-    "propertyLabels": {
-      "bedrooms": "اتاق خواب",
-      "bathrooms": "حمام",
-      "areaM2": "متراژ (مترمربع)",
-      "plotAreaM2": "متراژ زمین (مترمربع)",
-      "floor": "طبقه",
-      "buildingAge": "سن بنا",
-      "livingRooms": "پذیرایی"
-    },
-    "consultantLabels": {
-      "consultantName": "نام مشاور",
-      "consultantPhone": "تلفن",
-      "consultantWhatsapp": "واتس‌اپ",
-      "consultantEmail": "ایمیل",
-      "consultantOffice": "نام دفتر",
-      "consultantPhoto": "عکس مشاور (URL)",
-      "consultantOfficeLogo": "لوگوی دفتر (URL)",
-      "ratingPlaceholder": "امتیاز (مثلاً ۴.۸)",
-      "favPlaceholder": "تعداد علاقه‌مندی‌ها"
     },
     "sections": {
       "basicInfo": "اطلاعات آگهی",
@@ -379,5 +360,106 @@
       "GUNLUK_KIRALIK": "اجاره روزانه",
       "PROJE": "پروژه"
     }
+  },
+  "Career": {
+    "title": "فرصت‌های شغلی در آلفا املاک",
+    "subtitle": "برای پیوستن به تیم ما درخواست دهید.",
+    "firstName": "نام",
+    "lastName": "نام خانوادگی",
+    "email": "ایمیل",
+    "phone": "تلفن",
+    "message": "پیام کوتاه",
+    "messagePlaceholder": "به‌طور خلاصه درباره خود بگویید (اختیاری)",
+    "cv": "رزومه (CV)",
+    "cvHint": "PDF، DOC یا DOCX • حداکثر ۵ مگابایت",
+    "uploadCv": "بارگذاری رزومه",
+    "changeCv": "تغییر رزومه",
+    "uploading": "در حال بارگذاری...",
+    "submit": "ارسال درخواست",
+    "submitting": "در حال ارسال...",
+    "cancel": "انصراف",
+    "close": "بستن",
+    "success": "درخواست شما دریافت شد. به‌زودی با شما تماس می‌گیریم.",
+    "errors": {
+      "invalidFile": "فقط فایل PDF یا Word (DOC/DOCX) پذیرفته می‌شود.",
+      "fileTooLarge": "حجم فایل نباید بیشتر از ۵ مگابایت باشد.",
+      "uploadFailed": "بارگذاری ناموفق بود.",
+      "submitFailed": "ارسال ناموفق بود."
+    }
+  },
+  "HeroSearch": {
+    "tabs": {
+      "sale": "فروش",
+      "project": "پروژه‌ها",
+      "rent": "اجاره",
+      "daily": "روزانه"
+    },
+    "category": "دسته‌بندی",
+    "propertyType": "نوع ملک",
+    "city": "شهر",
+    "region": "منطقه",
+    "selectCategory": "دسته‌بندی را انتخاب کنید",
+    "catKonut": "مسکونی",
+    "catArsa": "زمین",
+    "catTicari": "تجاری",
+    "catProje": "پروژه",
+    "allSubTypes": "همه انواع",
+    "selectCategoryFirst": "ابتدا دسته‌بندی را انتخاب کنید",
+    "subTypes": {
+      "villa": "ویلا",
+      "daire": "آپارتمان",
+      "ikizVilla": "ویلای دوقلو",
+      "penthouse": "پنت‌هاوس",
+      "residence": "رزیدانس",
+      "bungalow": "بانگلو",
+      "mustakilEv": "خانه مستقل",
+      "kompleBina": "ساختمان کامل",
+      "devremulk": "تایم‌شر",
+      "metrukBina": "ساختمان متروکه",
+      "yarimInsaat": "نیمه‌ساخت",
+      "konutImarli": "زمین مسکونی",
+      "ticariImarli": "زمین تجاری",
+      "tarla": "مزرعه",
+      "bagBahce": "باغ و تاکستان",
+      "sanayiArsasi": "زمین صنعتی",
+      "ofis": "دفتر",
+      "dukkan": "مغازه",
+      "magaza": "فروشگاه",
+      "otel": "هتل",
+      "restoran": "رستوران",
+      "depo": "انبار",
+      "fabrika": "کارخانه",
+      "devamEden": "پروژه‌های در حال انجام",
+      "tamamlanmis": "پروژه‌های تکمیل شده"
+    },
+    "selectCity": "شهر را انتخاب کنید",
+    "allRegions": "همه مناطق",
+    "submit": "مشاهده آگهی‌ها",
+    "advancedShow": "فیلترهای پیشرفته",
+    "advancedHide": "پنهان کردن فیلترها",
+    "priceRange": "بازه قیمت",
+    "min": "حداقل",
+    "max": "حداکثر",
+    "roomCount": "تعداد اتاق",
+    "heatingFurniture": "گرمایش و مبلمان",
+    "heatingSelect": "گرمایش را انتخاب کنید",
+    "heating": {
+      "ac": "کولر",
+      "central": "مرکزی",
+      "floor": "از کف",
+      "stove": "بخاری",
+      "combi": "پکیج"
+    },
+    "furnished": "مبله",
+    "featuresLabel": "امکانات",
+    "features": {
+      "balcony": "بالکن",
+      "parking": "پارکینگ",
+      "elevator": "آسانسور",
+      "security": "نگهبانی",
+      "pool": "استخر"
+    },
+    "areaRange": "بازه متراژ",
+    "ariaListingType": "نوع آگهی"
   }
 }
