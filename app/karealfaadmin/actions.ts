@@ -486,6 +486,9 @@ export async function saveListing(payload: ListingSavePayload) {
 
   if (payload.id || payload.originalListingId) {
     const listingDbId = existingListing?.id ?? payload.id;
+    if (!listingDbId) {
+      throw new Error("Güncellenecek ilan bulunamadı.");
+    }
 
     // Update existing listing
     const { error } = await updateListingWithCompat(listingDbId, data);
