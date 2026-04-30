@@ -32,7 +32,7 @@ async function selectDashboardRows(
 
   const primary = await query.order("updated_at", { ascending: false }).limit(limit);
   if (!primary.error) {
-    return (primary.data ?? []) as DashboardRow[];
+    return (primary.data ?? []) as unknown as DashboardRow[];
   }
 
   if (!primary.error.message.includes("Could not find the")) {
@@ -48,7 +48,7 @@ async function selectDashboardRows(
   }
 
   const secondary = await fallback.order("updated_at", { ascending: false }).limit(limit);
-  return (secondary.data ?? []) as DashboardRow[];
+  return (secondary.data ?? []) as unknown as DashboardRow[];
 }
 
 export default async function AdminDashboardPage() {
