@@ -37,7 +37,7 @@ export default async function HomePage({ params }: Props) {
 
   return (
     <main className="flex-1">
-      <div className="relative h-[100dvh] min-h-[600px] w-full overflow-visible">
+      <div className="relative w-full overflow-visible min-h-[100dvh] md:h-[100dvh] md:min-h-[600px]">
         <div className="absolute inset-0 z-0 overflow-hidden bg-black">
           <HeroSlider
             images={sliderSettings.images.length > 0 ? sliderSettings.images : [heroImage]}
@@ -65,12 +65,12 @@ export default async function HomePage({ params }: Props) {
                   ALFA EMLAK
                 </span>
                 <h1 className="text-white">
-                  <span className="block font-headline text-5xl font-extrabold leading-[1.02] tracking-[-0.03em] md:text-7xl lg:text-8xl">
+                  <span className="block font-headline text-4xl font-extrabold leading-[1.02] tracking-[-0.03em] sm:text-5xl md:text-7xl lg:text-8xl">
                     {t("heroTitle")}
                   </span>
                   <span className="mt-2 flex flex-col items-center gap-0 leading-[1.05] sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-center sm:gap-x-3 md:mt-1 lg:justify-end">
                     <span className="font-prestijli-word hero-prestijli">{t("heroPrestijli")}</span>
-                    <span className="font-headline text-5xl font-extrabold tracking-[-0.03em] text-white sm:inline md:text-7xl lg:text-8xl">
+                    <span className="font-headline text-4xl font-extrabold tracking-[-0.03em] text-white sm:inline sm:text-5xl md:text-7xl lg:text-8xl">
                       {t("heroPortfolio")}
                     </span>
                   </span>
