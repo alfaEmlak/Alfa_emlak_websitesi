@@ -123,7 +123,7 @@ export async function registerConsultant(formData: FormData) {
     password_hash: hashPassword(password),
     phone: phone || null,
     title: "Emlak Danışmanı",
-    role: "CONSULTANT",
+    role: "AGENT",
     is_active: false,
   });
 

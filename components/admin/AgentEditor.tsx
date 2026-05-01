@@ -25,6 +25,9 @@ export function AgentEditor({ agent }: Props) {
   const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
   const [uploading, setUploading] = useState(false);
 
+  const defaultRole =
+    agent?.role === "CONSULTANT" ? "AGENT" : agent?.role ?? "AGENT";
+
   const [form, setForm] = useState({
     id: agent?.id ?? "",
     name: agent?.name ?? "",
@@ -32,7 +35,7 @@ export function AgentEditor({ agent }: Props) {
     phone: agent?.phone ?? "",
     photo: agent?.photo ?? "",
     title: agent?.title ?? "Emlak Danismani",
-    role: agent?.role ?? "CONSULTANT",
+    role: defaultRole,
     password: "",
     is_active: agent?.is_active ?? true,
   });
@@ -194,7 +197,7 @@ export function AgentEditor({ agent }: Props) {
           <label className="block text-sm font-medium text-zinc-700">
             Rol
             <select className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" value={form.role} onChange={(e) => set("role", e.target.value)}>
-              <option value="CONSULTANT">Danisman</option>
+              <option value="AGENT">Danisman</option>
               <option value="ADMIN">Yonetici</option>
             </select>
           </label>

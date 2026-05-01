@@ -128,7 +128,10 @@ export async function saveAgent(data: {
 }) {
   await requireAdmin();
 
-  const normalizedRole = data.role === "AGENT" ? "CONSULTANT" : data.role;
+  // Supabase tablosunda check constraint historically "ADMIN | AGENT" olabilir (bkz. lib/supabase/client.ts).
+  // UI'dan gelen legacy "CONSULTANT" değerini DB'nin beklediği AGENT olarak normalize et.
+  const normalizedRole =
+    data.role === "CONSULTANT" || data.role === "AGENT" ? "AGENT" : data.role;
 
   if (data.id) {
     const updateData: Record<string, unknown> = {
