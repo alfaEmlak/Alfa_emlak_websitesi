@@ -51,8 +51,8 @@ type FeedListingRow = Record<string, unknown> & {
   billing_cycle_id_101?: number | null;
   price_for_101?: string | null;
   reference_no_101?: string | null;
-  listing_images?: Array<{ url: string; sort_order?: number; sortOrder?: number }> | null;
-  images?: Array<{ url: string; sort_order?: number; sortOrder?: number }> | null;
+  listing_images?: Array<{ url: string; sort_order?: number; sortOrder?: number; is_primary?: boolean; isPrimary?: boolean }> | null;
+  images?: Array<{ url: string; sort_order?: number; sortOrder?: number; is_primary?: boolean; isPrimary?: boolean }> | null;
 };
 
 type NormalizedFeedListing = {
@@ -198,10 +198,13 @@ function buildAdSpecs(
 }
 
 function buildAdPictures(
-  images: Array<{ url: string; sort_order?: number; sortOrder?: number }> | null | undefined,
+  images: Array<{ url: string; sort_order?: number; sortOrder?: number; is_primary?: boolean; isPrimary?: boolean }> | null | undefined,
 ): string {
   if (!images || images.length === 0) return "";
   const sorted = [...images].sort((a, b) => {
+    const ap = a.is_primary ?? a.isPrimary ?? false;
+    const bp = b.is_primary ?? b.isPrimary ?? false;
+    if (ap !== bp) return ap ? -1 : 1;
     const ao = a.sort_order ?? a.sortOrder ?? 0;
     const bo = b.sort_order ?? b.sortOrder ?? 0;
     return ao - bo;

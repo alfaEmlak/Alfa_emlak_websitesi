@@ -2,13 +2,8 @@
   "feed": "hangiev",
   "listing_id": "AE-2026-96331",
   "total": 1,
-  "included": 0,
-  "skipped": [
-    {
-      "listingId": "AE-2026-96331",
-      "reason": "missing_property_type_id"
-    }
-  ],
+  "included": 1,
+  "skipped": [],
   "account": {
     "portal_id": null,
     "agent_id": null,

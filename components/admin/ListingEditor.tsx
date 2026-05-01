@@ -808,8 +808,6 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
 
     if (preparedForm.exportToHangiev) {
       const missingHangiev: string[] = [];
-      if (!preparedForm.hangiev_property_type_id) missingHangiev.push("Emlak Tipi");
-      if (!preparedForm.hangiev_area_id) missingHangiev.push("Bölge");
       if (!Object.prototype.hasOwnProperty.call(HANGIEV_CURRENCY_CODE_MAP, preparedForm.currency.toUpperCase())) {
         missingHangiev.push("Hangiev para birimi kodu");
       }

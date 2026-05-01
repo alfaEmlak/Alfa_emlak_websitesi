@@ -17,6 +17,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
+import { BILLING_CYCLE_OPTIONS, TITLE_TYPE_OPTIONS } from "../lib/feeds/101evler-constants";
+import { HANGIEV_PROPERTY_TYPE_OPTIONS } from "../lib/feeds/hangiev-constants";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(here, "..");
@@ -89,6 +91,48 @@ function asArray(value: unknown): string[] {
   return [];
 }
 
+function asObject(value: unknown): Record<string, unknown> {
+  if (!value) return {};
+  if (typeof value === "string" && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : {};
+    } catch {
+      return {};
+    }
+  }
+  return typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function labelFromOptions(
+  value: unknown,
+  options: Array<{ id: string | number; label: string }>,
+): string {
+  if (value === null || value === undefined || value === "") return "";
+  const match = options.find((option) => String(option.id) === String(value));
+  return match?.label ?? "";
+}
+
+function normalizedKey(value: string): string {
+  return value
+    .toLocaleLowerCase("tr-TR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ı/g, "i")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function getDetailValue(details: Record<string, unknown>, keys: string[]): unknown {
+  const normalized = new Map(Object.entries(details).map(([key, value]) => [normalizedKey(key), value]));
+  for (const key of keys) {
+    const value = normalized.get(normalizedKey(key));
+    if (value !== null && value !== undefined && String(value).trim() !== "") return value;
+  }
+  return null;
+}
+
 function mapKind(kind: string | null | undefined): string {
   switch (kind) {
     case "SATILIK": return "SALE";
@@ -119,16 +163,38 @@ async function main() {
   const titleTr =
     getTranslation(listing.translations, "tr", "title") || listing.title || "";
   const titleEn = getTranslation(listing.translations, "en", "title");
+  const titleRu = getTranslation(listing.translations, "ru", "title");
+  const titleDe = getTranslation(listing.translations, "de", "title");
+  const titleFa = getTranslation(listing.translations, "fa", "title");
   const descTr =
     getTranslation(listing.translations, "tr", "longDescription") ||
     listing.description_tr ||
+    titleTr ||
     "";
   const descEn =
     getTranslation(listing.translations, "en", "longDescription") ||
     listing.description_en ||
     "";
+  const descRu = getTranslation(listing.translations, "ru", "longDescription");
+  const descDe = getTranslation(listing.translations, "de", "longDescription");
+  const descFa = getTranslation(listing.translations, "fa", "longDescription");
 
   const features = asArray(listing.features);
+  const extHangiev = asObject(listing.ext_hangiev);
+  const ext101evler = asObject(listing.ext_101evler);
+  const details = asObject(listing.detail_fields);
+  const propertySubtype =
+    labelFromOptions(
+      (listing as Record<string, unknown>).property_type_id_hg ?? extHangiev.property_type_id,
+      HANGIEV_PROPERTY_TYPE_OPTIONS,
+    ) ||
+    (listing.property_type && !["Konut", "Ticari"].includes(String(listing.property_type))
+      ? String(listing.property_type)
+      : "") ||
+    (listing.property_type === "Konut" ? "Daire" : "");
+  const titleTypeId = (listing as Record<string, unknown>).title_type_id_101 ?? ext101evler.title_type_id;
+  const billingCycleId =
+    (listing as Record<string, unknown>).billing_cycle_id_101 ?? ext101evler.billing_cycle_id;
 
   const images = (listing.listing_images ?? []) as Array<{
     url: string;
@@ -162,6 +228,21 @@ async function main() {
     featuresXml += "    </features>\n";
   }
 
+  let detailsXml = "";
+  const detailEntries = Object.entries(details).filter(([, value]) => (
+    value !== null && value !== undefined && String(value).trim() !== ""
+  ));
+  if (detailEntries.length > 0) {
+    detailsXml += "    <details>\n";
+    for (const [name, value] of detailEntries) {
+      detailsXml += "      <detail>\n";
+      detailsXml += `        <name>${escapeXml(name)}</name>\n`;
+      detailsXml += `        <value>${escapeXml(String(value))}</value>\n`;
+      detailsXml += "      </detail>\n";
+    }
+    detailsXml += "    </details>\n";
+  }
+
   const inner =
     tag("external_id", listing.id) +
     tag("reference_no", listing.listing_id) +
@@ -171,16 +252,27 @@ async function main() {
     tag("kind", mapKind(listing.kind)) +
     tag("kind_label_tr", listing.kind) +
     tag("property_type", listing.property_type) +
+    tag("property_subtype", propertySubtype) +
     tag("city", listing.city) +
     tag("region", listing.region) +
     tag("neighborhood", listing.neighborhood) +
     tag("full_address", (listing as Record<string, unknown>).full_address ?? null) +
     tag("title_tr", titleTr, { cdata: true }) +
     tag("title_en", titleEn, { cdata: true }) +
+    tag("title_ru", titleRu, { cdata: true }) +
+    tag("title_de", titleDe, { cdata: true }) +
+    tag("title_fa", titleFa, { cdata: true }) +
     tag("description_tr", descTr, { cdata: true }) +
     tag("description_en", descEn, { cdata: true }) +
+    tag("description_ru", descRu, { cdata: true }) +
+    tag("description_de", descDe, { cdata: true }) +
+    tag("description_fa", descFa, { cdata: true }) +
     tag("price", listing.price) +
     tag("currency", listing.currency) +
+    tag("billing_cycle_id", listing.kind === "KIRALIK" ? billingCycleId : null) +
+    tag("billing_cycle", listing.kind === "KIRALIK" ? labelFromOptions(billingCycleId, BILLING_CYCLE_OPTIONS) : null) +
+    tag("deposit_amount", listing.kind === "KIRALIK" ? getDetailValue(details, ["deposit", "depozito", "depozito miktarı", "depozito miktari"]) : null) +
+    tag("minimum_rental_period", listing.kind === "KIRALIK" ? getDetailValue(details, ["minimum süre", "minimum sure", "minimum kira süresi", "minimum kira suresi"]) : null) +
     tag("bedrooms", (listing as Record<string, unknown>).bedrooms ?? null) +
     tag("bathrooms", (listing as Record<string, unknown>).bathrooms ?? null) +
     tag("living_rooms", (listing as Record<string, unknown>).living_rooms ?? null) +
@@ -189,6 +281,8 @@ async function main() {
     tag("plot_area_m2", (listing as Record<string, unknown>).plot_area_m2 ?? null) +
     tag("building_age", (listing as Record<string, unknown>).building_age ?? null) +
     tag("furnished", (listing as Record<string, unknown>).furnished ?? null) +
+    tag("title_type_id", titleTypeId) +
+    tag("title_deed_type", labelFromOptions(titleTypeId, TITLE_TYPE_OPTIONS) || getDetailValue(details, ["koçan türü", "kocan turu", "title deed"])) +
     tag("has_pool", listing.has_pool) +
     tag("has_garden", listing.has_garden) +
     tag("has_fireplace", listing.has_fireplace) +
@@ -204,6 +298,7 @@ async function main() {
     tag("consultant_email", listing.consultant_email) +
     tag("detail_url", detailUrl) +
     featuresXml +
+    detailsXml +
     imagesXml;
 
   const xml =
