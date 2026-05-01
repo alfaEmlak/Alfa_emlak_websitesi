@@ -209,7 +209,7 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
               aria-label={t("menu")}
               onClick={() => setOpen(true)}
             >
-              <span className="material-symbols-outlined text-[22px]">menu</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
             </button>
           </div>
         </nav>
@@ -221,7 +221,7 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
               <div className="flex items-center justify-between border-b border-slate-100 p-5">
                 <span className="font-headline text-lg font-extrabold text-primary">{t("menu")}</span>
                 <button type="button" onClick={() => setOpen(false)} className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-primary transition hover:bg-slate-200">
-                  <span className="material-symbols-outlined text-xl">close</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
               <div className="flex-1 p-5">
@@ -233,7 +233,7 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
                   onClick={() => setOpen(false)}
                 >
                   <span>{t("forSale")}</span>
-                  <span className="material-symbols-outlined text-base text-primary/35">chevron_right</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
                 </Link>
               </li>
               <li>
@@ -243,7 +243,7 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
                   onClick={() => setOpen(false)}
                 >
                   <span>{t("project")}</span>
-                  <span className="material-symbols-outlined text-base text-primary/35">chevron_right</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
                 </Link>
               </li>
               <li>
@@ -253,7 +253,7 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
                   onClick={() => setOpen(false)}
                 >
                   <span>{t("forRent")}</span>
-                  <span className="material-symbols-outlined text-base text-primary/35">chevron_right</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
                 </Link>
               </li>
               <li>
@@ -263,7 +263,7 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
                   onClick={() => setOpen(false)}
                 >
                   <span>{t("allListings")}</span>
-                  <span className="material-symbols-outlined text-base text-primary/35">chevron_right</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
                 </Link>
               </li>
               <li>
@@ -273,7 +273,7 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
                   onClick={() => setOpen(false)}
                 >
                   <span>{t("aboutUs")}</span>
-                  <span className="material-symbols-outlined text-base text-primary/35">chevron_right</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
                 </Link>
               </li>
               <li>
@@ -286,7 +286,7 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
                   }}
                 >
                   <span>{t("career")}</span>
-                  <span className="material-symbols-outlined text-base text-primary/35">chevron_right</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
                 </button>
               </li>
               <li>
@@ -446,7 +446,7 @@ function SiteHeaderFallback({ menu, siteName }: { menu: MenuTopItem[]; siteName:
               aria-label="Menü"
               onClick={() => setOpen(true)}
             >
-              <span className="material-symbols-outlined text-[22px]">menu</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
             </button>
           </div>
         </nav>
@@ -457,7 +457,7 @@ function SiteHeaderFallback({ menu, siteName }: { menu: MenuTopItem[]; siteName:
               <div className="flex items-center justify-between border-b border-slate-100 p-5">
                 <span className="font-headline text-lg font-extrabold text-primary">Menü</span>
                 <button type="button" onClick={() => setOpen(false)} className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-primary transition hover:bg-slate-200">
-                  <span className="material-symbols-outlined text-xl">close</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
               <div className="flex-1 p-5">
@@ -469,7 +469,7 @@ function SiteHeaderFallback({ menu, siteName }: { menu: MenuTopItem[]; siteName:
                   onClick={() => setOpen(false)}
                 >
                   <span>Satılık</span>
-                  <span className="material-symbols-outlined text-base text-primary/35">chevron_right</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
                 </Link>
               </li>
               <li>
@@ -479,7 +479,7 @@ function SiteHeaderFallback({ menu, siteName }: { menu: MenuTopItem[]; siteName:
                   onClick={() => setOpen(false)}
                 >
                   <span>Projeler</span>
-                  <span className="material-symbols-outlined text-base text-primary/35">chevron_right</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
                 </Link>
               </li>
               <li>
@@ -489,7 +489,7 @@ function SiteHeaderFallback({ menu, siteName }: { menu: MenuTopItem[]; siteName:
                   onClick={() => setOpen(false)}
                 >
                   <span>Kiralık</span>
-                  <span className="material-symbols-outlined text-base text-primary/35">chevron_right</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
                 </Link>
               </li>
               <li>
@@ -499,7 +499,7 @@ function SiteHeaderFallback({ menu, siteName }: { menu: MenuTopItem[]; siteName:
                   onClick={() => setOpen(false)}
                 >
                   <span>Tüm İlanlar</span>
-                  <span className="material-symbols-outlined text-base text-primary/35">chevron_right</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
                 </Link>
               </li>
               <li>
@@ -509,7 +509,7 @@ function SiteHeaderFallback({ menu, siteName }: { menu: MenuTopItem[]; siteName:
                   onClick={() => setOpen(false)}
                 >
                   <span>Hakkımızda</span>
-                  <span className="material-symbols-outlined text-base text-primary/35">chevron_right</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
                 </Link>
               </li>
               <li>
