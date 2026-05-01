@@ -178,3 +178,26 @@ export async function deleteAgent(id: string) {
   revalidatePath("/karealfaadmin/danismanlar");
   return { ok: true as const };
 }
+
+export async function approveAgent(id: string) {
+  await requireAdmin();
+
+  const { error } = await supabaseAdmin
+    .from("agents")
+    .update({ is_active: true, updated_at: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) throw new Error(`Agent approve failed: ${error.message}`);
+
+  revalidatePath("/karealfaadmin/danismanlar");
+}
+
+export async function rejectAgent(id: string) {
+  await requireAdmin();
+
+  const { error } = await supabaseAdmin.from("agents").delete().eq("id", id).eq("is_active", false);
+
+  if (error) throw new Error(`Agent reject failed: ${error.message}`);
+
+  revalidatePath("/karealfaadmin/danismanlar");
+}

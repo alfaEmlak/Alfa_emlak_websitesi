@@ -6,7 +6,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getPanelSession, requireAdmin, requirePanelUser } from "@/lib/panel-auth";
 import { defaultMegaMenu } from "@/lib/default-menu";
 import { menuTopItemsSchema } from "@/lib/menu-schema";
-import { verifyPassword } from "@/lib/password";
+import { hashPassword, verifyPassword } from "@/lib/password";
 import { isUuidString } from "@/lib/listing-identity";
 import { customAlphabet } from "nanoid";
 
@@ -25,21 +25,22 @@ type ActiveConsultantAccount = {
   name: string;
   role: string;
   password_hash: string;
+  is_active: boolean;
 };
 
-async function findConsultantByPassword(password: string) {
+async function findConsultantByEmail(email: string) {
   const { data, error } = await supabaseAdmin
     .from("agents")
-    .select("id, name, role, password_hash")
-    .eq("is_active", true)
-    .in("role", CONSULTANT_ROLES);
+    .select("id, name, role, password_hash, is_active")
+    .eq("email", email)
+    .in("role", CONSULTANT_ROLES)
+    .maybeSingle();
 
   if (error) {
     throw new Error(`Danışman hesabı okunamadı: ${error.message}`);
   }
 
-  const consultants = (data ?? []) as ActiveConsultantAccount[];
-  return consultants.find((consultant) => verifyPassword(password, consultant.password_hash)) ?? null;
+  return (data ?? null) as ActiveConsultantAccount | null;
 }
 
 function normalizeRequestedStatus(status: string | undefined): ListingStatus {
@@ -55,13 +56,13 @@ function canPublishDirectly(role: "ADMIN" | "CONSULTANT") {
 }
 
 export async function loginAdmin(formData: FormData) {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "").trim();
   const session = await getPanelSession();
+  const expectedAdminEmail = (process.env.ADMIN_EMAIL ?? "").trim().toLowerCase();
   const expectedAdminPassword = process.env.ADMIN_PASSWORD ?? "";
-  const fallbackConsultantPassword = process.env.CONSULTANT_PASSWORD?.trim();
-  const fallbackConsultantName = process.env.CONSULTANT_NAME?.trim() || "Panel Danismani";
 
-  if (expectedAdminPassword && password === expectedAdminPassword) {
+  if (expectedAdminEmail && expectedAdminPassword && email === expectedAdminEmail && password === expectedAdminPassword) {
     session.isAdmin = true;
     session.role = "ADMIN";
     session.agentId = undefined;
@@ -70,19 +71,18 @@ export async function loginAdmin(formData: FormData) {
     redirect("/karealfaadmin/dashboard");
   }
 
-  const consultant = await findConsultantByPassword(password);
+  const consultant = email ? await findConsultantByEmail(email) : null;
 
   if (!consultant) {
-    if (!fallbackConsultantPassword || password !== fallbackConsultantPassword) {
-      redirect("/karealfaadmin?e=1");
-    }
+    redirect("/karealfaadmin?e=1");
+  }
 
-    session.isAdmin = false;
-    session.role = "CONSULTANT";
-    session.agentId = "env-consultant";
-    session.name = fallbackConsultantName;
-    await session.save();
-    redirect("/karealfaadmin/dashboard");
+  if (!consultant.is_active) {
+    redirect("/karealfaadmin?e=pending");
+  }
+
+  if (!verifyPassword(password, consultant.password_hash)) {
+    redirect("/karealfaadmin?e=1");
   }
 
   session.isAdmin = false;
@@ -91,6 +91,48 @@ export async function loginAdmin(formData: FormData) {
   session.name = consultant.name;
   await session.save();
   redirect("/karealfaadmin/dashboard");
+}
+
+export async function registerConsultant(formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const phone = String(formData.get("phone") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+
+  if (!name || !email || !password || password.length < 6) {
+    redirect("/karealfaadmin?e=register");
+  }
+
+  const { data: existing, error: existingError } = await supabaseAdmin
+    .from("agents")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (existingError) {
+    throw new Error(`Danışman e-posta kontrolü başarısız: ${existingError.message}`);
+  }
+
+  if (existing) {
+    redirect("/karealfaadmin?e=exists");
+  }
+
+  const { error } = await supabaseAdmin.from("agents").insert({
+    name,
+    email,
+    password_hash: hashPassword(password),
+    phone: phone || null,
+    title: "Emlak Danışmanı",
+    role: "CONSULTANT",
+    is_active: false,
+  });
+
+  if (error) {
+    throw new Error(`Danışman kaydı oluşturulamadı: ${error.message}`);
+  }
+
+  revalidatePath("/karealfaadmin/danismanlar");
+  redirect("/karealfaadmin?registered=1");
 }
 
 export async function logoutAdmin() {

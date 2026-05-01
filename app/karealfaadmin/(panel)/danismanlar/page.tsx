@@ -3,6 +3,7 @@ import Image from "next/image";
 import { AdminIcon } from "@/components/admin/AdminIcon";
 import { requireAdmin } from "@/lib/panel-auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { approveAgent, rejectAgent } from "@/app/karealfaadmin/module-actions";
 
 export default async function AgentsPage() {
   await requireAdmin();
@@ -12,6 +13,7 @@ export default async function AgentsPage() {
     .order("created_at", { ascending: false });
 
   const agentsList = agents || [];
+  const pendingAgents = agentsList.filter((agent) => !agent.is_active);
 
   return (
     <div className="p-6 lg:p-10">
@@ -19,6 +21,11 @@ export default async function AgentsPage() {
         <div>
           <h1 className="text-3xl font-extrabold">Danışmanlar</h1>
           <p className="mt-1 text-sm text-zinc-500">Emlak danışmanlarını yönetin</p>
+          {pendingAgents.length > 0 ? (
+            <p className="mt-2 text-sm font-semibold text-amber-700">
+              {pendingAgents.length} danışman üyelik onayı bekliyor.
+            </p>
+          ) : null}
         </div>
         <Link
           href="/karealfaadmin/danismanlar/yeni"
@@ -68,17 +75,38 @@ export default async function AgentsPage() {
                   {a.role === "ADMIN" ? "Yönetici" : "Danışman"}
                 </span>
                 <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-                  a.is_active ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
+                  a.is_active ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
                 }`}>
-                  {a.is_active ? "Aktif" : "Pasif"}
+                  {a.is_active ? "Aktif" : "Onay bekliyor"}
                 </span>
               </div>
-              <Link
-                href={`/karealfaadmin/danismanlar/${a.id}/duzenle`}
-                className="mt-4 block text-center text-sm font-semibold text-emerald-600 hover:underline"
-              >
-                Düzenle
-              </Link>
+              {a.is_active ? (
+                <Link
+                  href={`/karealfaadmin/danismanlar/${a.id}/duzenle`}
+                  className="mt-4 block text-center text-sm font-semibold text-emerald-600 hover:underline"
+                >
+                  Düzenle
+                </Link>
+              ) : (
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <form action={approveAgent.bind(null, a.id)}>
+                    <button
+                      type="submit"
+                      className="w-full rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-700"
+                    >
+                      Kabul et
+                    </button>
+                  </form>
+                  <form action={rejectAgent.bind(null, a.id)}>
+                    <button
+                      type="submit"
+                      className="w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100"
+                    >
+                      Reddet
+                    </button>
+                  </form>
+                </div>
+              )}
             </div>
           ))}
         </div>
