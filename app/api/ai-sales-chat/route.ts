@@ -273,6 +273,7 @@ export async function POST(req: Request) {
       chatMessages.push(assistantMessage);
 
       for (const toolCall of toolCalls) {
+        if (toolCall.type !== "function") continue;
         let args: Record<string, unknown> = {};
         try {
           args = JSON.parse(toolCall.function.arguments || "{}");

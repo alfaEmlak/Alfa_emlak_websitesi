@@ -53,7 +53,7 @@ function asEntry(v: string, visible = true): LandDetailFieldEntry {
 function readEntry(map: LandDetailFieldsMap, key: string): string {
   const e = map[key];
   if (!e || typeof e !== "object" || e === null) return "";
-  return String((e as DetailFieldEntry).value ?? "").trim();
+  return String((e as LandDetailFieldEntry).value ?? "").trim();
 }
 
 /** Konum etiketleri: "id1,id2" veya eski "label, label" (virgüllü metin) */

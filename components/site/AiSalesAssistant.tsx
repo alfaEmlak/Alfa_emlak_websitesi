@@ -233,7 +233,7 @@ export function AiSalesAssistant({ locale }: { locale: string }) {
                     <p className="line-clamp-2 text-sm font-semibold text-slate-900">{item.title}</p>
                     <p className="mt-1 text-xs text-slate-600">
                       {[item.city, item.region].filter(Boolean).join(" / ")}
-                      {item.rooms ? ` · ${item.rooms}` : ""}
+                      {item.bedrooms != null ? ` · ${item.bedrooms} oda` : ""}
                       {item.areaM2 ? ` · ${item.areaM2} m²` : ""}
                     </p>
                     <button
