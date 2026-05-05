@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { AdminIcon, type AdminIconName } from "@/components/admin/AdminIcon";
+import { getPanelTranslations } from "@/lib/panel-translations";
+import { getPanelLocale } from "@/lib/panel-locale";
 import { requirePanelUser } from "@/lib/panel-auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -53,6 +55,8 @@ async function selectDashboardRows(
 
 export default async function AdminDashboardPage() {
   const user = await requirePanelUser();
+  const t = await getPanelTranslations();
+  const locale = await getPanelLocale();
 
   const listingsCountSource = () => {
     let query = supabaseAdmin.from("listings").select("*", { count: "exact", head: true });
@@ -79,11 +83,11 @@ export default async function AdminDashboardPage() {
   ]);
 
   const cards: Array<{ label: string; value: number; icon: AdminIconName; color: string; bg: string }> = [
-    { label: "Toplam ilan", value: total || 0, icon: "apartment", color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Yayinda", value: published || 0, icon: "check_circle", color: "text-emerald-600", bg: "bg-emerald-50" },
-    { label: "Taslak", value: drafts || 0, icon: "edit_note", color: "text-amber-600", bg: "bg-amber-50" },
+    { label: t("dashboard.cardTotal"), value: total || 0, icon: "apartment", color: "text-blue-600", bg: "bg-blue-50" },
+    { label: t("dashboard.cardPublished"), value: published || 0, icon: "check_circle", color: "text-emerald-600", bg: "bg-emerald-50" },
+    { label: t("dashboard.cardDraft"), value: drafts || 0, icon: "edit_note", color: "text-amber-600", bg: "bg-amber-50" },
     {
-      label: user.role === "ADMIN" ? "Onay bekleyen" : "Gonderilenler",
+      label: user.role === "ADMIN" ? t("dashboard.cardPendingAdmin") : t("dashboard.cardPendingConsultant"),
       value: pendingApproval || 0,
       icon: "warning",
       color: "text-fuchsia-600",
@@ -91,11 +95,30 @@ export default async function AdminDashboardPage() {
     },
   ];
 
+  function statusLabel(code: string) {
+    switch (code) {
+      case "DRAFT":
+        return t("publishStatus.DRAFT");
+      case "PENDING_APPROVAL":
+        return t("publishStatus.PENDING_APPROVAL");
+      case "PUBLISHED":
+        return t("publishStatus.PUBLISHED");
+      case "HIDDEN":
+        return t("publishStatus.HIDDEN");
+      case "REJECTED":
+        return t("publishStatus.REJECTED");
+      default:
+        return code;
+    }
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-10">
-      <h1 className="admin-page-title text-2xl font-extrabold sm:text-3xl">{user.role === "ADMIN" ? "Yonetim ozeti" : "Danisman ozeti"}</h1>
+      <h1 className="admin-page-title text-2xl font-extrabold sm:text-3xl">
+        {user.role === "ADMIN" ? t("dashboard.titleAdmin") : t("dashboard.titleConsultant")}
+      </h1>
       <p className="mt-1 text-sm text-(--on-surface)/55">
-        {user.role === "ADMIN" ? "Bekleyen ilan onaylari ve son aktiviteler" : "Kendi ilanlarinizin durumu ve admin onay sureci"}
+        {user.role === "ADMIN" ? t("dashboard.subtitleAdmin") : t("dashboard.subtitleConsultant")}
       </p>
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:mt-8 sm:gap-4 lg:grid-cols-4">
@@ -116,21 +139,21 @@ export default async function AdminDashboardPage() {
         <section className="admin-card overflow-hidden">
           <div className="flex items-center justify-between gap-4 border-b border-(--ghost-outline) px-5 py-4">
             <div>
-              <h2 className="font-headline text-lg font-bold text-(--primary)">Son ilan hareketleri</h2>
-              <p className="text-xs text-(--on-surface)/50">Yeni eklenen ve guncellenen kayitlar</p>
+              <h2 className="font-headline text-lg font-bold text-(--primary)">{t("dashboard.recentTitle")}</h2>
+              <p className="text-xs text-(--on-surface)/50">{t("dashboard.recentSubtitle")}</p>
             </div>
             <Link href="/karealfaadmin/ilanlar" className="text-sm font-semibold text-(--secondary) hover:underline">
-              Tumu
+              {t("dashboard.recentAll")}
             </Link>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-(--surface-container-low)/80 text-xs font-semibold uppercase tracking-wide text-(--primary)/55">
                 <tr>
-                  <th className="px-4 py-3">Ilan ID</th>
-                  <th className="px-4 py-3">Baslik</th>
-                  <th className="px-4 py-3">Durum</th>
-                  <th className="px-4 py-3">Fiyat</th>
+                  <th className="px-4 py-3">{t("dashboard.colListingId")}</th>
+                  <th className="px-4 py-3">{t("dashboard.colTitle")}</th>
+                  <th className="px-4 py-3">{t("dashboard.colStatus")}</th>
+                  <th className="px-4 py-3">{t("dashboard.colPrice")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-(--ghost-outline) bg-surface-lowest">
@@ -142,20 +165,24 @@ export default async function AdminDashboardPage() {
                         <Link href={`/karealfaadmin/ilanlar/${row.id}/duzenle`} className="font-medium text-on-surface hover:text-(--secondary)">
                           {row.title}
                         </Link>
-                        {user.role === "ADMIN" && row.created_by_name ? <p className="mt-1 text-xs text-(--on-surface)/45">Gonderen: {row.created_by_name}</p> : null}
+                        {user.role === "ADMIN" && row.created_by_name ? (
+                          <p className="mt-1 text-xs text-(--on-surface)/45">{t("dashboard.sentBy", { name: row.created_by_name })}</p>
+                        ) : null}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="inline-flex rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-bold uppercase text-zinc-700">{row.publish_status}</span>
+                        <span className="inline-flex rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-bold uppercase text-zinc-700">
+                          {statusLabel(row.publish_status)}
+                        </span>
                       </td>
                       <td className="px-4 py-3 tabular-nums text-on-surface">
-                        {Number(row.price ?? 0).toLocaleString("tr-TR")} {row.currency}
+                        {Number(row.price ?? 0).toLocaleString(locale)} {row.currency}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
                     <td colSpan={4} className="px-4 py-8 text-center text-sm text-(--on-surface)/45">
-                      Henuz kayit yok
+                      {t("dashboard.emptyRecent")}
                     </td>
                   </tr>
                 )}
@@ -167,13 +194,15 @@ export default async function AdminDashboardPage() {
         <section className="admin-card overflow-hidden">
           <div className="flex items-center justify-between gap-4 border-b border-(--ghost-outline) px-5 py-4">
             <div>
-              <h2 className="font-headline text-lg font-bold text-(--primary)">{user.role === "ADMIN" ? "Bekleyen admin onaylari" : "Onaya gonderilen ilanlar"}</h2>
+              <h2 className="font-headline text-lg font-bold text-(--primary)">
+                {user.role === "ADMIN" ? t("dashboard.pendingTitleAdmin") : t("dashboard.pendingTitleConsultant")}
+              </h2>
               <p className="text-xs text-(--on-surface)/50">
-                {user.role === "ADMIN" ? "Danismanlarin gonderdigi ilanlari gozden gecirin" : "Admin incelemesinde olan ilanlarinizi takip edin"}
+                {user.role === "ADMIN" ? t("dashboard.pendingSubtitleAdmin") : t("dashboard.pendingSubtitleConsultant")}
               </p>
             </div>
             <Link href="/karealfaadmin/onay-bekleyen" className="text-sm font-semibold text-(--secondary) hover:underline">
-              Ac
+              {t("dashboard.pendingOpen")}
             </Link>
           </div>
           <div className="divide-y divide-(--ghost-outline)">
@@ -190,13 +219,17 @@ export default async function AdminDashboardPage() {
                       {user.role === "ADMIN" && row.created_by_name ? ` • ${row.created_by_name}` : ""}
                     </p>
                   </div>
-                  <span className="text-[10px] text-(--on-surface)/35">{row.updated_at ? new Date(row.updated_at).toLocaleDateString("tr-TR") : ""}</span>
+                  <span className="text-[10px] text-(--on-surface)/35">
+                    {row.updated_at ? new Date(row.updated_at).toLocaleDateString(locale) : ""}
+                  </span>
                 </Link>
               ))
             ) : (
               <div className="flex flex-col items-center justify-center p-10 text-center">
                 <AdminIcon name="inbox" size={28} className="text-(--on-surface)/15" />
-                <p className="mt-2 text-sm text-(--on-surface)/40">{user.role === "ADMIN" ? "Bekleyen danisman ilani yok" : "Onaya gonderilmis ilanin yok"}</p>
+                <p className="mt-2 text-sm text-(--on-surface)/40">
+                  {user.role === "ADMIN" ? t("dashboard.emptyPendingAdmin") : t("dashboard.emptyPendingConsultant")}
+                </p>
               </div>
             )}
           </div>

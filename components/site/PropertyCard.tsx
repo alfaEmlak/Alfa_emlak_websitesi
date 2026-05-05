@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Link } from "@/i18n/routing";
 import type { ListingPublic } from "@/lib/listings-query";
 import { formatMoney, primaryImageUrl } from "@/lib/listing-utils";
+import { titleDeedOwnershipLabel } from "@/lib/title-deed-ownership";
 import { useTranslations } from "next-intl";
 
 function Badge({ children, accent }: { children: React.ReactNode; accent?: boolean }) {
@@ -20,6 +21,8 @@ function Badge({ children, accent }: { children: React.ReactNode; accent?: boole
 
 export function PropertyCard({ listing, stagger }: { listing: ListingPublic; stagger?: boolean }) {
   const t = useTranslations("Common");
+  const row = listing as Record<string, unknown>;
+  const tapuLabel = titleDeedOwnershipLabel(row.titleDeedOwnership ?? row.title_deed_ownership);
   const img = primaryImageUrl(listing) || "/placeholder-property.svg";
   const isRemote = img.startsWith("http");
 
@@ -81,6 +84,11 @@ export function PropertyCard({ listing, stagger }: { listing: ListingPublic; sta
         <span className="font-headline text-[11px] font-semibold uppercase tracking-tighter text-on-surface/40">
           {t(`listingKinds.${listing.kind}`)}
         </span>
+        {tapuLabel ? (
+          <span className="font-headline text-[11px] font-semibold uppercase tracking-tighter text-secondary">
+            Tapu: {tapuLabel}
+          </span>
+        ) : null}
       </div>
     </article>
   );

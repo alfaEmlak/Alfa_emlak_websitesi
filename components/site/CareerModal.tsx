@@ -156,7 +156,9 @@ export function CareerModal({ open, onClose }: Props) {
             className="ml-4 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-primary transition hover:bg-slate-200 disabled:opacity-40"
             aria-label={t("close")}
           >
-            <span className="material-symbols-outlined text-xl">close</span>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
 
@@ -236,12 +238,16 @@ export function CareerModal({ open, onClose }: Props) {
                   onChange={onFileChange}
                   disabled={uploading || submitting}
                 />
-                <span className="material-symbols-outlined text-base">upload_file</span>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-5 w-5 shrink-0" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                </svg>
                 {uploading ? t("uploading") : cv ? t("changeCv") : t("uploadCv")}
               </label>
               {cv ? (
                 <div className="flex items-center gap-2 text-xs text-emerald-700">
-                  <span className="material-symbols-outlined text-sm">check_circle</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                  </svg>
                   <span className="max-w-[200px] truncate">{cv.filename}</span>
                 </div>
               ) : (

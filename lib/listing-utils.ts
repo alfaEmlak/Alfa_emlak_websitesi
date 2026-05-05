@@ -1,4 +1,15 @@
 import type { Listing, ListingImage } from "@prisma/client";
+import { OWNER_CONTACT_PRIVATE_KEY } from "@/lib/owner-contact-private";
+import { titleDeedOwnershipLabel } from "@/lib/title-deed-ownership";
+import { landParcelHighlightLinesFromDetailFields, listingPropertyTypeIsArsa } from "@/lib/land-parcel-detail";
+import {
+  listingPropertyTypeIsTicari,
+  ticariHighlightLinesFromDetailFields,
+} from "@/lib/commercial-parcel-detail";
+import {
+  OWNED_FLOORS_LAYOUT_KEYS,
+  OWNED_FLOORS_SCOPE_KEYS,
+} from "@/lib/owned-floors-detail";
 
 export type DetailFieldEntry = { value: string; visible: boolean };
 export type DetailFieldsMap = Record<string, DetailFieldEntry>;
@@ -18,6 +29,17 @@ export const DETAIL_FIELD_LABELS: Record<string, string> = {
   garden: "Bahçe",
   fireplace: "Şömine",
   livingRoom: "Oturma Odası",
+  landImarDurumu: "İmar durumu",
+  landToplamImarOrani: "Toplam imar oranı",
+  landTabanOrani: "Taban oranı",
+  landMaxKat: "Mülkiyet kaç kat çıkabilir",
+  landKonumOzellikleri: "Konum özellikleri",
+  ticariAnaCadde: "Ana cadde",
+  ticariAraSokak: "Ara sokak",
+  ticariAyriOtopark: "Ayrı otopark",
+  ticariKendiBodrum: "Kendine ait bodrum",
+  ownedFloorsScope: "Sahip olunan kat",
+  ownedFloorsLayout: "Çok katlı tip",
 };
 
 export function parseDetailFields(raw: string | null | undefined): DetailFieldsMap {
@@ -67,15 +89,120 @@ export function parseLatLngPair(raw: string): { lat: string; lng: string } | nul
   return { lat, lng };
 }
 
+function formatOwnedFloorsScopeTr(value: string): string {
+  return value === OWNED_FLOORS_SCOPE_KEYS.multiple ? "Birden fazla kata sahip" : "Tek kata sahip";
+}
+
+function formatOwnedFloorsLayoutTr(value: string, customFloorCount?: string): string {
+  if (value === OWNED_FLOORS_LAYOUT_KEYS.duplex) return "Dubleks";
+  if (value === OWNED_FLOORS_LAYOUT_KEYS.triplex) return "Tripleks";
+  if (value === OWNED_FLOORS_LAYOUT_KEYS.whole_building) return "Tüm bina";
+  if (value === OWNED_FLOORS_LAYOUT_KEYS.custom) {
+    const n = String(customFloorCount ?? "").trim();
+    return n ? `Elle: ${n} kat` : "Elle belirtilen kat sayısı";
+  }
+  return value;
+}
+
 export function visibleDetailRows(raw: string | null | undefined) {
   const fields = parseDetailFields(raw);
+  const scopeRaw = String(fields.ownedFloorsScope?.value ?? "").trim();
   return Object.entries(fields)
-    .filter(([, v]) => v.visible && String(v.value ?? "").trim() !== "")
-    .map(([key, v]) => ({
-      key,
-      label: DETAIL_FIELD_LABELS[key] ?? key,
-      value: v.value,
-    }));
+    .filter(
+      ([key, v]) =>
+        key !== OWNER_CONTACT_PRIVATE_KEY &&
+        !key.startsWith("land") &&
+        !key.startsWith("ticari") &&
+        key !== "ownedFloorsFloorCount" &&
+        typeof v === "object" &&
+        v !== null &&
+        "visible" in v &&
+        (v as DetailFieldEntry).visible &&
+        String((v as DetailFieldEntry).value ?? "").trim() !== "" &&
+        !(
+          key === "ownedFloorsLayout" &&
+          scopeRaw !== OWNED_FLOORS_SCOPE_KEYS.multiple
+        ),
+    )
+    .map(([key, v]) => {
+      const entry = v as DetailFieldEntry;
+      let displayValue = entry.value;
+      if (key === "ownedFloorsScope") {
+        displayValue = formatOwnedFloorsScopeTr(String(entry.value ?? ""));
+      } else if (key === "ownedFloorsLayout") {
+        displayValue = formatOwnedFloorsLayoutTr(
+          String(entry.value ?? ""),
+          String(fields.ownedFloorsFloorCount?.value ?? ""),
+        );
+      }
+      return {
+        key,
+        label: DETAIL_FIELD_LABELS[key] ?? key,
+        value: displayValue,
+      };
+    });
+}
+
+/** Admin/danışman checkbox’ları + serbest “Özellikler” satırları — tek listede, tekrarsız. */
+const LISTING_BOOLEAN_HIGHLIGHT_LABELS: { key: string; label: string }[] = [
+  { key: "hasPool", label: "Havuz" },
+  { key: "hasGarden", label: "Bahçe" },
+  { key: "hasFireplace", label: "Şömine" },
+  { key: "hasParking", label: "Otopark" },
+  { key: "furnished", label: "Eşyalı" },
+  { key: "seaView", label: "Deniz Manzarası" },
+  { key: "hasElevator", label: "Asansörlü" },
+  { key: "hasBalcony", label: "Balkon" },
+  { key: "hasTerrace", label: "Teras" },
+  { key: "hasAirConditioning", label: "Klima" },
+  { key: "hasGatedCommunity", label: "Güvenlikli site" },
+];
+
+export function mergeListingHighlightLines(listing: Record<string, unknown>): string[] {
+  const isArsa = listingPropertyTypeIsArsa(listing.propertyType ?? listing.property_type);
+  const isTicari =
+    !isArsa && listingPropertyTypeIsTicari(listing.propertyType ?? listing.property_type);
+  const fromBools = isArsa
+    ? []
+    : isTicari
+      ? []
+      : LISTING_BOOLEAN_HIGHLIGHT_LABELS.filter(({ key }) => listing[key] === true).map(({ label }) => label);
+  const fromLandArsa = isArsa
+    ? landParcelHighlightLinesFromDetailFields(listing.detailFields ?? listing.detail_fields)
+    : [];
+  const fromTicariTags = isTicari
+    ? ticariHighlightLinesFromDetailFields(listing.detailFields ?? listing.detail_fields)
+    : [];
+  const fromTicariElevator =
+    isTicari && listing.hasElevator === true ? ["Asansör"] : [];
+  const tapuLabel = titleDeedOwnershipLabel(
+    listing.titleDeedOwnership ?? listing.title_deed_ownership,
+  );
+  const tapuLine = tapuLabel ? `Tapu mülkiyeti: ${tapuLabel}` : null;
+  const rawFeatures = listing.features;
+  const asString =
+    typeof rawFeatures === "string"
+      ? rawFeatures
+      : rawFeatures != null
+        ? JSON.stringify(rawFeatures)
+        : null;
+  const fromText = parseStringArray(asString);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const line of [
+    ...(tapuLine ? [tapuLine] : []),
+    ...fromLandArsa,
+    ...fromTicariTags,
+    ...fromTicariElevator,
+    ...fromBools,
+    ...fromText,
+  ]) {
+    const t = line.trim();
+    if (!t || seen.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+  }
+  return out;
 }
 
 export type ListingWithImages = Listing & { images: ListingImage[] };

@@ -164,7 +164,7 @@ async function main() {
       title: "Lefkoşa Merkezde Yatırımlık 2+1 Daire",
       kind: "SATILIK",
       propertyType: "Daire",
-      city: "Lefkoşa",
+      city: "lefkosa",
       region: "Merkez",
       neighborhood: "Küçük Kaymaklı",
       price: 189000,

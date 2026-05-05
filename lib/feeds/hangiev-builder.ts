@@ -7,6 +7,8 @@
  */
 
 import { normalizeListing } from "@/lib/listing-normalize";
+import { OWNER_CONTACT_PRIVATE_KEY } from "@/lib/owner-contact-private";
+import { propertyTypeForFeedLookup } from "@/lib/listing-property-taxonomy";
 import { BILLING_CYCLE_OPTIONS, TITLE_TYPE_OPTIONS } from "./101evler-constants";
 import { HANGIEV_CURRENCY_CODE_MAP, HANGIEV_PROPERTY_TYPE_OPTIONS } from "./hangiev-constants";
 
@@ -62,6 +64,11 @@ type NormalizedFeedListing = {
   hasFireplace?: boolean | null;
   hasParking?: boolean | null;
   seaView?: boolean | null;
+  hasElevator?: boolean | null;
+  hasBalcony?: boolean | null;
+  hasTerrace?: boolean | null;
+  hasAirConditioning?: boolean | null;
+  hasGatedCommunity?: boolean | null;
   mapEnabled?: boolean | null;
   lat?: string | number | null;
   lng?: string | number | null;
@@ -209,6 +216,7 @@ function buildFeatures(features: unknown): string {
 
 function buildDetails(details: Record<string, unknown>): string {
   const items = Object.entries(details)
+    .filter(([name]) => name !== OWNER_CONTACT_PRIVATE_KEY)
     .map(([name, value]) => {
       if (value === null || value === undefined || String(value).trim() === "") return "";
       return rawTag("detail", tag("name", name) + tag("value", value));
@@ -338,8 +346,7 @@ export function buildListingElement(
   const detailFields = parseJsonObject(rawListing.detail_fields ?? rawListing.detailFields);
   const propertySubtype =
     labelFromOptions(ext.property_type_id, HANGIEV_PROPERTY_TYPE_OPTIONS) ||
-    (l.propertyType && !["Konut", "Ticari"].includes(l.propertyType) ? l.propertyType : "") ||
-    (l.propertyType === "Konut" ? "Daire" : "");
+    propertyTypeForFeedLookup(l.propertyType || "");
   const titleTypeLabel = labelFromOptions(ext101.title_type_id, TITLE_TYPE_OPTIONS);
   const billingCycleLabel = labelFromOptions(ext101.billing_cycle_id, BILLING_CYCLE_OPTIONS);
   const depositAmount = getDetailValue(detailFields, [
@@ -425,6 +432,11 @@ export function buildListingElement(
     tag("has_fireplace", l.hasFireplace),
     tag("has_parking", l.hasParking),
     tag("sea_view", l.seaView),
+    tag("has_elevator", l.hasElevator),
+    tag("has_balcony", l.hasBalcony),
+    tag("has_terrace", l.hasTerrace),
+    tag("has_air_conditioning", l.hasAirConditioning),
+    tag("has_gated_community", l.hasGatedCommunity),
     tag("map_available", l.mapEnabled ? 1 : 0),
     tag("lat", l.lat),
     tag("lng", l.lng),

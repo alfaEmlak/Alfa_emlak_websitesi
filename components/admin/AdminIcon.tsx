@@ -1,6 +1,7 @@
 import {
   ArrowLeft,
   ArrowRight,
+  BarChart3,
   Building2,
   CircleCheckBig,
   CircleHelp,
@@ -75,7 +76,8 @@ export type AdminIconName =
   | "fiber_new"
   | "slideshow"
   | "image"
-  | "list";
+  | "list"
+  | "analytics";
 
 const ICONS: Record<AdminIconName, LucideIcon> = {
   dashboard: LayoutDashboard,
@@ -114,6 +116,7 @@ const ICONS: Record<AdminIconName, LucideIcon> = {
   slideshow: Presentation,
   image: ImageIcon,
   list: List,
+  analytics: BarChart3,
 };
 
 type AdminIconProps = {

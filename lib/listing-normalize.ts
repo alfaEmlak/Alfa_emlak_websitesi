@@ -1,6 +1,8 @@
 /**
  * Normalize Supabase snake_case data to camelCase for frontend use
  */
+import { displayListingCity } from "@/lib/listing-city";
+
 type ListingRow = Record<string, unknown>;
 
 function parseObject(value: unknown): Record<string, unknown> {
@@ -44,6 +46,12 @@ export function normalizeListing<T extends ListingRow>(row: T | null): (T & List
     hasFireplace: row.has_fireplace ?? row.hasFireplace,
     hasParking: row.has_parking ?? row.hasParking,
     seaView: row.sea_view ?? row.seaView,
+    hasElevator: row.has_elevator ?? row.hasElevator,
+    hasBalcony: row.has_balcony ?? row.hasBalcony,
+    hasTerrace: row.has_terrace ?? row.hasTerrace,
+    hasAirConditioning: row.has_air_conditioning ?? row.hasAirConditioning,
+    hasGatedCommunity: row.has_gated_community ?? row.hasGatedCommunity,
+    titleDeedOwnership: row.title_deed_ownership ?? row.titleDeedOwnership,
     detailFields: row.detail_fields ?? row.detailFields,
     
     // Media
@@ -53,6 +61,7 @@ export function normalizeListing<T extends ListingRow>(row: T | null): (T & List
     videoEnabled: row.video_enabled ?? row.videoEnabled,
     
     // Location
+    city: displayListingCity(typeof row.city === "string" ? row.city : String(row.city ?? "")),
     lat: row.latitude ?? row.lat,
     lng: row.longitude ?? row.lng,
     mapEnabled: row.map_enabled ?? row.mapEnabled,

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import type { Listing, ListingImage } from "@prisma/client";
 import { saveListing, suggestListingId, type ListingSavePayload } from "@/app/karealfaadmin/actions";
 import { kktcCities, kktcRegions, kktcCityCoords, kktcRegionCoords } from "@/lib/kktc-regions";
@@ -12,7 +12,46 @@ import {
   serializeNearbyPoiCategoriesJson,
   type NearbyPoiCategoryId,
 } from "@/lib/nearby-poi";
+import { normalizeListingCitySlug } from "@/lib/listing-city";
+import {
+  formatListingPropertyType,
+  LISTING_CATEGORY_KEYS,
+  LISTING_SUBTYPE_MAP,
+  parseListingPropertyType,
+  propertyTypeForFeedLookup,
+  type ListingCategoryKey,
+} from "@/lib/listing-property-taxonomy";
+import {
+  mergeDetailFieldsWithOwnerAndPreset,
+  parseOwnerContactPrivate,
+} from "@/lib/owner-contact-private";
 import { parseLatLngPair, parseNearby, parseStringArray } from "@/lib/listing-utils";
+import { TITLE_DEED_OWNERSHIP_OPTIONS, parseTitleDeedOwnership } from "@/lib/title-deed-ownership";
+import {
+  LAND_LOCATION_TAG_DEFS,
+  emptyLandTags,
+  mergeLandParcelDetailFields,
+  parseLandFieldsFromDetailFields,
+} from "@/lib/land-parcel-detail";
+import {
+  FLOOR_BASEMENT_CANONICAL,
+  FLOOR_GROUND_CANONICAL,
+  isBasementFloorStored,
+  isGroundFloorStored,
+  isPresetFloorChoiceStored,
+  normalizeFloorFromListing,
+} from "@/lib/floor-field";
+import {
+  TICARI_TAG_DEFS,
+  emptyTicariTags,
+  mergeCommercialDetailFields,
+  parseTicariTagsFromDetailFields,
+} from "@/lib/commercial-parcel-detail";
+import {
+  mergeOwnedFloorsDetailFields,
+  OWNED_FLOORS_LAYOUT_KEYS,
+  parseOwnedFloorsFromDetailFields,
+} from "@/lib/owned-floors-detail";
 import { type FeedLookups, type LookupOption, groupAreasByCity } from "@/lib/feeds/lookup-types";
 import { AdminIcon, type AdminIconName } from "@/components/admin/AdminIcon";
 import { NearbyPoiAdminPreview } from "@/components/admin/NearbyPoiAdminPreview";
@@ -33,31 +72,6 @@ function isSelectableImageFile(f: File): boolean {
   if (t.startsWith("image/")) return true;
   if ((t === "" || t === "application/octet-stream") && LIKELY_IMAGE_EXT.test(f.name)) return true;
   return false;
-}
-
-async function postUploadFile(file: File): Promise<string> {
-  const fd = new FormData();
-  fd.append("file", file);
-  const res = await fetch("/api/upload", {
-    method: "POST",
-    body: fd,
-    credentials: "same-origin",
-  });
-  const ct = (res.headers.get("content-type") || "").toLowerCase();
-  let data: { url?: string; error?: string };
-  if (ct.includes("application/json")) {
-    data = (await res.json()) as { url?: string; error?: string };
-  } else {
-    const text = (await res.text()).trim().slice(0, 200);
-    throw new Error(
-      text
-        ? `Sunucu yanıtı (${res.status}): ${text}`
-        : `Yükleme başarısız (HTTP ${res.status}).`,
-    );
-  }
-  if (!res.ok) throw new Error(data.error ?? "Yükleme başarısız");
-  if (!data.url) throw new Error("Sunucu adres döndürmedi");
-  return data.url;
 }
 
 type Ext101evler = {
@@ -106,12 +120,17 @@ type Props = {
         furnishing_id_hg?: number | null;
         price_for_hg?: string | null;
         reference_no_hg?: string | null;
+        titleDeedOwnership?: string | null;
+        title_deed_ownership?: string | null;
       })
     | null;
   suggestedId: string;
   agents?: { id: string; name: string; email: string; phone: string | null; photo: string | null; title: string | null; is_active?: boolean }[];
   viewerRole: "ADMIN" | "CONSULTANT";
   lookups: FeedLookups;
+  fixedOfficeName: string;
+  fixedOfficeLogo: string;
+  lockedConsultant?: { id: string; name: string; email: string; phone: string | null; photo: string | null } | null;
 };
 
 function parseExt101(v: unknown): Ext101evler {
@@ -161,12 +180,14 @@ function normalize101Text(value: string): string {
 }
 
 function inferTypeIdFromOptions(propertyType: string, options: LookupOption[]): string {
-  const key = propertyType.trim().toLocaleLowerCase("tr-TR");
+  const label = propertyTypeForFeedLookup(propertyType);
+  const key = label.trim().toLocaleLowerCase("tr-TR");
   if (!key) return "";
   if (key === "arsa") return findId(options, "Arsa");
   if (key === "ticari") return findId(options, "İş Yeri");
   if (key === "konut") return findId(options, "Daire");
-  return findId(options, propertyType);
+  if (key === "proje") return findId(options, "Proje");
+  return findId(options, label);
 }
 
 function findId(options: LookupOption[], label: string): string {
@@ -226,10 +247,36 @@ function inferBuildAgeIdFromValue(buildingAge: string): string {
   return "9";
 }
 
+type BuildingAgePreset = "" | "zero" | "project";
+
+function parseBuildingAgePresetFromListing(listing: Props["listing"]): BuildingAgePreset {
+  if (!listing) return "";
+  try {
+    const raw = listing.detailFields;
+    let o: { buildingAgePreset?: unknown };
+    if (typeof raw === "string" && raw.trim()) {
+      o = JSON.parse(raw) as { buildingAgePreset?: unknown };
+    } else if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+      o = raw as { buildingAgePreset?: unknown };
+    } else {
+      o = {};
+    }
+    if (o.buildingAgePreset === "project" || o.buildingAgePreset === "zero") return o.buildingAgePreset;
+  } catch {
+    /* ignore */
+  }
+  if (listing.buildingAge === 0) return "zero";
+  return "";
+}
+
+function effectiveBuildingAgeString(form: { buildingAgePreset: BuildingAgePreset; buildingAge: string }): string {
+  if (form.buildingAgePreset === "project") return "Proje";
+  if (form.buildingAgePreset === "zero") return "0";
+  return form.buildingAge;
+}
+
 function getInitialCity(val?: string | null) {
-  if (!val) return "";
-  const match = kktcCities.find(c => c.v === val || c.l === val || c.l.toLowerCase() === val.toLowerCase() || c.v.toLowerCase() === val.toLowerCase());
-  return match ? match.v : val;
+  return normalizeListingCitySlug(val ?? "");
 }
 
 function getInitialRegion(cityVal: string, val?: string | null) {
@@ -239,9 +286,37 @@ function getInitialRegion(cityVal: string, val?: string | null) {
   return match ? match.v : val;
 }
 
-export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookups }: Props) {
+export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookups, fixedOfficeName, fixedOfficeLogo, lockedConsultant = null }: Props) {
   const t = useTranslations("Wizard");
+  const th = useTranslations("HeroSearch");
+  const tp = useTranslations("Panel");
   const router = useRouter();
+
+  const postUploadFile = useCallback(
+    async (file: File): Promise<string> => {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: fd,
+        credentials: "same-origin",
+      });
+      const ct = (res.headers.get("content-type") || "").toLowerCase();
+      let data: { url?: string; error?: string };
+      if (ct.includes("application/json")) {
+        data = (await res.json()) as { url?: string; error?: string };
+      } else {
+        const text = (await res.text()).trim().slice(0, 200);
+        throw new Error(
+          text ? tp("listingEditor.uploadServerResponse", { status: res.status, text }) : tp("listingEditor.uploadHttpFail", { status: res.status }),
+        );
+      }
+      if (!res.ok) throw new Error(data.error ?? tp("common.uploadFailed"));
+      if (!data.url) throw new Error(tp("listingEditor.uploadNoUrl"));
+      return data.url;
+    },
+    [tp],
+  );
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const [wizardStep, setWizardStep] = useState(0);
@@ -297,6 +372,7 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
   const PROPERTY_LABELS: Record<string, string> = {
     bedrooms: t("propertyLabels.bedrooms"),
     bathrooms: t("propertyLabels.bathrooms"),
+    toilets: t("propertyLabels.toilets"),
     areaM2: t("propertyLabels.areaM2"),
     plotAreaM2: t("propertyLabels.plotAreaM2"),
     floor: t("propertyLabels.floor"),
@@ -324,6 +400,7 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
   const [gallery, setGallery] = useState<GalleryRow[]>(initialGallery);
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadHint, setUploadHint] = useState("");
+  const [ownerDocUploadBusy, setOwnerDocUploadBusy] = useState(false);
 
   const initialCity = getInitialCity(listing?.city);
   const initialRegion = getInitialRegion(initialCity, listing?.region);
@@ -352,11 +429,34 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
     reference_no: listing?.reference_no_hg ?? extHangievFromJson.reference_no ?? null,
   };
 
+  const initialBuildingAgePreset = parseBuildingAgePresetFromListing(listing);
+  const initialBuildingAgeStr =
+    initialBuildingAgePreset === "project" || initialBuildingAgePreset === "zero"
+      ? ""
+      : listing?.buildingAge != null
+        ? String(listing.buildingAge)
+        : "";
+  const consultantLocked = viewerRole === "CONSULTANT" || !!lockedConsultant;
+
+  const initialOwnerContact = parseOwnerContactPrivate(listing?.detailFields);
+  const initialLand = parseLandFieldsFromDetailFields(listing?.detailFields);
+  const initialTicariTags = parseTicariTagsFromDetailFields(listing?.detailFields);
+  const initialOwnedFloors = parseOwnedFloorsFromDetailFields(listing?.detailFields);
+  const initialTaxonomy = parseListingPropertyType(listing?.propertyType ?? null);
+  const initialPropertyType =
+    listing?.propertyType?.trim() ||
+    formatListingPropertyType(
+      initialTaxonomy.category,
+      initialTaxonomy.subtypeKey || (initialTaxonomy.category === "konut" ? "daire" : ""),
+    );
+
   const [form, setForm] = useState({
     listingId: listing?.listingId ?? suggestedId,
     title: listing?.title ?? "",
     kind: listing?.kind ?? "SATILIK",
-    propertyType: listing?.propertyType ?? "Konut",
+    propertyCategory: initialTaxonomy.category,
+    propertySubtypeKey: initialTaxonomy.subtypeKey,
+    propertyType: initialPropertyType,
     price: listing != null ? String(listing.price) : "",
     currency: listing?.currency ?? "EUR",
     shortDescription: listing?.shortDescription ?? "",
@@ -368,10 +468,12 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
     coverImage: listing?.coverImage ?? "",
     bedrooms: listing?.bedrooms != null ? String(listing.bedrooms) : "",
     bathrooms: listing?.bathrooms != null ? String(listing.bathrooms) : "",
+    toilets: listing?.toilets != null ? String(listing.toilets) : "",
     areaM2: listing?.areaM2 != null ? String(listing.areaM2) : "",
     plotAreaM2: listing?.plotAreaM2 != null ? String(listing.plotAreaM2) : "",
-    floor: listing?.floor ?? "",
-    buildingAge: listing?.buildingAge != null ? String(listing.buildingAge) : "",
+    floor: normalizeFloorFromListing(listing?.floor ?? ""),
+    buildingAgePreset: initialBuildingAgePreset,
+    buildingAge: initialBuildingAgeStr,
     livingRooms: listing?.livingRooms != null ? String(listing.livingRooms) : "",
     hasPool: listing?.hasPool ?? false,
     hasGarden: listing?.hasGarden ?? false,
@@ -379,6 +481,24 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
     hasParking: listing?.hasParking ?? false,
     furnished: listing?.furnished ?? false,
     seaView: listing?.seaView ?? false,
+    hasElevator: listing?.hasElevator ?? false,
+    hasBalcony: listing?.hasBalcony ?? false,
+    hasTerrace: listing?.hasTerrace ?? false,
+    hasAirConditioning: listing?.hasAirConditioning ?? false,
+    hasGatedCommunity: listing?.hasGatedCommunity ?? false,
+    titleDeedOwnership: parseTitleDeedOwnership(
+      (listing as Record<string, unknown> | null)?.titleDeedOwnership ??
+        (listing as Record<string, unknown> | null)?.title_deed_ownership,
+    ),
+    landImarDurumu: initialLand.imarDurumu,
+    landToplamImarOrani: initialLand.toplamImarOrani,
+    landTabanOrani: initialLand.tabanOrani,
+    landMaxKat: initialLand.maxKat,
+    landTags: { ...emptyLandTags(), ...initialLand.tags },
+    ticariTags: { ...emptyTicariTags(), ...initialTicariTags },
+    ownedFloorsScope: initialOwnedFloors.ownedFloorsScope,
+    ownedFloorsLayout: initialOwnedFloors.ownedFloorsLayout,
+    ownedFloorsFloorCount: initialOwnedFloors.ownedFloorsFloorCount,
     featuresText: parseStringArray(listing?.features ?? null).join("\n"),
     coordinates:
       listing?.lat != null && listing?.lng != null ? `${listing.lat},${listing.lng}` : "",
@@ -396,14 +516,14 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
     badgeVideo: listing?.badgeVideo ?? false,
     badgeNew: listing?.badgeNew ?? false,
     badgePriceDrop: listing?.badgePriceDrop ?? false,
-    consultantName: listing?.consultantName ?? "",
-    consultantPhone: listing?.consultantPhone ?? "",
+    consultantName: lockedConsultant?.name ?? listing?.consultantName ?? "",
+    consultantPhone: lockedConsultant?.phone ?? listing?.consultantPhone ?? "",
     consultantWhatsapp: listing?.consultantWhatsapp ?? "",
-    consultantEmail: listing?.consultantEmail ?? "",
-    consultantOffice: listing?.consultantOffice ?? "",
-    consultantPhoto: listing?.consultantPhoto ?? "",
-    consultantOfficeLogo: listing?.consultantOfficeLogo ?? "",
-    selectedAgentId: "",
+    consultantEmail: lockedConsultant?.email ?? listing?.consultantEmail ?? "",
+    consultantOffice: fixedOfficeName,
+    consultantPhoto: lockedConsultant?.photo ?? listing?.consultantPhoto ?? "",
+    consultantOfficeLogo: fixedOfficeLogo,
+    selectedAgentId: lockedConsultant?.id ?? listing?.createdByAgentId ?? "",
     publishStatus: listing?.publishStatus ?? (viewerRole === "ADMIN" ? "DRAFT" : "PENDING_APPROVAL"),
     statsShowViews: listing?.statsShowViews ?? true,
     statsShowFavs: listing?.statsShowFavs ?? true,
@@ -431,7 +551,14 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
     hangiev_price_for: (initialExtHangiev.price_for as string | null | undefined) ?? "T",
     hangiev_reference_no: initialExtHangiev.reference_no ?? "",
     hangiev_area_city: inferHangievAreaCity(initialCity),
+    ownerFirstName: initialOwnerContact.firstName,
+    ownerLastName: initialOwnerContact.lastName,
+    ownerPhone: initialOwnerContact.phone,
+    ownerEmail: initialOwnerContact.email,
+    ownerNotes: initialOwnerContact.notes,
+    ownerDocumentUrls: [...initialOwnerContact.documentUrls],
   });
+  const consultantFieldsReadOnly = consultantLocked || (viewerRole === "ADMIN" && !!form.selectedAgentId);
 
   function with101Defaults(current: typeof form, overwrite = false): typeof form {
     const apply = (existing: string, inferred: string) => (overwrite ? inferred || existing : existing || inferred);
@@ -442,7 +569,7 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
       ext101_area_city: apply(current.ext101_area_city, infer101AreaCity(current.city)),
       ext101_area_id: apply(current.ext101_area_id, infer101AreaId(current.city, current.region)),
       ext101_room_count_id: apply(current.ext101_room_count_id, infer101RoomCountId(current.bedrooms, current.livingRooms)),
-      ext101_build_age_id: apply(current.ext101_build_age_id, infer101BuildAgeId(current.buildingAge)),
+      ext101_build_age_id: apply(current.ext101_build_age_id, infer101BuildAgeId(effectiveBuildingAgeString(current))),
       ext101_furnishing_id: apply(current.ext101_furnishing_id, current.furnished ? "3" : "1"),
       ext101_price_for: current.ext101_price_for || "T",
       ext101_reference_no: current.ext101_reference_no || current.listingId,
@@ -469,7 +596,7 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
       hangiev_area_city: apply(current.hangiev_area_city, inferHangievAreaCity(current.city)),
       hangiev_area_id: apply(current.hangiev_area_id, inferHangievAreaId(current.city, current.region)),
       hangiev_room_count_id: apply(current.hangiev_room_count_id, inferHangievRoomCountId(current.bedrooms, current.livingRooms)),
-      hangiev_build_age_id: apply(current.hangiev_build_age_id, inferHangievBuildAgeId(current.buildingAge)),
+      hangiev_build_age_id: apply(current.hangiev_build_age_id, inferHangievBuildAgeId(effectiveBuildingAgeString(current))),
       hangiev_furnishing_id: apply(current.hangiev_furnishing_id, current.furnished ? "3" : "1"),
       hangiev_price_for: current.hangiev_price_for || "T",
       hangiev_reference_no: current.hangiev_reference_no || current.listingId,
@@ -509,6 +636,18 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
     setForm((f) => {
       let next = { ...f, [k]: v } as typeof form;
 
+      if (k === "buildingAgePreset") {
+        const presetVal = String(v) as BuildingAgePreset;
+        const normalizedPreset: BuildingAgePreset =
+          presetVal === "zero" || presetVal === "project" ? presetVal : "";
+        next.buildingAgePreset = normalizedPreset;
+        if (normalizedPreset === "zero" || normalizedPreset === "project") {
+          next.buildingAge = "";
+        }
+      }
+
+      const ageStr = effectiveBuildingAgeString(next);
+
       if (next.exportTo101evler) {
         if (k === "propertyType") {
           next = { ...next, ext101_type_id: infer101TypeId(next.propertyType) };
@@ -516,8 +655,8 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
         if (k === "bedrooms" || k === "livingRooms") {
           next = { ...next, ext101_room_count_id: infer101RoomCountId(next.bedrooms, next.livingRooms) };
         }
-        if (k === "buildingAge") {
-          next = { ...next, ext101_build_age_id: infer101BuildAgeId(next.buildingAge) };
+        if (k === "buildingAge" || k === "buildingAgePreset") {
+          next = { ...next, ext101_build_age_id: infer101BuildAgeId(ageStr) };
         }
         if (k === "furnished") {
           next = { ...next, ext101_furnishing_id: next.furnished ? "3" : "1" };
@@ -534,8 +673,8 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
         if (k === "bedrooms" || k === "livingRooms") {
           next = { ...next, hangiev_room_count_id: inferHangievRoomCountId(next.bedrooms, next.livingRooms) };
         }
-        if (k === "buildingAge") {
-          next = { ...next, hangiev_build_age_id: inferHangievBuildAgeId(next.buildingAge) };
+        if (k === "buildingAge" || k === "buildingAgePreset") {
+          next = { ...next, hangiev_build_age_id: inferHangievBuildAgeId(ageStr) };
         }
         if (k === "furnished") {
           next = { ...next, hangiev_furnishing_id: next.furnished ? "3" : "1" };
@@ -547,6 +686,23 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
 
       return next;
     });
+
+  const setPropertyTaxonomy = (category: ListingCategoryKey, subtypeKey: string) => {
+    const propertyType = formatListingPropertyType(category, subtypeKey);
+    setForm((f) => {
+      let next = { ...f, propertyCategory: category, propertySubtypeKey: subtypeKey, propertyType };
+      if (category === "arsa") {
+        next = { ...next, ownedFloorsScope: "single", ownedFloorsLayout: "", ownedFloorsFloorCount: "" };
+      }
+      if (next.exportTo101evler) {
+        next = { ...next, ext101_type_id: infer101TypeId(propertyType) };
+      }
+      if (next.exportToHangiev) {
+        next = { ...next, hangiev_property_type_id: inferHangievPropertyTypeId(propertyType) };
+      }
+      return next;
+    });
+  };
 
   const previewCoords = useMemo(() => {
     const p = parseLatLngPair(form.coordinates);
@@ -579,13 +735,9 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
   }
 
   function handleAgentSelect(agentId: string) {
+    if (viewerRole !== "ADMIN") return;
     set("selectedAgentId", agentId);
     if (!agentId) {
-      set("consultantName", "");
-      set("consultantPhone", "");
-      set("consultantWhatsapp", "");
-      set("consultantEmail", "");
-      set("consultantPhoto", "");
       return;
     }
     const agent = agents?.find(a => a.id === agentId);
@@ -608,7 +760,7 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
         updates.fullAddress = address.fullAddress;
         if (address.city) {
           const match = kktcCities.find(c => c.l.toLowerCase() === address.city.toLowerCase() || c.v.toLowerCase() === address.city.toLowerCase());
-          updates.city = match ? match.v : address.city;
+          updates.city = normalizeListingCitySlug(match ? match.v : address.city);
         }
         const regionParts = [address.region, address.neighborhood].filter(Boolean).join(", ");
         if (regionParts && !f.region) {
@@ -644,6 +796,47 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
       setUploadBusy(false);
       setUploadHint("");
     }
+  }
+
+  function isOwnerDocumentFile(f: File): boolean {
+    if (isSelectableImageFile(f)) return true;
+    const t = (f.type || "").trim().toLowerCase();
+    if (t === "application/pdf") return true;
+    return /\.pdf$/i.test(f.name);
+  }
+
+  async function onOwnerDocumentFilesChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const input = e.target;
+    const picked = input.files?.length ? Array.from(input.files) : [];
+    input.value = "";
+    if (!picked.length) return;
+    const list = picked.filter(isOwnerDocumentFile);
+    if (!list.length) {
+      setMessage(t("messages.imageNotRecognized"));
+      return;
+    }
+    setMessage(null);
+    setOwnerDocUploadBusy(true);
+    try {
+      const urls: string[] = [];
+      for (let i = 0; i < list.length; i++) {
+        urls.push(await postUploadFile(list[i]));
+      }
+      if (urls.length) {
+        setForm((prev) => ({ ...prev, ownerDocumentUrls: [...prev.ownerDocumentUrls, ...urls] }));
+      }
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : t("messages.uploadError"));
+    } finally {
+      setOwnerDocUploadBusy(false);
+    }
+  }
+
+  function removeOwnerDocument(idx: number) {
+    setForm((prev) => ({
+      ...prev,
+      ownerDocumentUrls: prev.ownerDocumentUrls.filter((_, i) => i !== idx),
+    }));
   }
 
   async function onGalleryFilesChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -766,62 +959,90 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
     }
 
     // Step 2 sayısal alan validasyonu (101evler ve Hangiev'in min/max sınırlarına uyum)
-    const numericLimits: { key: keyof typeof preparedForm; min: number; max: number; label: string }[] = [
-      { key: "bedrooms", min: 0, max: 20, label: PROPERTY_LABELS.bedrooms },
-      { key: "bathrooms", min: 0, max: 10, label: PROPERTY_LABELS.bathrooms },
-      { key: "floor", min: -5, max: 100, label: PROPERTY_LABELS.floor },
-      { key: "buildingAge", min: 0, max: 120, label: PROPERTY_LABELS.buildingAge },
-      { key: "livingRooms", min: 0, max: 10, label: PROPERTY_LABELS.livingRooms },
-    ];
+    const isArsaStep = preparedForm.propertyCategory === "arsa";
+    const isTicariStep = preparedForm.propertyCategory === "ticari";
+    const numericLimits: { key: keyof typeof preparedForm; min: number; max: number; label: string }[] = isArsaStep
+      ? [
+          { key: "landToplamImarOrani", min: 0, max: 100, label: tp("listingEditor.landImarOrani") },
+          { key: "landTabanOrani", min: 0, max: 100, label: tp("listingEditor.landTabanOrani") },
+          { key: "landMaxKat", min: 0, max: 50, label: tp("listingEditor.landMaxKat") },
+          { key: "areaM2", min: 0, max: 100000, label: tp("listingEditor.landToplamAlan") },
+          { key: "plotAreaM2", min: 0, max: 1000000, label: tp("listingEditor.landParselAlan") },
+        ]
+      : [
+          { key: "bedrooms", min: 0, max: 20, label: isTicariStep ? tp("listingEditor.roomCountTicari") : PROPERTY_LABELS.bedrooms },
+          { key: "bathrooms", min: 0, max: 10, label: PROPERTY_LABELS.bathrooms },
+          { key: "toilets", min: 0, max: 10, label: PROPERTY_LABELS.toilets },
+          { key: "buildingAge", min: 0, max: 120, label: PROPERTY_LABELS.buildingAge },
+          ...(isTicariStep
+            ? []
+            : [{ key: "livingRooms" as const, min: 0, max: 10, label: PROPERTY_LABELS.livingRooms }]),
+        ];
     const violations: string[] = [];
     for (const { key, min, max, label } of numericLimits) {
+      if (!isArsaStep && key === "buildingAge" && preparedForm.buildingAgePreset !== "") continue;
       const raw = String(preparedForm[key] ?? "").trim();
       if (raw === "") continue;
       const num = Number(raw);
       if (!Number.isFinite(num) || num < min || num > max) {
-        violations.push(`${label} (${min}-${max} arasında olmalı, girilen: ${raw})`);
+        violations.push(tp("listingEditor.rangeError", { label, min, max, value: raw }));
       }
     }
+    if (!isArsaStep) {
+      const fv = String(preparedForm.floor ?? "").trim();
+      if (fv && !isPresetFloorChoiceStored(fv)) {
+        const num = Number(fv);
+        if (!Number.isFinite(num) || num < -5 || num > 100) {
+          violations.push(tp("listingEditor.floorInvalid", { label: PROPERTY_LABELS.floor, value: fv }));
+        }
+      }
+    }
+
     if (violations.length > 0) {
-      setMessage(`Geçersiz emlak özelliği değerleri: ${violations.join("; ")}.`);
+      setMessage(tp("listingEditor.validationIntro", { detail: violations.join("; ") }));
       setMessageType("error");
       setWizardStep(2);
       return;
     }
 
     if (preparedForm.exportTo101evler) {
+      const feed101CurLabel = tp("listingEditor.feed101Currency");
+      const feedPriceLabel = tp("listingEditor.feedPrice");
       const missing101: string[] = [];
-      if (!preparedForm.ext101_type_id) missing101.push("İlan Tipi");
-      if (!preparedForm.ext101_area_id) missing101.push("Bölge");
+      if (!preparedForm.ext101_type_id) missing101.push(tp("listingEditor.labelListingType101"));
+      if (!preparedForm.ext101_area_id) missing101.push(tp("listingEditor.labelArea101"));
       if (!Object.prototype.hasOwnProperty.call(CURRENCY_CODE_MAP, preparedForm.currency.toUpperCase())) {
-        missing101.push("101evler para birimi kodu");
+        missing101.push(feed101CurLabel);
       }
-      if (!preparedForm.price || Number(preparedForm.price) <= 0) missing101.push("Fiyat");
+      if (!preparedForm.price || Number(preparedForm.price) <= 0) missing101.push(feedPriceLabel);
 
       if (missing101.length > 0) {
-        setMessage(`101evler'e gönderim için eksik/uyumsuz alanlar: ${missing101.join(", ")}. Lütfen 101evler adımını kontrol edin.`);
+        setMessage(tp("listingEditor.missing101", { fields: missing101.join(", ") }));
         setMessageType("error");
-        setWizardStep(missing101.includes("101evler para birimi kodu") || missing101.includes("Fiyat") ? 0 : 5);
+        setWizardStep(missing101.includes(feed101CurLabel) || missing101.includes(feedPriceLabel) ? 0 : 6);
         return;
       }
     }
 
     if (preparedForm.exportToHangiev) {
+      const feedHgCurLabel = tp("listingEditor.feedHangievCurrency");
+      const feedPriceLabelHg = tp("listingEditor.feedPrice");
       const missingHangiev: string[] = [];
       if (!Object.prototype.hasOwnProperty.call(HANGIEV_CURRENCY_CODE_MAP, preparedForm.currency.toUpperCase())) {
-        missingHangiev.push("Hangiev para birimi kodu");
+        missingHangiev.push(feedHgCurLabel);
       }
-      if (!preparedForm.price || Number(preparedForm.price) <= 0) missingHangiev.push("Fiyat");
+      if (!preparedForm.price || Number(preparedForm.price) <= 0) missingHangiev.push(feedPriceLabelHg);
 
       if (missingHangiev.length > 0) {
-        setMessage(`Hangiev'e gönderim için eksik/uyumsuz alanlar: ${missingHangiev.join(", ")}. Lütfen Hangiev adımını kontrol edin.`);
+        setMessage(tp("listingEditor.missingHangiev", { fields: missingHangiev.join(", ") }));
         setMessageType("error");
-        setWizardStep(missingHangiev.includes("Hangiev para birimi kodu") || missingHangiev.includes("Fiyat") ? 0 : 6);
+        setWizardStep(missingHangiev.includes(feedHgCurLabel) || missingHangiev.includes(feedPriceLabelHg) ? 0 : 7);
         return;
       }
     }
 
     const f = preparedForm;
+    const isArsaSave = f.propertyCategory === "arsa";
     const featuresLines = f.featuresText
       .split("\n")
       .map((s) => s.trim())
@@ -829,9 +1050,30 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
 
     const parsedCoords = parseLatLngPair(f.coordinates);
     if (!parsedCoords || !parsedCoords.lat || !parsedCoords.lng) {
-      setMessage("Lütfen haritadan bir konum seçin veya koordinat girin");
+      setMessage(tp("listingEditor.pickMapLocation"));
       setMessageType("error");
       return;
+    }
+
+    if (statusOverride === "PUBLISHED") {
+      const ng = normalizeGalleryForSave(gallery);
+      let coverCheck = f.coverImage.trim();
+      if (!coverCheck && ng.length > 0) {
+        coverCheck = (ng.find((g) => g.isPrimary) ?? ng[0])?.url?.trim() ?? "";
+      }
+      if (ng.length === 0 && !coverCheck) {
+        setMessage(tp("errors.saveNeedPhoto"));
+        setMessageType("error");
+        setWizardStep(3);
+        return;
+      }
+      const activeAgentsCount = agents?.filter((a) => a.is_active ?? true).length ?? 0;
+      if (viewerRole === "ADMIN" && activeAgentsCount > 0 && !f.selectedAgentId?.trim()) {
+        setMessage(tp("errors.saveNeedConsultant"));
+        setMessageType("error");
+        setWizardStep(5);
+        return;
+      }
     }
 
     const normGallery = normalizeGalleryForSave(gallery);
@@ -840,6 +1082,39 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
       const primary = normGallery.find((g) => g.isPrimary) ?? normGallery[0];
       coverOut = primary.url;
     }
+
+    const mergedOwnerDetailFields = mergeDetailFieldsWithOwnerAndPreset(
+      listing?.detailFields,
+      isArsaSave ? "" : f.buildingAgePreset,
+      {
+        firstName: f.ownerFirstName,
+        lastName: f.ownerLastName,
+        phone: f.ownerPhone,
+        email: f.ownerEmail,
+        notes: f.ownerNotes,
+        documentUrls: f.ownerDocumentUrls,
+      },
+    );
+    const detailAfterLand = mergeLandParcelDetailFields(mergedOwnerDetailFields, isArsaSave, {
+      imarDurumu: f.landImarDurumu,
+      toplamImarOrani: f.landToplamImarOrani,
+      tabanOrani: f.landTabanOrani,
+      maxKat: f.landMaxKat,
+      tags: f.landTags,
+    });
+    const isTicariSave = f.propertyCategory === "ticari";
+    const detailAfterCommercial = mergeCommercialDetailFields(
+      detailAfterLand,
+      isTicariSave && !isArsaSave,
+      f.ticariTags,
+    );
+    const detailFieldsForSave = mergeOwnedFloorsDetailFields(
+      detailAfterCommercial,
+      !isArsaSave,
+      f.ownedFloorsScope,
+      f.ownedFloorsLayout,
+      f.ownedFloorsFloorCount,
+    );
 
     const payload: ListingSavePayload = {
       id: listing?.id,
@@ -857,20 +1132,33 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
       shortDescription: f.shortDescription,
       longDescription: f.longDescription,
       coverImage: coverOut,
-      bedrooms: f.bedrooms,
-      bathrooms: f.bathrooms,
+      bedrooms: isArsaSave ? "" : f.bedrooms,
+      bathrooms: isArsaSave ? "" : f.bathrooms,
+      toilets: isArsaSave ? "" : f.toilets,
       areaM2: f.areaM2,
       plotAreaM2: f.plotAreaM2,
-      floor: f.floor,
-      buildingAge: f.buildingAge,
-      livingRooms: f.livingRooms,
-      hasPool: f.hasPool,
-      hasGarden: f.hasGarden,
-      hasFireplace: f.hasFireplace,
-      hasParking: f.hasParking,
-      furnished: f.furnished,
-      seaView: f.seaView,
-      detailFields: listing?.detailFields ?? "{}",
+      floor: isArsaSave ? "" : f.floor,
+      buildingAge: isArsaSave
+        ? ""
+        : f.buildingAgePreset === "project"
+          ? ""
+          : f.buildingAgePreset === "zero"
+            ? "0"
+            : f.buildingAge,
+      livingRooms: isArsaSave || isTicariSave ? "" : f.livingRooms,
+      hasPool: isArsaSave || isTicariSave ? false : f.hasPool,
+      hasGarden: isArsaSave || isTicariSave ? false : f.hasGarden,
+      hasFireplace: isArsaSave || isTicariSave ? false : f.hasFireplace,
+      hasParking: isArsaSave || isTicariSave ? false : f.hasParking,
+      furnished: isArsaSave || isTicariSave ? false : f.furnished,
+      seaView: isArsaSave || isTicariSave ? false : f.seaView,
+      hasElevator: isArsaSave ? false : f.hasElevator,
+      hasBalcony: isArsaSave || isTicariSave ? false : f.hasBalcony,
+      hasTerrace: isArsaSave || isTicariSave ? false : f.hasTerrace,
+      hasAirConditioning: isArsaSave || isTicariSave ? false : f.hasAirConditioning,
+      hasGatedCommunity: isArsaSave || isTicariSave ? false : f.hasGatedCommunity,
+      titleDeedOwnership: f.titleDeedOwnership,
+      detailFields: detailFieldsForSave,
       features: JSON.stringify(featuresLines),
       nearbyPlaces: f.nearbyText || "[]",
       nearbyEnabled: f.nearbyEnabled,
@@ -892,9 +1180,9 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
       consultantPhone: f.consultantPhone,
       consultantWhatsapp: f.consultantWhatsapp,
       consultantEmail: f.consultantEmail,
-      consultantOffice: f.consultantOffice,
+      consultantOffice: fixedOfficeName,
       consultantPhoto: f.consultantPhoto,
-      consultantOfficeLogo: f.consultantOfficeLogo,
+      consultantOfficeLogo: fixedOfficeLogo,
       publishStatus: statusOverride ?? f.publishStatus,
       statsShowViews: f.statsShowViews,
       statsShowFavs: f.statsShowFavs,
@@ -925,6 +1213,7 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
         price_for: (f.hangiev_price_for === "U" ? "U" : "T") as "T" | "U",
         reference_no: f.hangiev_reference_no?.trim() || null,
       },
+      selectedAgentId: f.selectedAgentId,
     };
 
     try {
@@ -933,46 +1222,54 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
       const statusLabel =
         statusOverride === "PUBLISHED"
           ? viewerRole === "ADMIN"
-            ? "yayına alındı"
-            : "admin onayına gönderildi"
-          : "taslak olarak kaydedildi";
-      setMessage(`İlan başarıyla ${statusLabel}!`);
+            ? tp("listingEditor.successPublished")
+            : tp("listingEditor.successPending")
+          : tp("listingEditor.successDraft");
+      setMessage(tp("listingEditor.successLine", { status: statusLabel }));
       setMessageType("success");
       router.refresh();
       setTimeout(() => {
         router.push("/karealfaadmin/ilanlar");
       }, 1500);
     } catch (e) {
-      const errorMsg = e instanceof Error ? e.message : "Bilinmeyen hata oluştu";
+      const errorMsg = e instanceof Error ? e.message : tp("common.unknownErrorOccurred");
       console.error("Save error:", e);
-      setMessage(`Kayıt hatası: ${errorMsg}`);
+      setMessage(tp("listingEditor.saveError", { detail: errorMsg }));
       setMessageType("error");
-      
-      // Duplicate ID hatası varsa yeni ID öner
-      if (errorMsg.includes("zaten mevcut")) {
+
+      if (errorMsg === "LISTING_DUPLICATE") {
         const newId = await suggestListingId();
         set("listingId", newId);
-        setMessage(`İlan numarası çakışması! Otomatik olarak yeni numara atandı: ${newId}. Tekrar kaydetmeyi deneyin.`);
+        setMessage(tp("listingEditor.idCollision", { id: newId }));
       }
     }
   }
 
   const steps = [
-    { icon: "info" as AdminIconName, label: "Temel Bilgiler" },
-    { icon: "map" as AdminIconName, label: "Konum" },
-    { icon: "home" as AdminIconName, label: "Özellikler" },
-    { icon: "photo_library" as AdminIconName, label: "Medya" },
-    { icon: "person" as AdminIconName, label: "Danışman & Yayın" },
-    { icon: "settings" as AdminIconName, label: "101evler" },
-    { icon: "settings" as AdminIconName, label: "Hangiev" },
+    { icon: "info" as AdminIconName, label: tp("listingEditor.stepBasic") },
+    { icon: "map" as AdminIconName, label: tp("listingEditor.stepMap") },
+    { icon: "home" as AdminIconName, label: tp("listingEditor.stepFeatures") },
+    { icon: "photo_library" as AdminIconName, label: tp("listingEditor.stepMedia") },
+    { icon: "call" as AdminIconName, label: tp("listingEditor.stepOwner") },
+    { icon: "person" as AdminIconName, label: tp("listingEditor.stepConsultant") },
+    { icon: "settings" as AdminIconName, label: tp("listingEditor.step101") },
+    { icon: "settings" as AdminIconName, label: tp("listingEditor.stepHangiev") },
   ];
+
+  const isArsa = form.propertyCategory === "arsa";
+  const isTicari = form.propertyCategory === "ticari" && !isArsa;
+
+  const adminNeedsConsultantSelection =
+    viewerRole === "ADMIN" &&
+    (agents?.filter((a) => a.is_active ?? true).length ?? 0) > 0 &&
+    !form.selectedAgentId.trim();
 
   return (
     <div className="space-y-8 pb-28">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-extrabold md:text-3xl">{listing ? "İlan Düzenle" : "Yeni İlan Oluştur"}</h1>
-          <p className="mt-1 text-sm text-zinc-500">Adımları takip ederek ilanınızı oluşturun</p>
+          <h1 className="text-2xl font-extrabold md:text-3xl">{listing ? tp("listingEditor.titleEdit") : tp("listingEditor.titleNew")}</h1>
+          <p className="mt-1 text-sm text-zinc-500">{tp("listingEditor.subtitleSteps")}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <a
@@ -981,7 +1278,7 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
             rel="noopener noreferrer"
             className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50"
           >
-            Önizleme
+            {tp("listingEditor.preview")}
           </a>
           <button
             type="button"
@@ -989,15 +1286,20 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
             disabled={pending || uploadBusy}
             className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 disabled:opacity-50"
           >
-            Taslak Kaydet
+            {tp("listingEditor.saveDraft")}
           </button>
           <button
             type="button"
             onClick={publish}
-            disabled={pending || uploadBusy}
+            disabled={pending || uploadBusy || adminNeedsConsultantSelection}
+            title={
+              adminNeedsConsultantSelection
+                ? tp("listingEditor.needConsultantFirst")
+                : undefined
+            }
             className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-md shadow-emerald-600/25 disabled:opacity-50 hover:bg-emerald-700"
           >
-            {viewerRole === "ADMIN" ? "Yayınla" : "Admin Onayına Gönder"}
+            {viewerRole === "ADMIN" ? tp("listingEditor.publishAdmin") : tp("listingEditor.submitApproval")}
           </button>
         </div>
       </div>
@@ -1006,7 +1308,7 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
       {message && messageType === "success" && (
         <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4">
           <p className="text-sm font-semibold text-emerald-800">{message}</p>
-          <p className="text-xs text-emerald-600 mt-1">İlanlar sayfasına yönlendiriliyorsunuz...</p>
+          <p className="text-xs text-emerald-600 mt-1">{tp("listingEditor.redirecting")}</p>
         </div>
       )}
       {message && messageType === "error" && (
@@ -1019,7 +1321,7 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
       <div className="mb-2">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">
-            Adım {wizardStep + 1} / {steps.length}
+            {tp("listingEditor.stepCounter", { current: wizardStep + 1, total: steps.length })}
           </span>
           <span className="text-xs font-semibold text-zinc-400">
             {Math.round(((wizardStep + 1) / steps.length) * 100)}%
@@ -1078,11 +1380,38 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
               </select>
             </label>
             <label className="block text-sm font-medium text-zinc-700">
-              Emlak Tipi
-              <select className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" value={form.propertyType.toLowerCase()} onChange={(e) => set("propertyType", e.target.value)}>
-                <option value="konut">Konut / Daire</option>
-                <option value="ticari">Ticari</option>
-                <option value="arsa">Arsa / Arazi</option>
+              {th("category")}
+              <select
+                className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                value={form.propertyCategory}
+                onChange={(e) => setPropertyTaxonomy(e.target.value as ListingCategoryKey, "")}
+              >
+                {LISTING_CATEGORY_KEYS.map((k) => (
+                  <option key={k} value={k}>
+                    {k === "konut"
+                      ? th("catKonut")
+                      : k === "arsa"
+                        ? th("catArsa")
+                        : k === "ticari"
+                          ? th("catTicari")
+                          : th("catProje")}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-sm font-medium text-zinc-700">
+              {th("propertyType")}
+              <select
+                className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                value={form.propertySubtypeKey}
+                onChange={(e) => setPropertyTaxonomy(form.propertyCategory, e.target.value)}
+              >
+                <option value="">{th("allSubTypes")}</option>
+                {LISTING_SUBTYPE_MAP[form.propertyCategory].map((sk) => (
+                  <option key={sk} value={sk}>
+                    {th(`subTypes.${sk}` as Parameters<typeof th>[0])}
+                  </option>
+                ))}
               </select>
             </label>
             <label className="block text-sm font-medium text-zinc-700">
@@ -1267,27 +1596,219 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
       {wizardStep === 2 && (
         <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-bold text-zinc-800">Emlak Özellikleri</h2>
-          <p className="mt-1 text-sm text-zinc-500">Oda sayısı, metrekare ve diğer özellikleri girin</p>
+          <p className="mt-1 text-sm text-zinc-500">
+            {isArsa
+              ? "Arsa / arazi için imar ve parsel bilgilerini girin"
+              : "Oda sayısı, metrekare ve diğer özellikleri girin"}
+          </p>
+
+          {!isArsa ? (
+          <fieldset className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50/70 p-4">
+            <legend className="px-1 text-sm font-semibold text-zinc-800">Bina yaşı</legend>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-x-6 sm:gap-y-2">
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                <input
+                  type="radio"
+                  name="buildingAgePreset"
+                  checked={form.buildingAgePreset === ""}
+                  onChange={() => set("buildingAgePreset", "")}
+                  className="h-4 w-4 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
+                />
+                Yaşı gir (manuel)
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                <input
+                  type="radio"
+                  name="buildingAgePreset"
+                  checked={form.buildingAgePreset === "zero"}
+                  onChange={() => set("buildingAgePreset", "zero")}
+                  className="h-4 w-4 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
+                />
+                Sıfır yaşında
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                <input
+                  type="radio"
+                  name="buildingAgePreset"
+                  checked={form.buildingAgePreset === "project"}
+                  onChange={() => set("buildingAgePreset", "project")}
+                  className="h-4 w-4 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
+                />
+                Proje
+              </label>
+            </div>
+            {form.buildingAgePreset === "" ? (
+              <label className="mt-4 block text-sm font-medium text-zinc-700">
+                <span className="flex items-center justify-between">
+                  <span>{PROPERTY_LABELS.buildingAge}</span>
+                  <span className="text-[11px] font-normal text-zinc-400">0-120 (yıl)</span>
+                </span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  max={120}
+                  step={1}
+                  className={`mt-1 w-full max-w-xs rounded-xl border bg-zinc-50 px-3 py-2 text-sm outline-none focus:ring-2 ${
+                    form.buildingAge !== "" &&
+                    (!Number.isFinite(Number(form.buildingAge)) ||
+                      Number(form.buildingAge) < 0 ||
+                      Number(form.buildingAge) > 120)
+                      ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500/20"
+                      : "border-zinc-200 focus:border-emerald-500 focus:ring-emerald-500/20"
+                  }`}
+                  value={form.buildingAge}
+                  onChange={(e) => set("buildingAge", e.target.value)}
+                />
+              </label>
+            ) : (
+              <p className="mt-3 text-xs text-zinc-500">
+                Yaş rakamı girilemez; kayıtta{" "}
+                {form.buildingAgePreset === "zero" ? "sıfır yaşında" : "proje"} olarak işlenir.
+              </p>
+            )}
+          </fieldset>
+          ) : null}
+
+          {isArsa ? (
+            <>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <label className="block text-sm font-medium text-zinc-700 sm:col-span-2 lg:col-span-3">
+                  İmar durumu
+                  <textarea
+                    className="mt-1 min-h-[72px] w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                    placeholder="Örn. Konut imarlı, ticari imarlı, tarla…"
+                    value={form.landImarDurumu}
+                    onChange={(e) => set("landImarDurumu", e.target.value)}
+                    rows={2}
+                  />
+                </label>
+                <label className="block text-sm font-medium text-zinc-700">
+                  <span className="flex items-center justify-between">
+                    <span>Toplam imar oranı</span>
+                    <span className="text-[11px] font-normal text-zinc-400">% (0–100)</span>
+                  </span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    max={100}
+                    step={0.01}
+                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                    value={form.landToplamImarOrani}
+                    onChange={(e) => set("landToplamImarOrani", e.target.value)}
+                  />
+                </label>
+                <label className="block text-sm font-medium text-zinc-700">
+                  <span className="flex items-center justify-between">
+                    <span>Toplam imar alanı</span>
+                    <span className="text-[11px] font-normal text-zinc-400">m²</span>
+                  </span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={100000}
+                    step={1}
+                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                    value={form.areaM2}
+                    onChange={(e) => set("areaM2", e.target.value)}
+                  />
+                </label>
+                <label className="block text-sm font-medium text-zinc-700">
+                  <span className="flex items-center justify-between">
+                    <span>Taban oranı</span>
+                    <span className="text-[11px] font-normal text-zinc-400">% (0–100)</span>
+                  </span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    max={100}
+                    step={0.01}
+                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                    value={form.landTabanOrani}
+                    onChange={(e) => set("landTabanOrani", e.target.value)}
+                  />
+                </label>
+                <label className="block text-sm font-medium text-zinc-700">
+                  <span className="flex items-center justify-between">
+                    <span>Parsel / arazi alanı</span>
+                    <span className="text-[11px] font-normal text-zinc-400">m²</span>
+                  </span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={1000000}
+                    step={1}
+                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                    value={form.plotAreaM2}
+                    onChange={(e) => set("plotAreaM2", e.target.value)}
+                  />
+                </label>
+                <label className="block text-sm font-medium text-zinc-700">
+                  <span className="flex items-center justify-between">
+                    <span>Mülkiyet kaç kat çıkabilir</span>
+                    <span className="text-[11px] font-normal text-zinc-400">0–50</span>
+                  </span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={50}
+                    step={1}
+                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                    value={form.landMaxKat}
+                    onChange={(e) => set("landMaxKat", e.target.value)}
+                  />
+                </label>
+              </div>
+              <div className="mt-4">
+                <p className="text-sm font-semibold text-zinc-800">Konum / çevre</p>
+                <p className="mt-0.5 text-xs text-zinc-500">Uygun olanları işaretleyin</p>
+                <div className="mt-3 flex flex-wrap gap-4">
+                  {LAND_LOCATION_TAG_DEFS.map((t) => (
+                    <label key={t.id} className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                      <input
+                        type="checkbox"
+                        checked={form.landTags[t.id]}
+                        onChange={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            landTags: { ...prev.landTags, [t.id]: !prev.landTags[t.id] },
+                          }))
+                        }
+                        className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
+                      />
+                      {t.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {(
               [
-                { key: "bedrooms", min: 0, max: 20, step: 1, hint: "0-20" },
-                { key: "bathrooms", min: 0, max: 10, step: 1, hint: "0-10" },
-                { key: "areaM2", min: 0, max: 100000, step: 1, hint: "m²" },
-                { key: "plotAreaM2", min: 0, max: 1000000, step: 1, hint: "m²" },
-                { key: "floor", min: -5, max: 100, step: 1, hint: "-5 ile 100" },
-                { key: "buildingAge", min: 0, max: 120, step: 1, hint: "0-120 (yıl)" },
-                { key: "livingRooms", min: 0, max: 10, step: 1, hint: "0-10" },
+                { key: "bedrooms" as const, min: 0, max: 20, step: 1, hint: "0-20" },
+                { key: "bathrooms" as const, min: 0, max: 10, step: 1, hint: "0-10" },
+                { key: "toilets" as const, min: 0, max: 10, step: 1, hint: "0-10" },
+                { key: "areaM2" as const, min: 0, max: 100000, step: 1, hint: "m²" },
+                { key: "plotAreaM2" as const, min: 0, max: 1000000, step: 1, hint: "m²" },
               ] as const
             ).map(({ key, min, max, step, hint }) => {
               const raw = form[key];
               const num = raw === "" ? null : Number(raw);
               const invalid =
                 num !== null && (!Number.isFinite(num) || num < min || num > max);
+              const fieldLabel =
+                key === "bedrooms" && isTicari ? "Oda sayısı" : PROPERTY_LABELS[key];
               return (
                 <label key={key} className="block text-sm font-medium text-zinc-700">
                   <span className="flex items-center justify-between">
-                    <span>{PROPERTY_LABELS[key]}</span>
+                    <span>{fieldLabel}</span>
                     <span className="text-[11px] font-normal text-zinc-400">{hint}</span>
                   </span>
                   <input
@@ -1312,22 +1833,318 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
                 </label>
               );
             })}
+            <div className="sm:col-span-2 lg:col-span-3 rounded-xl border border-zinc-200 bg-zinc-50/60 p-4">
+              <p className="text-sm font-medium text-zinc-800">{PROPERTY_LABELS.floor}</p>
+              <p className="mt-0.5 text-xs text-zinc-500">
+                Zemin / bodrum kat veya bulunduğu kat numarasını belirtin (isteğe bağlı)
+              </p>
+              <div className="mt-3 flex flex-wrap gap-4">
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                  <input
+                    type="radio"
+                    name="listingFloorMode"
+                    className="h-4 w-4 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
+                    checked={isGroundFloorStored(form.floor)}
+                    onChange={() => set("floor", FLOOR_GROUND_CANONICAL)}
+                  />
+                  Zemin kat
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                  <input
+                    type="radio"
+                    name="listingFloorMode"
+                    className="h-4 w-4 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
+                    checked={isBasementFloorStored(form.floor)}
+                    onChange={() => set("floor", FLOOR_BASEMENT_CANONICAL)}
+                  />
+                  Bodrum kat
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                  <input
+                    type="radio"
+                    name="listingFloorMode"
+                    className="h-4 w-4 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
+                    checked={!isPresetFloorChoiceStored(form.floor)}
+                    onChange={() => set("floor", "")}
+                  />
+                  Elle kat gir
+                </label>
+              </div>
+              {!isPresetFloorChoiceStored(form.floor) ? (
+                <label className="mt-3 block text-sm font-medium text-zinc-700">
+                  <span className="flex items-center justify-between">
+                    <span>Kat numarası</span>
+                    <span className="text-[11px] font-normal text-zinc-400">-5 ile 100</span>
+                  </span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={-5}
+                    max={100}
+                    step={1}
+                    className="mt-1 w-full max-w-xs rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                    value={form.floor}
+                    onChange={(e) => set("floor", e.target.value)}
+                    placeholder="Örn. 1, 2, 3…"
+                  />
+                </label>
+              ) : null}
+            </div>
+
+            <div className="sm:col-span-2 lg:col-span-3 rounded-xl border border-zinc-200 bg-zinc-50/60 p-4">
+              <p className="text-sm font-medium text-zinc-800">Sahip olunan kat</p>
+              <p className="mt-0.5 text-xs text-zinc-500">
+                Mülkün yalnızca bir katta mı yoksa birden fazla kata mı yayıldığını belirtin.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-4">
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                  <input
+                    type="radio"
+                    name="ownedFloorsScope"
+                    className="h-4 w-4 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
+                    checked={form.ownedFloorsScope === "single"}
+                    onChange={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        ownedFloorsScope: "single",
+                        ownedFloorsLayout: "",
+                        ownedFloorsFloorCount: "",
+                      }))
+                    }
+                  />
+                  Tek kata sahip
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                  <input
+                    type="radio"
+                    name="ownedFloorsScope"
+                    className="h-4 w-4 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
+                    checked={form.ownedFloorsScope === "multiple"}
+                    onChange={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        ownedFloorsScope: "multiple",
+                      }))
+                    }
+                  />
+                  Birden fazla kata sahip
+                </label>
+              </div>
+              {form.ownedFloorsScope === "multiple" ? (
+                <div className="mt-4 border-t border-zinc-200 pt-4">
+                  <p className="text-sm font-medium text-zinc-800">Çok katlı kullanım tipi</p>
+                  <p className="mt-0.5 text-xs text-zinc-500">
+                    Dubleks, tripleks, tüm bina veya elle kaç kata yayıldığını yazın (2–99 kat).
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-4">
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                      <input
+                        type="radio"
+                        name="ownedFloorsLayout"
+                        className="h-4 w-4 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
+                        checked={form.ownedFloorsLayout === OWNED_FLOORS_LAYOUT_KEYS.duplex}
+                        onChange={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            ownedFloorsLayout: OWNED_FLOORS_LAYOUT_KEYS.duplex,
+                            ownedFloorsFloorCount: "",
+                          }))
+                        }
+                      />
+                      Dubleks
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                      <input
+                        type="radio"
+                        name="ownedFloorsLayout"
+                        className="h-4 w-4 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
+                        checked={form.ownedFloorsLayout === OWNED_FLOORS_LAYOUT_KEYS.triplex}
+                        onChange={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            ownedFloorsLayout: OWNED_FLOORS_LAYOUT_KEYS.triplex,
+                            ownedFloorsFloorCount: "",
+                          }))
+                        }
+                      />
+                      Tripleks
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                      <input
+                        type="radio"
+                        name="ownedFloorsLayout"
+                        className="h-4 w-4 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
+                        checked={form.ownedFloorsLayout === OWNED_FLOORS_LAYOUT_KEYS.whole_building}
+                        onChange={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            ownedFloorsLayout: OWNED_FLOORS_LAYOUT_KEYS.whole_building,
+                            ownedFloorsFloorCount: "",
+                          }))
+                        }
+                      />
+                      Tüm bina
+                    </label>
+                    <label className="flex cursor-pointer flex-wrap items-center gap-2 text-sm text-zinc-700">
+                      <span className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="ownedFloorsLayout"
+                          className="h-4 w-4 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
+                          checked={form.ownedFloorsLayout === OWNED_FLOORS_LAYOUT_KEYS.custom}
+                          onChange={() =>
+                            setForm((prev) => ({
+                              ...prev,
+                              ownedFloorsLayout: OWNED_FLOORS_LAYOUT_KEYS.custom,
+                            }))
+                          }
+                        />
+                        Elle kat sayısı
+                      </span>
+                      {form.ownedFloorsLayout === OWNED_FLOORS_LAYOUT_KEYS.custom ? (
+                        <span className="flex items-center gap-1.5 pl-6 sm:pl-0">
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            min={2}
+                            max={99}
+                            step={1}
+                            placeholder="örn. 4"
+                            className="w-20 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                            value={form.ownedFloorsFloorCount}
+                            onChange={(e) => set("ownedFloorsFloorCount", e.target.value)}
+                            aria-label="Sahip olunan kat adedi"
+                          />
+                          <span className="text-zinc-600">kat</span>
+                        </span>
+                      ) : null}
+                    </label>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            {!isTicari
+              ? (
+                  (
+                    [{ key: "livingRooms" as const, min: 0, max: 10, step: 1, hint: "0-10" }] as const
+                  ).map(({ key, min, max, step, hint }) => {
+                    const raw = form[key];
+                    const num = raw === "" ? null : Number(raw);
+                    const invalid =
+                      num !== null && (!Number.isFinite(num) || num < min || num > max);
+                    return (
+                      <label key={key} className="block text-sm font-medium text-zinc-700">
+                        <span className="flex items-center justify-between">
+                          <span>{PROPERTY_LABELS[key]}</span>
+                          <span className="text-[11px] font-normal text-zinc-400">{hint}</span>
+                        </span>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          min={min}
+                          max={max}
+                          step={step}
+                          className={`mt-1 w-full rounded-xl border bg-zinc-50 px-3 py-2 text-sm outline-none focus:ring-2 ${
+                            invalid
+                              ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500/20"
+                              : "border-zinc-200 focus:border-emerald-500 focus:ring-emerald-500/20"
+                          }`}
+                          value={raw}
+                          onChange={(e) => set(key, e.target.value)}
+                        />
+                        {invalid && (
+                          <span className="mt-1 block text-xs text-rose-600">
+                            Lütfen {min} ile {max} arasında bir değer girin.
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })
+                )
+              : null}
           </div>
           <div className="mt-4 flex flex-wrap gap-4">
-            {([
-              ["hasPool", "Havuz"],
-              ["hasGarden", "Bahçe"],
-              ["hasFireplace", "Şömine"],
-              ["hasParking", "Otopark"],
-              ["furnished", "Eşyalı"],
-              ["seaView", "Deniz Manzarası"],
-            ] as const).map(([k, label]) => (
-              <label key={k} className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={form[k]} onChange={(e) => set(k, e.target.checked)} className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500/20" />
-                {label}
-              </label>
-            ))}
+            {isTicari ? (
+              <>
+                {TICARI_TAG_DEFS.map((t) => (
+                  <label key={t.id} className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                    <input
+                      type="checkbox"
+                      checked={form.ticariTags[t.id]}
+                      onChange={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          ticariTags: { ...prev.ticariTags, [t.id]: !prev.ticariTags[t.id] },
+                        }))
+                      }
+                      className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
+                    />
+                    {t.label}
+                  </label>
+                ))}
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                  <input
+                    type="checkbox"
+                    checked={form.hasElevator}
+                    onChange={(e) => set("hasElevator", e.target.checked)}
+                    className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
+                  />
+                  Asansör
+                </label>
+              </>
+            ) : (
+              ([
+                ["hasPool", "Havuz"],
+                ["hasGarden", "Bahçe"],
+                ["hasFireplace", "Şömine"],
+                ["hasParking", "Otopark"],
+                ["furnished", "Eşyalı"],
+                ["seaView", "Deniz Manzarası"],
+                ["hasElevator", "Asansörlü"],
+                ["hasBalcony", "Balkon"],
+                ["hasTerrace", "Teras"],
+                ["hasAirConditioning", "Klima"],
+                ["hasGatedCommunity", "Güvenlikli site"],
+              ] as const).map(([k, label]) => (
+                <label key={k} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={form[k]}
+                    onChange={(e) => set(k, e.target.checked)}
+                    className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
+                  />
+                  {label}
+                </label>
+              ))
+            )}
           </div>
+            </>
+          )}
+
+          <fieldset className="mt-6 rounded-xl border border-zinc-200 bg-zinc-50/70 p-4">
+            <legend className="px-1 text-sm font-semibold text-zinc-800">Tapu mülkiyeti (isteğe bağlı)</legend>
+            <p className="mt-1 text-xs text-zinc-500">
+              Doldurmak zorunlu değil. Seçerseniz ilan kartı ve detay sayfasında gösterilir; boş bırakırsanız bu bilgi yayımda yer almaz.
+            </p>
+            <label className="mt-3 block text-sm font-medium text-zinc-700">
+              Seçim
+              <select
+                className="mt-1 w-full max-w-md rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                value={form.titleDeedOwnership}
+                onChange={(e) => set("titleDeedOwnership", e.target.value)}
+                aria-label="Tapu mülkiyeti, isteğe bağlı"
+              >
+                <option value="">— Belirtmiyorum (boş) —</option>
+                {TITLE_DEED_OWNERSHIP_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </fieldset>
+
           <label className="mt-6 block text-sm font-medium text-zinc-700">
             Özellikler / Ekipmanlar
             <textarea
@@ -1392,10 +2209,31 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
                             {g.isPrimary && (
                               <span className="absolute left-2 top-2 rounded bg-emerald-600 px-2 py-0.5 text-xs font-bold text-white">Kapak</span>
                             )}
+                            <span className="absolute bottom-2 left-2 rounded bg-black/65 px-2 py-0.5 text-xs font-semibold text-white">
+                              Sıra: {idx + 1}
+                            </span>
                           </div>
                           <div className="flex flex-wrap gap-1 p-2">
-                            <button type="button" className="rounded border border-zinc-200 bg-white px-2 py-1 text-xs font-medium hover:bg-zinc-100 disabled:opacity-40" disabled={idx === 0} onClick={() => moveGallery(idx, -1)}>↑</button>
-                            <button type="button" className="rounded border border-zinc-200 bg-white px-2 py-1 text-xs font-medium hover:bg-zinc-100 disabled:opacity-40" disabled={idx >= gallery.length - 1} onClick={() => moveGallery(idx, 1)}>↓</button>
+                            <button
+                              type="button"
+                              className="rounded border border-zinc-200 bg-white px-2 py-1 text-xs font-medium hover:bg-zinc-100 disabled:opacity-40"
+                              title="Fotoğrafı bir sıra yukarı taşı"
+                              aria-label="Fotoğrafı bir sıra yukarı taşı"
+                              disabled={idx === 0}
+                              onClick={() => moveGallery(idx, -1)}
+                            >
+                              Yukarı
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded border border-zinc-200 bg-white px-2 py-1 text-xs font-medium hover:bg-zinc-100 disabled:opacity-40"
+                              title="Fotoğrafı bir sıra aşağı taşı"
+                              aria-label="Fotoğrafı bir sıra aşağı taşı"
+                              disabled={idx >= gallery.length - 1}
+                              onClick={() => moveGallery(idx, 1)}
+                            >
+                              Aşağı
+                            </button>
                             <button type="button" className="rounded border border-zinc-200 bg-white px-2 py-1 text-xs font-medium hover:bg-zinc-100" onClick={() => makeGalleryPrimary(idx)}>Kapak Yap</button>
                             <button type="button" className="ml-auto rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50" onClick={() => removeGalleryRow(idx)}>Sil</button>
                           </div>
@@ -1448,24 +2286,149 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
         </>
       )}
 
-      {/* STEP 4: Danışman & Yayın */}
+      {/* STEP 4: Mal sahibi (yalnızca panel) */}
       {wizardStep === 4 && (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50/50 p-6 shadow-sm">
+          <h2 className="text-lg font-bold text-zinc-800">Mal sahibi bilgileri</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            Ad, soyad, iletişim ve notlar yalnızca <strong>admin</strong> ve bu ilanı oluşturan{" "}
+            <strong>danışman</strong> tarafından görülebilir. İlan web sitesinde ve XML yayınlarında yer almaz.
+          </p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm font-medium text-zinc-700">
+              Ad
+              <input
+                className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                value={form.ownerFirstName}
+                onChange={(e) => set("ownerFirstName", e.target.value)}
+                autoComplete="off"
+              />
+            </label>
+            <label className="block text-sm font-medium text-zinc-700">
+              Soyad
+              <input
+                className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                value={form.ownerLastName}
+                onChange={(e) => set("ownerLastName", e.target.value)}
+                autoComplete="off"
+              />
+            </label>
+            <label className="block text-sm font-medium text-zinc-700">
+              Telefon
+              <input
+                type="tel"
+                className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                value={form.ownerPhone}
+                onChange={(e) => set("ownerPhone", e.target.value)}
+                autoComplete="off"
+              />
+            </label>
+            <label className="block text-sm font-medium text-zinc-700">
+              E-posta
+              <input
+                type="email"
+                className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                value={form.ownerEmail}
+                onChange={(e) => set("ownerEmail", e.target.value)}
+                autoComplete="off"
+              />
+            </label>
+            <label className="block text-sm font-medium text-zinc-700 sm:col-span-2">
+              Not
+              <textarea
+                className="mt-1 min-h-[96px] w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                value={form.ownerNotes}
+                onChange={(e) => set("ownerNotes", e.target.value)}
+                placeholder="Görüşme notları, uygunluk saatleri vb."
+              />
+            </label>
+          </div>
+
+          <div className="mt-6 border-t border-amber-200/80 pt-6">
+            <p className="text-sm font-medium text-zinc-800">Koçan ve belgeler</p>
+            <p className="mt-1 text-xs text-zinc-600">
+              Tapu / koçan fotoğrafları veya PDF belgeleri yükleyin. Bu dosyalar yalnızca panelde görünür.
+            </p>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <label
+                className={`inline-flex cursor-pointer items-center justify-center rounded-xl border border-amber-400 bg-white px-4 py-2.5 text-sm font-semibold text-amber-900 shadow-sm transition hover:bg-amber-100/80 ${ownerDocUploadBusy ? "pointer-events-none opacity-50" : ""}`}
+              >
+                <input
+                  type="file"
+                  accept="image/*,.heic,.heif,.avif,application/pdf,.pdf"
+                  className="sr-only"
+                  multiple
+                  onChange={onOwnerDocumentFilesChange}
+                  disabled={ownerDocUploadBusy}
+                />
+                {ownerDocUploadBusy ? "Yükleniyor…" : "Belge veya fotoğraf ekle"}
+              </label>
+            </div>
+            {form.ownerDocumentUrls.length > 0 && (
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                {form.ownerDocumentUrls.map((url, idx) => {
+                  const isPdf = /\.pdf(\?|#|$)/i.test(url);
+                  return (
+                    <div
+                      key={`${url}-${idx}`}
+                      className="group relative aspect-[4/3] overflow-hidden rounded-xl border border-amber-200/80 bg-zinc-100 shadow-sm"
+                    >
+                      {isPdf ? (
+                        <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-zinc-200/80 p-2">
+                          <span className="text-[11px] font-bold uppercase tracking-wide text-zinc-600">PDF</span>
+                          <span className="line-clamp-2 text-center text-[10px] text-zinc-500">Belge</span>
+                        </div>
+                      ) : (
+                        <div className="relative h-full w-full">
+                          <Image
+                            src={url}
+                            alt=""
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 640px) 50vw, 180px"
+                            unoptimized
+                          />
+                        </div>
+                      )}
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-black/60 px-1 py-1.5 text-center">
+                        <span className="text-[10px] font-semibold leading-tight text-white sm:text-[11px]">
+                          Koçan ve belgeleri ekleyiniz
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="absolute right-1.5 top-1.5 z-10 rounded-full bg-rose-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-md hover:bg-rose-700"
+                        onClick={() => removeOwnerDocument(idx)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* STEP 5: Danışman & Yayın */}
+      {wizardStep === 5 && (
         <>
           <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-zinc-800">Danışman Bilgileri</h2>
-            <p className="mt-1 text-sm text-zinc-500">Kayıtlı danışmandan seçin veya manuel girin</p>
+            <h2 className="text-lg font-bold text-zinc-800">{tp("listingEditor.consultantCardTitle")}</h2>
+            <p className="mt-1 text-sm text-zinc-500">{tp("listingEditor.consultantCardSub")}</p>
             
-            {agents && agents.length > 0 && (
+            {viewerRole === "ADMIN" && agents && agents.length > 0 && (
               <label className="mt-4 block text-sm font-medium text-zinc-700">
-                Kayıtlı Danışman Seç
+                {tp("listingEditor.selectRegisteredConsultant")}
                 <select
                   className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                   value={form.selectedAgentId}
                   onChange={(e) => handleAgentSelect(e.target.value)}
                 >
-                  <option value="">— Manuel Giriş —</option>
+                  <option value="">{tp("listingEditor.selectConsultantOption")}</option>
                   {agents.filter(a => a.is_active ?? true).map(a => (
-                    <option key={a.id} value={a.id}>{a.name} ({a.title || "Danışman"})</option>
+                    <option key={a.id} value={a.id}>{a.name} ({a.title || tp("listingEditor.consultantDefaultTitle")})</option>
                   ))}
                 </select>
               </label>
@@ -1474,11 +2437,11 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <label className="block text-sm font-medium text-zinc-700">
                 {CONSULTANT_LABELS.consultantName}
-                <input className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" value={form.consultantName} onChange={(e) => set("consultantName", e.target.value)} />
+                <input className={`mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none ${consultantFieldsReadOnly ? "border-zinc-200 bg-zinc-100 text-zinc-600" : "border-zinc-200 bg-zinc-50 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"}`} value={form.consultantName} onChange={(e) => set("consultantName", e.target.value)} readOnly={consultantFieldsReadOnly} disabled={consultantFieldsReadOnly} />
               </label>
               <label className="block text-sm font-medium text-zinc-700">
                 {CONSULTANT_LABELS.consultantPhone}
-                <input className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" value={form.consultantPhone} onChange={(e) => set("consultantPhone", e.target.value)} />
+                <input className={`mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none ${consultantFieldsReadOnly ? "border-zinc-200 bg-zinc-100 text-zinc-600" : "border-zinc-200 bg-zinc-50 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"}`} value={form.consultantPhone} onChange={(e) => set("consultantPhone", e.target.value)} readOnly={consultantFieldsReadOnly} disabled={consultantFieldsReadOnly} />
               </label>
               <label className="block text-sm font-medium text-zinc-700">
                 {CONSULTANT_LABELS.consultantWhatsapp}
@@ -1486,31 +2449,39 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
               </label>
               <label className="block text-sm font-medium text-zinc-700">
                 {CONSULTANT_LABELS.consultantEmail}
-                <input className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" value={form.consultantEmail} onChange={(e) => set("consultantEmail", e.target.value)} />
+                <input className={`mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none ${consultantFieldsReadOnly ? "border-zinc-200 bg-zinc-100 text-zinc-600" : "border-zinc-200 bg-zinc-50 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"}`} value={form.consultantEmail} onChange={(e) => set("consultantEmail", e.target.value)} readOnly={consultantFieldsReadOnly} disabled={consultantFieldsReadOnly} />
               </label>
               <label className="block text-sm font-medium text-zinc-700">
                 {CONSULTANT_LABELS.consultantOffice}
-                <input className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" value={form.consultantOffice} onChange={(e) => set("consultantOffice", e.target.value)} />
+                <input
+                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-100 px-3 py-2 text-sm text-zinc-600"
+                  value={fixedOfficeName}
+                  readOnly
+                  disabled
+                />
+                <p className="mt-1 text-xs text-zinc-500">Ofis bilgisi site ayarlarından otomatik gelir.</p>
               </label>
               
               {/* Danışman Fotoğraf Yükleme */}
               <label className="block text-sm font-medium text-zinc-700">
                 {CONSULTANT_LABELS.consultantPhoto}
                 <div className="mt-1 flex gap-2">
-                  <input className="flex-1 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" value={form.consultantPhoto} onChange={(e) => set("consultantPhoto", e.target.value)} placeholder="veya URL girin" />
-                  <label className="cursor-pointer rounded-xl bg-zinc-800 px-3 py-2 text-sm font-semibold text-white hover:bg-zinc-900">
-                    <input type="file" accept="image/*" className="sr-only" onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      try {
-                        const url = await postUploadFile(file);
-                        set("consultantPhoto", url);
-                      } catch (err) {
-                        setMessage(err instanceof Error ? err.message : "Yükleme hatası");
-                      }
-                    }} />
-                    Yükle
-                  </label>
+                  <input className={`flex-1 rounded-xl border px-3 py-2 text-sm outline-none ${consultantFieldsReadOnly ? "border-zinc-200 bg-zinc-100 text-zinc-600" : "border-zinc-200 bg-zinc-50 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"}`} value={form.consultantPhoto} onChange={(e) => set("consultantPhoto", e.target.value)} placeholder="veya URL girin" readOnly={consultantFieldsReadOnly} disabled={consultantFieldsReadOnly} />
+                  {!consultantFieldsReadOnly ? (
+                    <label className="cursor-pointer rounded-xl bg-zinc-800 px-3 py-2 text-sm font-semibold text-white hover:bg-zinc-900">
+                      <input type="file" accept="image/*" className="sr-only" onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        try {
+                          const url = await postUploadFile(file);
+                          set("consultantPhoto", url);
+                        } catch (err) {
+                          setMessage(err instanceof Error ? err.message : "Yükleme hatası");
+                        }
+                      }} />
+                      Yükle
+                    </label>
+                  ) : null}
                 </div>
                 {form.consultantPhoto && (
                   <div className="mt-2 relative h-16 w-16 rounded-lg overflow-hidden border border-zinc-200">
@@ -1519,30 +2490,20 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
                 )}
               </label>
 
-              {/* Ofis Logo Yükleme */}
               <label className="block text-sm font-medium text-zinc-700">
                 {CONSULTANT_LABELS.consultantOfficeLogo}
-                <div className="mt-1 flex gap-2">
-                  <input className="flex-1 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" value={form.consultantOfficeLogo} onChange={(e) => set("consultantOfficeLogo", e.target.value)} placeholder="veya URL girin" />
-                  <label className="cursor-pointer rounded-xl bg-zinc-800 px-3 py-2 text-sm font-semibold text-white hover:bg-zinc-900">
-                    <input type="file" accept="image/*" className="sr-only" onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      try {
-                        const url = await postUploadFile(file);
-                        set("consultantOfficeLogo", url);
-                      } catch (err) {
-                        setMessage(err instanceof Error ? err.message : "Yükleme hatası");
-                      }
-                    }} />
-                    Yükle
-                  </label>
-                </div>
-                {form.consultantOfficeLogo && (
+                <input
+                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-100 px-3 py-2 text-sm text-zinc-600"
+                  value={fixedOfficeLogo}
+                  readOnly
+                  disabled
+                />
+                {fixedOfficeLogo && (
                   <div className="mt-2 relative h-16 w-16 rounded-lg overflow-hidden border border-zinc-200">
-                    <Image src={form.consultantOfficeLogo} alt="" fill className="object-cover" sizes="64px" unoptimized />
+                    <Image src={fixedOfficeLogo} alt="" fill className="object-cover" sizes="64px" unoptimized />
                   </div>
                 )}
+                <p className="mt-1 text-xs text-zinc-500">Ofis logosu site ayarlarından otomatik gelir.</p>
               </label>
             </div>
           </section>
@@ -1617,8 +2578,8 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
         </>
       )}
 
-      {/* STEP 5: 101evler XML Yayını */}
-      {wizardStep === 5 && (
+      {/* STEP 6: 101evler XML Yayını */}
+      {wizardStep === 6 && (
         <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-bold text-zinc-800">101evler XML Yayını</h2>
           <p className="mt-1 text-sm text-zinc-500">
@@ -1816,8 +2777,8 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
         </section>
       )}
 
-      {/* STEP 6: Hangiev XML Yayını */}
-      {wizardStep === 6 && (
+      {/* STEP 7: Hangiev XML Yayını */}
+      {wizardStep === 7 && (
         <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-bold text-zinc-800">Hangiev XML Yayını</h2>
           <p className="mt-1 text-sm text-zinc-500">
@@ -1995,10 +2956,10 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
           className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-30"
         >
           <AdminIcon name="arrow_back" size={18} />
-          Önceki
+          {tp("listingEditor.navPrev")}
         </button>
         <span className="text-xs font-medium text-zinc-400">
-          Adım {wizardStep + 1} / {steps.length}
+          {tp("listingEditor.stepCounter", { current: wizardStep + 1, total: steps.length })}
         </span>
         <button
           type="button"
@@ -2006,19 +2967,29 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
           onClick={() => setWizardStep((s) => Math.min(steps.length - 1, s + 1))}
           className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-emerald-600/25 transition hover:bg-emerald-700 disabled:opacity-30"
         >
-          Sonraki
+          {tp("listingEditor.navNext")}
           <AdminIcon name="arrow_forward" size={18} />
         </button>
       </div>
 
       {/* Sticky Bottom Bar */}
       <div className="fixed bottom-0 left-0 right-0 z-40 flex flex-wrap items-center justify-center gap-2 border-t border-zinc-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur-md lg:left-64">
-        <span className="hidden text-xs text-zinc-400 sm:inline">Kaydetmeyi unutmayın!</span>
+        <span className="hidden text-xs text-zinc-400 sm:inline">{tp("listingEditor.dontForgetSave")}</span>
         <button type="button" onClick={saveDraft} disabled={pending || uploadBusy} className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 disabled:opacity-50">
-          Taslak Kaydet
+          {tp("listingEditor.saveDraft")}
         </button>
-        <button type="button" onClick={publish} disabled={pending || uploadBusy} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-md shadow-emerald-600/25 disabled:opacity-50 hover:bg-emerald-700">
-          {viewerRole === "ADMIN" ? "Yayınla" : "Admin Onayına Gönder"}
+        <button
+          type="button"
+          onClick={publish}
+          disabled={pending || uploadBusy || adminNeedsConsultantSelection}
+          title={
+            adminNeedsConsultantSelection
+              ? tp("listingEditor.needConsultantFirst")
+              : undefined
+          }
+          className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-md shadow-emerald-600/25 disabled:opacity-50 hover:bg-emerald-700"
+        >
+          {viewerRole === "ADMIN" ? tp("listingEditor.publishAdmin") : tp("listingEditor.submitApproval")}
         </button>
       </div>
     </div>

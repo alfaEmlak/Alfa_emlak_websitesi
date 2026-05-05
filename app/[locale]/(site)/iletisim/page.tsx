@@ -96,6 +96,7 @@ export default async function ContactPage({ params }: Props) {
             sendButton: t("sendButton"),
             successMessage: t("successMessage"),
             errorMessage: t("errorMessage"),
+            validationNamePhone: t("validationNamePhone"),
             sending: tc("sending"),
           }}
         />

@@ -1,0 +1,104 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bgGlow" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#14264A" stop-opacity="0.85"/>
+      <stop offset="55%" stop-color="#080B12" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#050609" stop-opacity="1"/>
+    </radialGradient>
+    <linearGradient id="orange" x1="238" y1="158" x2="802" y2="858" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFB11A"/>
+      <stop offset="0.55" stop-color="#FF8A00"/>
+      <stop offset="1" stop-color="#FF6500"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="314" y1="268" x2="766" y2="734" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#102D76"/>
+      <stop offset="0.5" stop-color="#061143"/>
+      <stop offset="1" stop-color="#02061A"/>
+    </linearGradient>
+    <linearGradient id="shell" x1="250" y1="125" x2="775" y2="844" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="0.45" stop-color="#F2F5FA"/>
+      <stop offset="1" stop-color="#C9D2DE"/>
+    </linearGradient>
+    <filter id="softShadow" x="120" y="120" width="800" height="820" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="24" stdDeviation="28" flood-color="#000000" flood-opacity="0.55"/>
+    </filter>
+    <filter id="orangeGlow" x="90" y="90" width="850" height="850" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="1 0 0 0 1  0 1 0 0 0.45  0 0 1 0 0  0 0 0 0.85 0"/>
+      <feBlend in="SourceGraphic" mode="screen"/>
+    </filter>
+    <filter id="blueGlow" x="250" y="260" width="540" height="430" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="0" stdDeviation="10" flood-color="#00A8FF" flood-opacity="0.75"/>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" rx="120" fill="url(#bgGlow)"/>
+
+  <!-- Floating tech nodes for animated mascot feeling -->
+  <g opacity="0.55" stroke="#FF8A00" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M180 666H248L306 610"/>
+    <circle cx="166" cy="666" r="22" fill="#091022" stroke="#FF8A00"/>
+    <circle cx="314" cy="602" r="13" fill="#FF8A00" stroke="none"/>
+    <path d="M840 650H775L728 603"/>
+    <circle cx="858" cy="650" r="22" fill="#091022" stroke="#FF8A00"/>
+    <circle cx="720" cy="595" r="13" fill="#FF8A00" stroke="none"/>
+  </g>
+
+  <!-- Head outer shell -->
+  <g filter="url(#softShadow)">
+    <path d="M512 121C605 121 748 296 803 455C850 590 785 771 655 841C571 887 453 887 369 841C239 771 174 590 221 455C276 296 419 121 512 121Z" fill="url(#shell)"/>
+    <path d="M512 149C595 149 720 310 770 464C812 595 751 745 636 808C561 849 463 849 388 808C273 745 212 595 254 464C304 310 429 149 512 149Z" stroke="url(#orange)" stroke-width="32" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Face screen -->
+  <path d="M512 211C588 211 704 350 745 479C778 582 729 696 633 748C562 786 462 786 391 748C295 696 246 582 279 479C320 350 436 211 512 211Z" fill="url(#blue)" stroke="#071034" stroke-width="10"/>
+
+  <!-- Inner orange rim -->
+  <path d="M512 181C599 181 730 342 779 488C816 599 761 737 644 801C569 842 455 842 380 801C263 737 208 599 245 488C294 342 425 181 512 181Z" stroke="url(#orange)" stroke-width="18" opacity="0.95"/>
+
+  <!-- Cute animated eyes -->
+  <g filter="url(#blueGlow)">
+    <ellipse cx="409" cy="500" rx="57" ry="67" fill="#20B7FF"/>
+    <ellipse cx="615" cy="500" rx="57" ry="67" fill="#20B7FF"/>
+    <ellipse cx="409" cy="507" rx="31" ry="39" fill="#06153A"/>
+    <ellipse cx="615" cy="507" rx="31" ry="39" fill="#06153A"/>
+    <circle cx="392" cy="477" r="15" fill="white" opacity="0.95"/>
+    <circle cx="598" cy="477" r="15" fill="white" opacity="0.95"/>
+    <circle cx="423" cy="522" r="8" fill="#6FE6FF" opacity="0.9"/>
+    <circle cx="629" cy="522" r="8" fill="#6FE6FF" opacity="0.9"/>
+  </g>
+
+  <!-- Eyebrows -->
+  <path d="M348 414C384 386 426 384 461 412" stroke="#46C9FF" stroke-width="18" stroke-linecap="round" opacity="0.9"/>
+  <path d="M563 412C599 384 641 386 676 414" stroke="#46C9FF" stroke-width="18" stroke-linecap="round" opacity="0.9"/>
+
+  <!-- Smile -->
+  <path d="M443 616C479 657 548 657 584 616" stroke="#46E4FF" stroke-width="20" stroke-linecap="round"/>
+
+  <!-- Cheeks -->
+  <ellipse cx="338" cy="595" rx="31" ry="17" fill="#FF8A00" opacity="0.25"/>
+  <ellipse cx="686" cy="595" rx="31" ry="17" fill="#FF8A00" opacity="0.25"/>
+
+  <!-- Side audio/assistant pods -->
+  <g filter="url(#orangeGlow)">
+    <circle cx="245" cy="507" r="61" fill="#E8EEF6" stroke="url(#orange)" stroke-width="15"/>
+    <circle cx="245" cy="507" r="31" fill="#10204A" stroke="#FF8A00" stroke-width="8"/>
+    <circle cx="779" cy="507" r="61" fill="#E8EEF6" stroke="url(#orange)" stroke-width="15"/>
+    <circle cx="779" cy="507" r="31" fill="#10204A" stroke="#FF8A00" stroke-width="8"/>
+  </g>
+
+  <!-- Small ALFY A mark on forehead -->
+  <g transform="translate(448 284) scale(0.35)" stroke="url(#orange)" stroke-width="36" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M183 0L330 270H36L183 0Z"/>
+    <path d="M92 205H276"/>
+    <path d="M125 205L183 100L238 205"/>
+    <circle cx="183" cy="100" r="16" fill="#FF8A00" stroke="none"/>
+  </g>
+
+  <!-- Bottom mini label -->
+  <g font-family="Arial, Helvetica, sans-serif" text-anchor="middle">
+    <text x="512" y="877" font-size="62" font-weight="800" letter-spacing="6" fill="#0A3B91">ALFY</text>
+    <text x="512" y="918" font-size="26" font-weight="600" letter-spacing="10" fill="#FF8A00">AI ASİSTANI</text>
+  </g>
+</svg>

@@ -1,7 +1,8 @@
+import { expandListingCityFilterValues, normalizeListingCitySlug } from "@/lib/listing-city";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { ListingKind } from "@/lib/listing-kinds";
 import { normalizeListings } from "@/lib/listing-normalize";
-import { kktcCities, kktcRegions } from "@/lib/kktc-regions";
+import { kktcRegions } from "@/lib/kktc-regions";
 
 export type ListingPublic = any;
 
@@ -70,10 +71,6 @@ export function buildListingFilters(sp: Record<string, string | string[] | undef
   return { where, q };
 }
 
-function getCityLabel(v: string) {
-  return kktcCities.find((c) => c.v === v)?.l || v;
-}
-
 function getRegionLabel(cityV: string, bolgeV: string) {
   const rs = kktcRegions[cityV] || [];
   return rs.find((r) => r.v === bolgeV)?.l || bolgeV;
@@ -85,12 +82,12 @@ function applyListingFilters(query: any, where: Record<string, any>) {
   if (where.bedrooms) query = query.gte("bedrooms", where.bedrooms);
   
   if (where.city) {
-    const l = getCityLabel(where.city);
-    query = query.in("city", Array.from(new Set([where.city, l])));
+    query = query.in("city", expandListingCityFilterValues(where.city));
   }
-  
+
   if (where.region) {
-    const l = where.city ? getRegionLabel(where.city, where.region) : where.region;
+    const cityKey = where.city ? normalizeListingCitySlug(where.city) || where.city : "";
+    const l = cityKey ? getRegionLabel(cityKey, where.region) : where.region;
     query = query.in("region", Array.from(new Set([where.region, l])));
   }
   
@@ -237,6 +234,28 @@ export async function getListingByPublicIdSafe(listingId: string, allowDraftForA
   }
 }
 
+/**
+ * Yayında ilan detayı her görüntülendiğinde Supabase `listings.views` sayacını artırır.
+ * (İstatistik paneli bu alanı okur; Prisma/SQLite ile senkron tutulmaz.)
+ */
+export async function incrementListingViewsSupabase(listingUuid: string): Promise<void> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("listings")
+      .select("views")
+      .eq("id", listingUuid)
+      .maybeSingle();
+    if (error || data == null) return;
+    const cur =
+      typeof data.views === "number" && Number.isFinite(data.views)
+        ? data.views
+        : Number.parseInt(String(data.views ?? "0"), 10) || 0;
+    await supabaseAdmin.from("listings").update({ views: cur + 1 }).eq("id", listingUuid);
+  } catch {
+    /* ignore */
+  }
+}
+
 export async function getSimilarListings(
   excludeId: string,
   city: string,
@@ -251,8 +270,7 @@ export async function getSimilarListings(
     .eq("kind", kind);
 
   if (city) {
-    const l = getCityLabel(city);
-    query = query.in("city", Array.from(new Set([city, l])));
+    query = query.in("city", expandListingCityFilterValues(city));
   }
 
   const { data } = await query

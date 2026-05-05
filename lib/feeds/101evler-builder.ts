@@ -83,6 +83,11 @@ type NormalizedFeedListing = {
   hasParking?: boolean | null;
   seaView?: boolean | null;
   furnished?: boolean | null;
+  hasElevator?: boolean | null;
+  hasBalcony?: boolean | null;
+  hasTerrace?: boolean | null;
+  hasAirConditioning?: boolean | null;
+  hasGatedCommunity?: boolean | null;
 };
 
 export type RealtorIds = {
@@ -171,6 +176,10 @@ function buildAdSpecs(
     hasParking?: boolean | null;
     seaView?: boolean | null;
     furnished?: boolean | null;
+    hasElevator?: boolean | null;
+    hasBalcony?: boolean | null;
+    hasTerrace?: boolean | null;
+    hasAirConditioning?: boolean | null;
   },
 ): string {
   const set = new Map<string, boolean>();
@@ -181,6 +190,10 @@ function buildAdSpecs(
   if (booleans.hasFireplace) set.set("fireplace", true);
   if (booleans.hasParking) set.set("closed_park", true);
   if (booleans.seaView) set.set("sea_view", true);
+  if (booleans.hasElevator) set.set("lift", true);
+  if (booleans.hasBalcony) set.set("balcony", true);
+  if (booleans.hasTerrace) set.set("terrace", true);
+  if (booleans.hasAirConditioning) set.set("ac", true);
 
   // features (jsonb dizisi veya JSON string)
   const list = toStringArray(features);
@@ -386,6 +399,10 @@ export function buildAdElement(
       hasParking: l.hasParking,
       seaView: l.seaView,
       furnished: l.furnished,
+      hasElevator: l.hasElevator,
+      hasBalcony: l.hasBalcony,
+      hasTerrace: l.hasTerrace,
+      hasAirConditioning: l.hasAirConditioning,
     }),
 
     buildAdPictures(rawListing.listing_images ?? rawListing.images ?? null),

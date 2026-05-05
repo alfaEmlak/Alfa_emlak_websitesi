@@ -1,13 +1,19 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { getPanelSession, requireAdmin, requirePanelUser } from "@/lib/panel-auth";
+import { getPanelSession, requireAdmin, requirePanelUser, requireRole } from "@/lib/panel-auth";
+import { PANEL_LOCALE_COOKIE } from "@/lib/panel-locale";
+import { getPanelTranslations } from "@/lib/panel-translations";
+import { routing } from "@/i18n/routing";
 import { defaultMegaMenu } from "@/lib/default-menu";
 import { menuTopItemsSchema } from "@/lib/menu-schema";
 import { hashPassword, verifyPassword } from "@/lib/password";
+import { normalizeListingCitySlug } from "@/lib/listing-city";
 import { isUuidString } from "@/lib/listing-identity";
+import { parseTitleDeedOwnership } from "@/lib/title-deed-ownership";
 import { customAlphabet } from "nanoid";
 
 const CONSULTANT_ROLES = ["CONSULTANT", "AGENT"];
@@ -55,6 +61,14 @@ function canPublishDirectly(role: "ADMIN" | "CONSULTANT") {
   return role === "ADMIN";
 }
 
+function listingPayloadHasVisual(
+  galleryRows: { url: string }[],
+  coverImage: string | undefined | null,
+): boolean {
+  if (galleryRows.some((g) => g.url.trim())) return true;
+  return Boolean(String(coverImage ?? "").trim());
+}
+
 export async function loginAdmin(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "").trim();
@@ -67,6 +81,7 @@ export async function loginAdmin(formData: FormData) {
     session.role = "ADMIN";
     session.agentId = undefined;
     session.name = "Admin";
+    await syncPanelLocaleCookieToSession(session);
     await session.save();
     redirect("/karealfaadmin/dashboard");
   }
@@ -89,8 +104,45 @@ export async function loginAdmin(formData: FormData) {
   session.role = "CONSULTANT";
   session.agentId = consultant.id;
   session.name = consultant.name;
+  await syncPanelLocaleCookieToSession(session);
   await session.save();
   redirect("/karealfaadmin/dashboard");
+}
+
+async function syncPanelLocaleCookieToSession(session: Awaited<ReturnType<typeof getPanelSession>>) {
+  const jar = await cookies();
+  const c = jar.get(PANEL_LOCALE_COOKIE)?.value;
+  if (c && routing.locales.includes(c as (typeof routing.locales)[number])) {
+    session.panelLocale = c;
+  }
+}
+
+export async function setPanelLocale(locale: string) {
+  const loc = String(locale ?? "").trim();
+  if (!loc || !routing.locales.includes(loc as (typeof routing.locales)[number])) {
+    return { ok: false as const };
+  }
+
+  const jar = await cookies();
+  jar.set(PANEL_LOCALE_COOKIE, loc, {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+    sameSite: "lax",
+    httpOnly: false,
+  });
+
+  try {
+    const session = await getPanelSession();
+    if (session.role) {
+      session.panelLocale = loc;
+      await session.save();
+    }
+  } catch {
+    /* oturum yok (giriş öncesi) — sadece çerez yeterli */
+  }
+
+  revalidatePath("/karealfaadmin", "layout");
+  return { ok: true as const };
 }
 
 export async function registerConsultant(formData: FormData) {
@@ -159,6 +211,7 @@ export type ListingSavePayload = {
   coverImage: string;
   bedrooms: string;
   bathrooms: string;
+  toilets: string;
   areaM2: string;
   plotAreaM2: string;
   floor: string;
@@ -170,6 +223,13 @@ export type ListingSavePayload = {
   hasParking: boolean;
   furnished: boolean;
   seaView: boolean;
+  hasElevator: boolean;
+  hasBalcony: boolean;
+  hasTerrace: boolean;
+  hasAirConditioning: boolean;
+  hasGatedCommunity: boolean;
+  /** Boş veya geçerli tapu mülkiyeti anahtarı (lib/title-deed-ownership) */
+  titleDeedOwnership: string;
   detailFields: string;
   features: string;
   nearbyPlaces: string;
@@ -196,6 +256,8 @@ export type ListingSavePayload = {
   consultantOffice: string;
   consultantPhoto: string;
   consultantOfficeLogo: string;
+  /** Admin ilan oluştururken/güncellerken kayıtlı danışman seçimi (UUID) */
+  selectedAgentId?: string;
   publishStatus: string;
   statsShowViews: boolean;
   statsShowFavs: boolean;
@@ -236,6 +298,26 @@ function numOrNull(s: string) {
 function intOrNull(s: string) {
   const n = parseInt(s, 10);
   return s === "" || Number.isNaN(n) ? null : n;
+}
+
+async function getListingOfficeDefaults(): Promise<{ office: string; logo: string }> {
+  try {
+    const { data } = await supabaseAdmin
+      .from("site_settings")
+      .select("default_consultant_json")
+      .eq("id", 1)
+      .maybeSingle();
+    const parsed =
+      typeof data?.default_consultant_json === "string" && data.default_consultant_json.trim()
+        ? JSON.parse(data.default_consultant_json) as { office?: string; logo?: string }
+        : {};
+    return {
+      office: parsed.office?.trim() || "ALFA EMLAK",
+      logo: parsed.logo?.trim() || "/alfa-3d.png",
+    };
+  } catch {
+    return { office: "ALFA EMLAK", logo: "/alfa-3d.png" };
+  }
 }
 
 function stripUnsupportedListingColumns<T extends Record<string, unknown>>(payload: T, message: string) {
@@ -404,6 +486,7 @@ async function findExistingListingForSave(payload: ListingSavePayload): Promise<
 
 export async function saveListing(payload: ListingSavePayload) {
   const user = await requirePanelUser();
+  const tp = await getPanelTranslations();
   const requestedStatus = normalizeRequestedStatus(payload.publishStatus);
   const finalStatus =
     user.role === "ADMIN"
@@ -414,9 +497,49 @@ export async function saveListing(payload: ListingSavePayload) {
           ? "DRAFT"
           : requestedStatus;
   const gallery = payload.gallery.filter((g) => g.url.trim() !== "");
+  const hasListingVisual = listingPayloadHasVisual(gallery, payload.coverImage);
+  if (
+    (finalStatus === "PUBLISHED" || finalStatus === "PENDING_APPROVAL") &&
+    !hasListingVisual
+  ) {
+    throw new Error(tp("errors.saveNeedPhoto"));
+  }
+
+  if (user.role === "ADMIN" && (finalStatus === "PUBLISHED" || finalStatus === "PENDING_APPROVAL")) {
+    const { count: activeAgentCount } = await supabaseAdmin
+      .from("agents")
+      .select("id", { count: "exact", head: true })
+      .eq("is_active", true);
+    if ((activeAgentCount ?? 0) > 0 && !String(payload.selectedAgentId ?? "").trim()) {
+      throw new Error(tp("errors.saveNeedConsultant"));
+    }
+  }
   const now = new Date().toISOString();
 
   let existingListing: ExistingListingForSave | null = null;
+  const officeDefaults = await getListingOfficeDefaults();
+  let effectiveConsultant = {
+    name: payload.consultantName?.trim() || null as string | null,
+    phone: payload.consultantPhone?.trim() || null as string | null,
+    email: payload.consultantEmail?.trim() || null as string | null,
+    photo: payload.consultantPhoto?.trim() || null as string | null,
+  };
+
+  if (user.role === "CONSULTANT" && user.agentId) {
+    const { data: me } = await supabaseAdmin
+      .from("agents")
+      .select("name, phone, email, photo")
+      .eq("id", user.agentId)
+      .maybeSingle();
+    if (me) {
+      effectiveConsultant = {
+        name: typeof me.name === "string" ? me.name : effectiveConsultant.name,
+        phone: typeof me.phone === "string" ? me.phone : null,
+        email: typeof me.email === "string" ? me.email : effectiveConsultant.email,
+        photo: typeof me.photo === "string" ? me.photo : null,
+      };
+    }
+  }
 
   if (payload.id || payload.originalListingId) {
     const { data, error } = await findExistingListingForSave(payload);
@@ -424,12 +547,21 @@ export async function saveListing(payload: ListingSavePayload) {
     if (!data) {
       if (error) {
         console.error("[saveListing] findExistingListingForSave error:", error);
-        throw new Error(`İlan bulunamadı (${error.message}).`);
+        throw new Error(tp("errors.listingNotFoundDetail", { detail: error.message }));
       }
-      throw new Error("İlan bulunamadı.");
+      throw new Error(tp("errors.listingNotFound"));
     }
 
     existingListing = data;
+
+    if (user.role === "CONSULTANT") {
+      if (!user.agentId) {
+        throw new Error(tp("errors.consultantNotConfigured"));
+      }
+      if (existingListing.created_by_agent_id !== user.agentId) {
+        throw new Error(tp("errors.noEditPermission"));
+      }
+    }
   }
 
   const data = {
@@ -437,7 +569,7 @@ export async function saveListing(payload: ListingSavePayload) {
     title: payload.title?.trim() || "",
     kind: payload.kind,
     property_type: payload.propertyType?.trim() || "",
-    city: payload.city?.trim() || "",
+    city: normalizeListingCitySlug(payload.city?.trim() || ""),
     region: payload.region?.trim() || "",
     neighborhood: payload.neighborhood?.trim() || null,
     full_address: payload.fullAddress?.trim() || null,
@@ -448,6 +580,7 @@ export async function saveListing(payload: ListingSavePayload) {
     cover_image: payload.coverImage?.trim() || null,
     bedrooms: intOrNull(payload.bedrooms),
     bathrooms: intOrNull(payload.bathrooms),
+    toilets: intOrNull(payload.toilets),
     area_m2: numOrNull(payload.areaM2),
     plot_area_m2: numOrNull(payload.plotAreaM2),
     floor: payload.floor || null,
@@ -459,6 +592,12 @@ export async function saveListing(payload: ListingSavePayload) {
     has_parking: payload.hasParking,
     furnished: payload.furnished,
     sea_view: payload.seaView,
+    has_elevator: payload.hasElevator,
+    has_balcony: payload.hasBalcony,
+    has_terrace: payload.hasTerrace,
+    has_air_conditioning: payload.hasAirConditioning,
+    has_gated_community: payload.hasGatedCommunity,
+    title_deed_ownership: parseTitleDeedOwnership(payload.titleDeedOwnership) || null,
     detail_fields: payload.detailFields?.trim() ? payload.detailFields : null,
     features: payload.features?.trim() ? JSON.parse(payload.features) : null,
     virtual_tour_url: payload.virtualTourUrl?.trim() || null,
@@ -485,16 +624,26 @@ export async function saveListing(payload: ListingSavePayload) {
     stats_show_views: payload.statsShowViews,
     stats_show_favs: payload.statsShowFavs,
     stats_show_rating: payload.statsShowRating,
-    consultant_name: payload.consultantName?.trim() || null,
-    consultant_phone: payload.consultantPhone?.trim() || null,
+    consultant_name: effectiveConsultant.name,
+    consultant_phone: effectiveConsultant.phone,
     consultant_whatsapp: payload.consultantWhatsapp?.trim() || null,
-    consultant_email: payload.consultantEmail?.trim() || null,
-    consultant_office: payload.consultantOffice?.trim() || null,
-    consultant_photo: payload.consultantPhoto?.trim() || null,
-    consultant_office_logo: payload.consultantOfficeLogo?.trim() || null,
+    consultant_email: effectiveConsultant.email,
+    consultant_office: officeDefaults.office,
+    consultant_photo: effectiveConsultant.photo,
+    consultant_office_logo: officeDefaults.logo,
     translations: payload.translations?.trim() || null,
-    created_by_agent_id: existingListing?.created_by_agent_id ?? (user.role === "CONSULTANT" ? user.agentId : null),
-    created_by_name: existingListing?.created_by_name ?? (user.role === "CONSULTANT" ? user.name : "Admin"),
+    created_by_agent_id:
+      user.role === "CONSULTANT"
+        ? user.agentId ?? existingListing?.created_by_agent_id ?? null
+        : String(payload.selectedAgentId ?? "").trim()
+          ? String(payload.selectedAgentId).trim()
+          : existingListing?.created_by_agent_id ?? null,
+    created_by_name:
+      user.role === "CONSULTANT"
+        ? user.name ?? existingListing?.created_by_name ?? "Danışman"
+        : String(payload.selectedAgentId ?? "").trim()
+          ? payload.consultantName?.trim() || existingListing?.created_by_name || "Admin"
+          : existingListing?.created_by_name ?? "Admin",
     last_updated_by_agent_id: user.role === "CONSULTANT" ? user.agentId : null,
     last_updated_by_name: user.name,
     approval_submitted_at: finalStatus === "PENDING_APPROVAL" ? now : null,
@@ -529,7 +678,7 @@ export async function saveListing(payload: ListingSavePayload) {
   if (payload.id || payload.originalListingId) {
     const listingDbId = existingListing?.id ?? payload.id;
     if (!listingDbId) {
-      throw new Error("Güncellenecek ilan bulunamadı.");
+      throw new Error(tp("errors.listingUpdateMissing"));
     }
 
     // Update existing listing
@@ -537,7 +686,7 @@ export async function saveListing(payload: ListingSavePayload) {
     
     if (error) {
       console.error("[saveListing] Update error:", error);
-      throw new Error(`İlan güncellenemedi: ${error.message}`);
+      throw new Error(tp("errors.listingUpdateFailed", { detail: error.message }));
     }
 
     // Delete old images
@@ -565,7 +714,7 @@ export async function saveListing(payload: ListingSavePayload) {
       
       if (imgError) {
         console.error("[saveListing] Insert images error:", imgError);
-        throw new Error(`Fotoğraflar eklenemedi: ${imgError.message}`);
+        throw new Error(tp("errors.photosAddFailed", { detail: imgError.message }));
       }
     }
 
@@ -584,9 +733,9 @@ export async function saveListing(payload: ListingSavePayload) {
     if (error) {
       console.error("[saveListing] Insert error:", error);
       if (error.code === "23505") {
-        throw new Error(`"${payload.listingId}" numaralı ilan zaten mevcut. Lütfen farklı bir ilan numarası girin.`);
+        throw new Error("LISTING_DUPLICATE");
       }
-      throw new Error(`İlan oluşturulamadı: ${error.message}`);
+      throw new Error(tp("errors.listingCreateFailed", { detail: error.message }));
     }
 
     console.log("[saveListing] Created listing:", newListing);
@@ -606,7 +755,7 @@ export async function saveListing(payload: ListingSavePayload) {
       
       if (imgError) {
         console.error("[saveListing] Insert images error:", imgError);
-        throw new Error(`Fotoğraflar eklenemedi: ${imgError.message}`);
+        throw new Error(tp("errors.photosAddFailed", { detail: imgError.message }));
       }
     }
 
@@ -629,26 +778,115 @@ export async function saveListing(payload: ListingSavePayload) {
   return { ok: true as const, status: finalStatus };
 }
 
+async function resolveListingRowId(idOrPublicId: string): Promise<string | null> {
+  const t = String(idOrPublicId ?? "").trim();
+  if (!t) return null;
+  if (isUuidString(t)) {
+    const { data } = await supabaseAdmin.from("listings").select("id").eq("id", t).maybeSingle();
+    if (data?.id) return String(data.id);
+  }
+  const { data: byPublic } = await supabaseAdmin.from("listings").select("id").eq("listing_id", t).maybeSingle();
+  return byPublic?.id ? String(byPublic.id) : null;
+}
+
+/** DB'de REJECTED check'te yoksa veya reddetme başka nedenle patlarsa: HIDDEN + jsonb işareti. */
+async function rejectListingAsHiddenWithFlag(
+  rowId: string,
+  userName: string | null,
+  now: string,
+): Promise<{ error: { message: string; code?: string } | null }> {
+  const { data: row } = await supabaseAdmin.from("listings").select("detail_fields").eq("id", rowId).maybeSingle();
+  let detail: Record<string, unknown> = {};
+  const raw = row?.detail_fields as unknown;
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    detail = { ...(raw as Record<string, unknown>) };
+  } else if (typeof raw === "string" && raw.trim()) {
+    try {
+      detail = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      detail = {};
+    }
+  }
+  detail.adminReject = true;
+  detail.rejectedAt = now;
+  detail.rejectedByName = userName ?? "";
+
+  return updateListingWithCompat(rowId, {
+    publish_status: "HIDDEN",
+    detail_fields: detail,
+    updated_at: now,
+    rejected_at: now,
+    rejected_by_name: userName ?? null,
+    approval_submitted_at: null,
+    approved_at: null,
+    approved_by_name: null,
+  });
+}
+
 export async function reviewListing(id: string, decision: "approve" | "reject") {
   const user = await requireAdmin();
   const now = new Date().toISOString();
 
   const status = decision === "approve" ? "PUBLISHED" : "REJECTED";
-  const { error } = await updateListingWithCompat(id, {
-    publish_status: status,
-    approval_submitted_at: null,
-    approved_at: decision === "approve" ? now : null,
-    approved_by_name: decision === "approve" ? user.name : null,
-    rejected_at: decision === "reject" ? now : null,
-    rejected_by_name: decision === "reject" ? user.name : null,
-    updated_at: now,
-  });
 
-  if (error) {
-    throw new Error(`İlan değerlendirmesi başarısız oldu: ${error.message}`);
+  const rowId = await resolveListingRowId(id);
+  if (!rowId) {
+    console.error("[reviewListing] ilan bulunamadı:", id);
+    redirect("/karealfaadmin/onay-bekleyen?review=fail");
   }
 
-  const { data } = await supabaseAdmin.from("listings").select("listing_id").eq("id", id).single();
+  if (decision === "approve") {
+    const { data: listingRow } = await supabaseAdmin
+      .from("listings")
+      .select("cover_image")
+      .eq("id", rowId)
+      .maybeSingle();
+    const coverOk = Boolean(String(listingRow?.cover_image ?? "").trim());
+    const { count: imageCount, error: countErr } = await supabaseAdmin
+      .from("listing_images")
+      .select("id", { count: "exact", head: true })
+      .eq("listing_id", rowId);
+    if (countErr) {
+      console.error("[reviewListing] listing_images count:", countErr);
+    }
+    const n = typeof imageCount === "number" ? imageCount : 0;
+    if (n === 0 && !coverOk) {
+      redirect("/karealfaadmin/onay-bekleyen?review=nophoto");
+    }
+  }
+
+  let error = (
+    await supabaseAdmin.from("listings").update({ publish_status: status, updated_at: now }).eq("id", rowId)
+  ).error;
+  if (error) {
+    error = (await supabaseAdmin.from("listings").update({ publish_status: status }).eq("id", rowId)).error;
+  }
+
+  let rejectUsedHiddenFallback = false;
+  if (error && decision === "reject") {
+    const fb = await rejectListingAsHiddenWithFlag(rowId, user.name ?? null, now);
+    if (!fb.error) {
+      error = null;
+      rejectUsedHiddenFallback = true;
+    }
+  }
+
+  if (!error && !rejectUsedHiddenFallback) {
+    const meta: Record<string, unknown> = {
+      approval_submitted_at: null,
+      updated_at: now,
+      approved_at: decision === "approve" ? now : null,
+      approved_by_name: decision === "approve" ? user.name : null,
+      rejected_at: decision === "reject" ? now : null,
+      rejected_by_name: decision === "reject" ? user.name : null,
+    };
+    const metaResult = await updateListingWithCompat(rowId, meta);
+    if (metaResult.error) {
+      console.warn("[reviewListing] onay/red meta kolonları (isteğe bağlı):", metaResult.error);
+    }
+  }
+
+  const { data } = await supabaseAdmin.from("listings").select("listing_id").eq("id", rowId).maybeSingle();
 
   revalidatePath("/");
   revalidatePath("/ilanlar");
@@ -657,6 +895,11 @@ export async function reviewListing(id: string, decision: "approve" | "reject") 
   revalidatePath("/karealfaadmin/onay-bekleyen");
   if (data?.listing_id) {
     revalidatePath(`/ilan/${data.listing_id}`);
+  }
+
+  if (error) {
+    console.error("[reviewListing]", error);
+    redirect("/karealfaadmin/onay-bekleyen?review=fail");
   }
 
   return { ok: true as const, status };
@@ -711,7 +954,7 @@ export async function saveSiteSettings(formData: FormData) {
     email: String(formData.get("dc_email") ?? "").trim(),
     office: String(formData.get("dc_office") ?? "").trim(),
     photo: String(formData.get("dc_photo") ?? "").trim(),
-    logo: String(formData.get("dc_logo") ?? "").trim(),
+    logo: String(formData.get("dc_logo") ?? "").trim() || "/alfa-3d.png",
   };
 
   const locales = ["en", "ru", "de", "fa"];
@@ -812,6 +1055,44 @@ export async function saveSiteSettings(formData: FormData) {
   revalidatePath("/karealfaadmin/ayarlar");
   revalidatePath("/iletisim");
   revalidatePath("/", "layout");
+}
+
+export async function saveMyConsultantProfile(formData: FormData) {
+  const user = await requireRole("CONSULTANT");
+  const tp = await getPanelTranslations();
+  if (!user.agentId) {
+    throw new Error(tp("errors.consultantMissing"));
+  }
+
+  const name = String(formData.get("name") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim();
+  const photo = String(formData.get("photo") ?? "").trim();
+
+  if (!name) {
+    throw new Error(tp("errors.profileNameRequired"));
+  }
+
+  const { error } = await supabaseAdmin
+    .from("agents")
+    .update({
+      name,
+      phone: phone || null,
+      photo: photo || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", user.agentId);
+
+  if (error) {
+    throw new Error(tp("errors.profileUpdateFailed", { detail: error.message }));
+  }
+
+  const session = await getPanelSession();
+  session.name = name;
+  await session.save();
+
+  revalidatePath("/karealfaadmin/danisman-ayarlar");
+  revalidatePath("/karealfaadmin/dashboard");
+  revalidatePath("/karealfaadmin", "layout");
 }
 
 export async function saveMenuJson(json: string) {

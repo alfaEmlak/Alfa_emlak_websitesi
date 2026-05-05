@@ -23,4 +23,6 @@ export type PanelSessionData = {
   role?: PanelRole;
   agentId?: string;
   name?: string;
+  /** Panel arayüz dili: tr | en | ru | de | fa */
+  panelLocale?: string;
 };

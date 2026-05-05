@@ -8,6 +8,7 @@ import type { MenuTopItem } from "@/lib/default-menu";
 import { LanguageSwitcher } from "@/components/site/LanguageSwitcher";
 import { CareerModal } from "@/components/site/CareerModal";
 import { useTranslations } from "next-intl";
+import alfaLogo from "@/alfaemlaklogov1-removebg-preview.png";
 
 type ActiveNav = "satilik" | "proje" | "kiralik" | "hakkimizda" | "ilanlar" | null;
 
@@ -112,11 +113,11 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
         <nav className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-6 py-4 md:px-8 md:py-5">
           <Link href="/" className="shrink-0">
             <Image
-              src="/alfaemlaklogo.png"
+              src={alfaLogo}
               alt={siteName || "Alfa Emlak"}
-              width={200}
-              height={48}
-              className="h-9 w-auto max-w-[200px] object-contain md:h-10"
+              width={240}
+              height={64}
+              className="h-11 w-auto max-w-[240px] object-contain md:h-12"
               priority
             />
           </Link>
@@ -362,11 +363,11 @@ function SiteHeaderFallback({ menu, siteName }: { menu: MenuTopItem[]; siteName:
         <nav className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-6 py-4 md:px-8 md:py-5">
           <Link href="/" className="shrink-0">
             <Image
-              src="/alfaemlaklogo.png"
+              src={alfaLogo}
               alt={siteName || "Alfa Emlak"}
-              width={200}
-              height={48}
-              className="h-9 w-auto max-w-[200px] object-contain md:h-10"
+              width={240}
+              height={64}
+              className="h-11 w-auto max-w-[240px] object-contain md:h-12"
               priority
             />
           </Link>

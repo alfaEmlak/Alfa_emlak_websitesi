@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-auth";
+import { getPanelUser } from "@/lib/panel-auth";
 import { fetchNearbyPoiRowsPublic } from "@/lib/osm-nearby";
 import type { NearbyPoiCategoryId } from "@/lib/nearby-poi";
 
 export async function POST(request: Request) {
-  const session = await getAdminSession();
-  if (!session.isAdmin) {
+  const user = await getPanelUser();
+  if (!user) {
     return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
   }
 

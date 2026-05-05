@@ -1,3 +1,4 @@
+import { displayListingCity } from "@/lib/listing-city";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { AdminIcon } from "@/components/admin/AdminIcon";
 import { requireAdmin } from "@/lib/panel-auth";
@@ -24,7 +25,7 @@ export default async function VitrinPage() {
       title: l.title,
       price: l.price,
       currency: l.currency,
-      city: l.city,
+      city: displayListingCity(l.city ?? ""),
       region: l.region,
       coverImage: l.cover_image,
       isFeatured,

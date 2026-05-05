@@ -25,6 +25,8 @@ model Listing {
   coverImage              String?
   bedrooms                Int?
   bathrooms               Int?
+  /// Ayrı WC / tuvalet sayısı (banyodan bağımsız)
+  toilets                 Int?
   areaM2                  Float?
   plotAreaM2              Float?
   floor                   String?
@@ -36,6 +38,13 @@ model Listing {
   hasParking              Boolean?
   furnished               Boolean?
   seaView                 Boolean?
+  hasElevator             Boolean?
+  hasBalcony              Boolean?
+  hasTerrace              Boolean?
+  hasAirConditioning      Boolean?
+  hasGatedCommunity       Boolean?
+  /// turk_mali | sehit_cocugu | esdeger | kirsal_kesim | tahsis
+  titleDeedOwnership      String?
   /// JSON string: { [key: string]: { value: string; visible: boolean } }
   detailFields            String?
   badgeFeatured           Boolean        @default(false)

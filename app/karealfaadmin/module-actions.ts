@@ -5,6 +5,10 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/panel-auth";
 import { hashPassword } from "@/lib/password";
 
+export type SubmitContactResult =
+  | { ok: true }
+  | { ok: false; error: "name_phone_required" };
+
 export async function submitContactMessage(data: {
   name: string;
   email?: string;
@@ -12,19 +16,26 @@ export async function submitContactMessage(data: {
   subject?: string;
   message: string;
   listingId?: string;
-}) {
+}): Promise<SubmitContactResult> {
+  const name = data.name?.trim() ?? "";
+  const message = data.message?.trim() ?? "";
+  const phoneDigits = (data.phone ?? "").replace(/\D/g, "");
+  if (name.length < 2 || phoneDigits.length < 7 || message.length < 1) {
+    return { ok: false, error: "name_phone_required" };
+  }
+
   const { error } = await supabaseAdmin.from("contact_messages").insert({
-    name: data.name.trim(),
+    name,
     email: data.email?.trim() || null,
     phone: data.phone?.trim() || null,
     subject: data.subject?.trim() || null,
-    message: data.message.trim(),
+    message,
     listing_id: data.listingId?.trim() || null,
   });
 
   if (error) throw new Error(`Message submit failed: ${error.message}`);
 
-  return { ok: true as const };
+  return { ok: true };
 }
 
 export async function markMessageRead(id: string) {

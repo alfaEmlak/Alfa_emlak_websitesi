@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/panel-auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getDefaultConsultant, getSocialLinks } from "@/lib/site-settings";
 import { MultiLangSettingsFields } from "@/components/admin/MultiLangSettingsFields";
+import { OfficeLogoUploadField } from "@/components/admin/OfficeLogoUploadField";
 
 type Ext101Settings = {
   first_realtor_id?: number | string | null;
@@ -133,10 +134,7 @@ export default async function AdminSettingsPage() {
             Foto URL
             <input name="dc_photo" defaultValue={dc.photo ?? ""} className="mt-1 w-full rounded-xl border border-(--ghost-outline) bg-(--surface) px-3 py-2 text-sm outline-none focus:border-(--secondary) focus:ring-2 focus:ring-(--secondary)/20" />
           </label>
-          <label className="block text-sm">
-            Logo URL
-            <input name="dc_logo" defaultValue={dc.logo ?? ""} className="mt-1 w-full rounded-xl border border-(--ghost-outline) bg-(--surface) px-3 py-2 text-sm outline-none focus:border-(--secondary) focus:ring-2 focus:ring-(--secondary)/20" />
-          </label>
+          <OfficeLogoUploadField initialLogo={dc.logo ?? "/alfa-3d.png"} />
         </section>
         <section className="admin-card space-y-3 p-6">
           <h2 className="label-sm text-(--primary)/55">101evler entegrasyonu</h2>

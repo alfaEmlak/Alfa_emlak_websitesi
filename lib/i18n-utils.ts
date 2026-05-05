@@ -5,6 +5,25 @@
 export const SUPPORTED_LOCALES = ['tr', 'en', 'ru', 'de', 'fa'] as const;
 export type Locale = typeof SUPPORTED_LOCALES[number];
 
+/** Supabase jsonb bazen nesne, Prisma / eski kayıtlar bazen string döner */
+export function parseRecordTranslations(raw: unknown): Record<string, Record<string, unknown>> | null {
+  if (raw == null) return null;
+  if (typeof raw === "object" && !Array.isArray(raw)) {
+    return raw as Record<string, Record<string, unknown>>;
+  }
+  if (typeof raw === "string") {
+    const t = raw.trim();
+    if (!t) return null;
+    try {
+      const o = JSON.parse(t) as unknown;
+      if (o && typeof o === "object" && !Array.isArray(o)) return o as Record<string, Record<string, unknown>>;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 /**
  * Translates a Listing object based on the given locale.
  */
@@ -12,30 +31,35 @@ export function getTranslatedListing<T extends {
   title: string; 
   shortDescription?: string | null; 
   longDescription?: string | null;
-  translations?: string | null;
-  [key: string]: any;
+  translations?: unknown;
+  [key: string]: unknown;
 }>(listing: T, locale: string): T {
-  if (!listing.translations || !SUPPORTED_LOCALES.includes(locale as any) || locale === 'tr') {
+  if (locale === "tr" || !SUPPORTED_LOCALES.includes(locale as Locale)) {
     return listing;
   }
 
-  try {
-    const translations = JSON.parse(listing.translations);
-    const langData = translations[locale];
+  const translations = parseRecordTranslations(listing.translations);
+  if (!translations) return listing;
 
-    if (langData) {
-      return {
-        ...listing,
-        title: langData.title || listing.title,
-        shortDescription: langData.shortDescription || listing.shortDescription,
-        longDescription: langData.longDescription || listing.longDescription,
-      };
-    }
-  } catch (e) {
-    console.error('Error parsing listing translations:', e);
-  }
+  const langData = translations[locale];
+  if (!langData) return listing;
 
-  return listing;
+  const t = typeof langData.title === "string" && langData.title.trim() ? langData.title : listing.title;
+  const s =
+    typeof langData.shortDescription === "string" && langData.shortDescription.trim()
+      ? langData.shortDescription
+      : listing.shortDescription;
+  const l =
+    typeof langData.longDescription === "string" && langData.longDescription.trim()
+      ? langData.longDescription
+      : listing.longDescription;
+
+  return {
+    ...listing,
+    title: t,
+    shortDescription: s,
+    longDescription: l,
+  };
 }
 
 /**
@@ -49,32 +73,30 @@ export function getTranslatedSiteSettings<T extends {
   seoTitle?: string | null;
   seoDescription?: string | null;
   address?: string | null;
-  translations?: string | null;
-  [key: string]: any;
+  translations?: unknown;
+  [key: string]: unknown;
 }>(settings: T, locale: string): T {
-  if (!settings.translations || !SUPPORTED_LOCALES.includes(locale as any) || locale === 'tr') {
+  if (locale === "tr" || !SUPPORTED_LOCALES.includes(locale as Locale)) {
     return settings;
   }
 
-  try {
-    const translations = JSON.parse(settings.translations);
-    const langData = translations[locale];
+  const translations = parseRecordTranslations(settings.translations);
+  if (!translations) return settings;
 
-    if (langData) {
-      return {
-        ...settings,
-        siteName: langData.siteName || settings.siteName,
-        footerAbout: langData.footerAbout || settings.footerAbout,
-        heroTitle: langData.heroTitle || settings.heroTitle,
-        heroSubtitle: langData.heroSubtitle || settings.heroSubtitle,
-        seoTitle: langData.seoTitle || settings.seoTitle,
-        seoDescription: langData.seoDescription || settings.seoDescription,
-        address: langData.address || settings.address,
-      };
-    }
-  } catch (e) {
-    console.error('Error parsing site settings translations:', e);
-  }
+  const langData = translations[locale];
+  if (!langData) return settings;
 
-  return settings;
+  const pick = (v: unknown, fb: string | null | undefined) =>
+    typeof v === "string" && v.trim() ? v.trim() : fb ?? null;
+
+  return {
+    ...settings,
+    siteName: pick(langData.siteName, settings.siteName) ?? settings.siteName,
+    footerAbout: pick(langData.footerAbout, settings.footerAbout),
+    heroTitle: pick(langData.heroTitle, settings.heroTitle),
+    heroSubtitle: pick(langData.heroSubtitle, settings.heroSubtitle),
+    seoTitle: pick(langData.seoTitle, settings.seoTitle),
+    seoDescription: pick(langData.seoDescription, settings.seoDescription),
+    address: pick(langData.address, settings.address),
+  };
 }

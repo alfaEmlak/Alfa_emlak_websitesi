@@ -1,5 +1,6 @@
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { AiSalesAssistant } from "@/components/site/AiSalesAssistant";
 import { parseMenuJson } from "@/lib/default-menu";
 import { getSiteSettingsOrFallback } from "@/lib/site-settings";
 import { getTranslatedSiteSettings } from "@/lib/i18n-utils";
@@ -21,6 +22,7 @@ export default async function SiteLayout({ children, params }: Props) {
       <SiteHeader menu={menu} siteName={settings.siteName} />
       {children}
       <SiteFooter settings={settings} />
+      <AiSalesAssistant locale={locale} />
     </>
   );
 }

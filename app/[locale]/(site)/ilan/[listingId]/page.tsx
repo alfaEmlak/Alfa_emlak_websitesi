@@ -3,27 +3,31 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { getTranslatedListing, getTranslatedSiteSettings } from "@/lib/i18n-utils";
-import { prisma } from "@/lib/prisma";
+import { listingPropertyTypeDisplayLabel } from "@/lib/listing-property-taxonomy";
+import { stripOwnerContactPrivateFromDetailFields } from "@/lib/owner-contact-private";
+import { getListingDetailForLocale } from "@/lib/listing-detail-data";
 import { getAdminSession } from "@/lib/admin-auth";
-import { getListingByPublicIdSafe, getSimilarListingsSafe } from "@/lib/listings-query";
+import { getSimilarListingsSafe, incrementListingViewsSupabase } from "@/lib/listings-query";
 import { getSiteSettingsOrFallback, getDefaultConsultant } from "@/lib/site-settings";
 import { resolveConsultant } from "@/lib/consultant";
-import { sortImages, visibleDetailRows, parseStringArray, parseNearby, formatMoney, primaryImageUrl, daysAgo } from "@/lib/listing-utils";
+import { sortImages, visibleDetailRows, parseNearby, formatMoney, primaryImageUrl, daysAgo, mergeListingHighlightLines } from "@/lib/listing-utils";
 import { getNearbyPoiRowsForListing } from "@/lib/osm-nearby";
 import { toVideoEmbedUrl } from "@/lib/video-embed";
 import { PhotoGallery } from "@/components/site/PhotoGallery";
 import { PropertyCard } from "@/components/site/PropertyCard";
+import { ConsultantPhoneCta } from "@/components/site/ConsultantPhoneCta";
+import { ListingShareButton } from "@/components/site/ListingShareButton";
 
 type Props = { params: Promise<{ listingId: string; locale: string }> };
 
 export async function generateMetadata({ params }: Props) {
   try {
     const { listingId, locale } = await params;
-    const row = await prisma.listing.findFirst({ where: { listingId } });
-    if (!row || row.publishStatus !== "PUBLISHED") {
+    const enriched = await getListingDetailForLocale(listingId, locale, false);
+    if (!enriched || enriched.publishStatus !== "PUBLISHED") {
       return { title: "İlan | ALFA EMLAK", robots: { index: false } };
     }
-    const tr = getTranslatedListing(row, locale);
+    const tr = getTranslatedListing(enriched, locale);
     return {
       title: `${tr.title} | ALFA EMLAK`,
       description: tr.shortDescription || tr.title,
@@ -40,13 +44,17 @@ export default async function ListingDetailPage({ params }: Props) {
 
   const session = await getAdminSession();
   const isAdmin = !!session?.isAdmin;
-  const listingRaw = await getListingByPublicIdSafe(listingId, isAdmin);
-  if (!listingRaw) notFound();
+  const listingEnriched = await getListingDetailForLocale(listingId, locale, isAdmin);
+  if (!listingEnriched) notFound();
 
-  const listing = getTranslatedListing(listingRaw, locale);
+  const listingTranslated = getTranslatedListing(listingEnriched, locale);
+  const listing = {
+    ...listingTranslated,
+    detailFields: stripOwnerContactPrivateFromDetailFields(listingTranslated.detailFields),
+  };
 
   if (listing.publishStatus === "PUBLISHED") {
-    prisma.listing.update({ where: { id: listing.id }, data: { views: { increment: 1 } } }).catch(() => {});
+    void incrementListingViewsSupabase(listing.id);
   }
 
   const settingsRaw = await getSiteSettingsOrFallback();
@@ -54,7 +62,7 @@ export default async function ListingDetailPage({ params }: Props) {
   const consultant = resolveConsultant(listing, getDefaultConsultant(settings));
   const images = sortImages(listing);
   const detailRows = visibleDetailRows(listing.detailFields);
-  const features = parseStringArray(listing.features);
+  const features = mergeListingHighlightLines(listing as Record<string, unknown>);
   const nearbyManual = parseNearby(listing.nearbyPlaces);
   const nearbyAuto = listing.nearbyEnabled ? await getNearbyPoiRowsForListing(listing) : [];
   const showNearbySection =
@@ -116,18 +124,7 @@ export default async function ListingDetailPage({ params }: Props) {
             <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
               <p className="font-headline text-3xl font-extrabold text-secondary md:text-4xl">{formatMoney(listing.price, listing.currency)}</p>
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="rounded-lg bg-surface-low px-3 py-1.5 text-sm font-medium text-primary ring-1 ring-primary/[0.12] transition hover:bg-surface-high"
-                >
-                  ♡ {t("favorite")}
-                </button>
-                <button
-                  type="button"
-                  className="rounded-lg bg-surface-low px-3 py-1.5 text-sm font-medium text-primary ring-1 ring-primary/[0.12] transition hover:bg-surface-high"
-                >
-                  {t("share")}
-                </button>
+                <ListingShareButton title={listing.title} label={t("share")} copiedMessage={t("shareCopied")} />
               </div>
             </div>
           </div>
@@ -145,10 +142,16 @@ export default async function ListingDetailPage({ params }: Props) {
                 <span>{listing.bathrooms} {tc("bathrooms")}</span>
               </div>
             ) : null}
+            {listing.toilets != null ? (
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🚽</span>
+                <span>{listing.toilets} {tc("toilets")}</span>
+              </div>
+            ) : null}
             {listing.areaM2 != null ? (
               <div className="flex items-center gap-2">
                 <span className="text-lg">⬛</span>
-                <span>{listing.areaM2} {tc("area")}</span>
+                <span>{listing.areaM2} {tc("squareMeters")}</span>
               </div>
             ) : null}
           </div>
@@ -196,7 +199,7 @@ export default async function ListingDetailPage({ params }: Props) {
           {listing.longDescription ? (
             <div className="mt-10">
               <h2 className="font-headline text-lg font-bold text-primary">
-                {listing.propertyType} {t("description")}
+                {listingPropertyTypeDisplayLabel(String(listing.propertyType ?? ""))} {t("description")}
               </h2>
               <div
                 className="mt-4 max-w-none text-sm leading-relaxed text-on-surface/60 [&_p]:mt-3"
@@ -341,14 +344,7 @@ export default async function ListingDetailPage({ params }: Props) {
                 </div>
               ) : null}
               <div className="mt-6 space-y-2">
-                {consultant.phone ? (
-                  <a
-                    href={`tel:${consultant.phone}`}
-                    className="btn-tactile btn-primary-gradient block w-full rounded-xl py-3 text-center text-sm font-bold text-white"
-                  >
-                    {t("callNow")}
-                  </a>
-                ) : null}
+                {consultant.phone ? <ConsultantPhoneCta phone={consultant.phone} showLabel={t("showPhone")} /> : null}
                 <Link
                   href="/iletisim"
                   className="block w-full rounded-xl bg-surface-high py-3 text-center text-sm font-semibold text-primary ring-1 ring-primary/[0.12] transition hover:bg-surface-highest"

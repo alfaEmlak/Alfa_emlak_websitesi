@@ -119,27 +119,35 @@ export function PhotoGallery({
 
       {isOpen && (
         <div
-          className="fixed inset-0 z-[100] flex flex-col bg-black/95"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="photo-gallery-title"
+          className="fixed inset-0 z-[500] flex flex-col bg-black/95"
           onClick={handleClose}
         >
-          <div className="flex items-center justify-between px-4 py-3 sm:px-6">
-            <h3 className="font-headline text-base font-bold text-white sm:text-lg">
+          {/* Sabit üst bar — site header (z-200) üstünde kalmalı; aksi halde kapatma görünmez */}
+          <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-black/90 px-4 py-3 backdrop-blur-sm sm:px-6">
+            <h3 id="photo-gallery-title" className="font-headline text-base font-bold text-white sm:text-lg">
               Fotoğraf Galerisi ({displayImages.length})
             </h3>
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); handleClose(); }}
-              aria-label="Kapat"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClose();
+              }}
+              aria-label="Galeriyi kapat"
+              className="flex shrink-0 items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-semibold text-white hover:bg-white/25 transition"
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M18 6L6 18M6 6l12 12" />
               </svg>
+              Kapat
             </button>
           </div>
 
           <div
-            className="flex-1 overflow-y-auto px-4 pb-8 sm:px-8"
+            className="flex-1 overflow-y-auto px-4 pb-24 pt-2 sm:px-8 sm:pb-28"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mx-auto flex max-w-5xl flex-col gap-4 sm:gap-6">
@@ -160,6 +168,20 @@ export function PhotoGallery({
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Mobil ve masaüstünde her zaman görünen ikinci kapatma çubuğu */}
+          <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[510] flex justify-center border-t border-white/10 bg-black/85 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClose();
+              }}
+              className="pointer-events-auto rounded-full bg-white px-8 py-3 text-sm font-bold text-black shadow-lg hover:bg-white/90"
+            >
+              Kapat — Esc
+            </button>
           </div>
         </div>
       )}

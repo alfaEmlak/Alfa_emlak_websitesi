@@ -22,6 +22,9 @@ alter table listings add column if not exists bedrooms integer;
 -- bathrooms
 alter table listings add column if not exists bathrooms integer;
 
+-- toilets (ayrı WC / tuvalet sayısı)
+alter table listings add column if not exists toilets integer;
+
 -- area_m2
 alter table listings add column if not exists area_m2 decimal(10, 2);
 
@@ -54,6 +57,13 @@ alter table listings add column if not exists furnished boolean default false;
 
 -- sea_view
 alter table listings add column if not exists sea_view boolean default false;
+
+-- Ek emlak özellikleri (checkbox’lar — ListingEditor)
+alter table listings add column if not exists has_elevator boolean default false;
+alter table listings add column if not exists has_balcony boolean default false;
+alter table listings add column if not exists has_terrace boolean default false;
+alter table listings add column if not exists has_air_conditioning boolean default false;
+alter table listings add column if not exists has_gated_community boolean default false;
 
 -- detail_fields (JSON)
 alter table listings add column if not exists detail_fields jsonb;
@@ -198,3 +208,47 @@ alter table career_applications enable row level security;
 create policy "Career apps insert by anyone" on career_applications for insert with check (true);
 create policy "Career apps managed by authenticated" on career_applications for all using (auth.role() = 'authenticated');
 
+-- ============================================================================
+-- AI müşteri formları (site chatbot lead)
+-- ============================================================================
+create table if not exists ai_customer_forms (
+  id uuid primary key default uuid_generate_v4(),
+  full_name text not null,
+  phone text not null,
+  email text not null,
+  desired_home_summary text,
+  chat_transcript text,
+  matched_listing_ids text[] not null default '{}',
+  source text not null default 'site_ai_assistant',
+  is_read boolean not null default false,
+  created_at timestamp with time zone default now()
+);
+
+create index if not exists idx_ai_customer_forms_created_at on ai_customer_forms(created_at desc);
+create index if not exists idx_ai_customer_forms_is_read on ai_customer_forms(is_read);
+
+alter table ai_customer_forms enable row level security;
+create policy "AI customer forms insert by anyone" on ai_customer_forms for insert with check (true);
+create policy "AI customer forms managed by authenticated" on ai_customer_forms for all using (auth.role() = 'authenticated');
+
+-- AI lead genişletme alanları
+alter table ai_customer_forms add column if not exists first_name text;
+alter table ai_customer_forms add column if not exists last_name text;
+alter table ai_customer_forms add column if not exists conversation_summary text;
+alter table ai_customer_forms add column if not exists property_preferences jsonb;
+alter table ai_customer_forms add column if not exists recommended_listing_ids jsonb;
+alter table ai_customer_forms add column if not exists status text not null default 'new';
+alter table ai_customer_forms add column if not exists updated_at timestamp with time zone default now();
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'ai_customer_forms_status_check'
+  ) then
+    alter table ai_customer_forms
+      add constraint ai_customer_forms_status_check
+      check (status in ('new', 'contacted', 'in_progress', 'closed', 'rejected'));
+  end if;
+end $$;

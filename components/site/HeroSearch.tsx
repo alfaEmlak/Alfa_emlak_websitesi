@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { kktcCities, kktcRegions } from "@/lib/kktc-regions";
+import { LISTING_SUBTYPE_MAP, type ListingCategoryKey } from "@/lib/listing-property-taxonomy";
 
 const tabIds = [
   { id: "SATILIK", tur: "satilik", key: "sale" },
@@ -15,13 +16,6 @@ const tabIds = [
 const heatingKeys = ["ac", "central", "floor", "stove", "combi"] as const;
 const featureKeys = ["balcony", "parking", "elevator", "security", "pool"] as const;
 const rooms = ["1+0", "1+1", "2+1", "3+1", "4+1", "5+"];
-
-const subTypeMap: Record<string, string[]> = {
-  konut: ["villa", "daire", "ikizVilla", "penthouse", "residence", "bungalow", "mustakilEv", "kompleBina", "devremulk", "metrukBina", "yarimInsaat"],
-  arsa: ["konutImarli", "ticariImarli", "tarla", "bagBahce", "sanayiArsasi"],
-  ticari: ["ofis", "dukkan", "magaza", "otel", "restoran", "depo", "fabrika"],
-  proje: ["devamEden", "tamamlanmis"],
-};
 
 type Option = { v: string; l: string };
 
@@ -151,7 +145,7 @@ export function HeroSearch({ variant = "light" }: { variant?: "light" | "overlay
   const emlakTipiOptions: Option[] = kategori
     ? [
         { v: "", l: t("allSubTypes") },
-        ...(subTypeMap[kategori] || []).map((key) => ({ v: key, l: t(`subTypes.${key}`) })),
+        ...(LISTING_SUBTYPE_MAP[kategori as ListingCategoryKey] ?? []).map((key) => ({ v: key, l: t(`subTypes.${key}`) })),
       ]
     : [{ v: "", l: t("selectCategoryFirst") }];
 
