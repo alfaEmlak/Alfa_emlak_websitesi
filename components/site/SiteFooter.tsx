@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Link } from "@/i18n/routing";
 import type { SiteSettings } from "@prisma/client";
 import { useTranslations } from "next-intl";
+import footerLogo from "@/alfaemlaklogov1-removebg-preview.png";
 
 export function SiteFooter({ settings }: { settings: SiteSettings }) {
   const t = useTranslations("Common");
@@ -13,7 +14,13 @@ export function SiteFooter({ settings }: { settings: SiteSettings }) {
     <footer className="mt-auto w-full border-t border-slate-100 bg-white py-8 sm:py-10 md:py-12">
       <div className="mx-auto flex max-w-[1440px] flex-col items-center justify-between gap-6 px-4 sm:px-6 md:flex-row md:gap-6 md:px-8">
         <div className="mb-1 md:mb-0">
-          <Image src="/alfaemlaklogo.png" alt={settings.siteName || "Alfa Emlak"} width={160} height={40} className="h-8 w-auto object-contain sm:h-9" />
+          <Image
+            src={footerLogo}
+            alt={settings.siteName || "Alfa Emlak"}
+            placeholder="blur"
+            className="h-8 w-auto max-w-[200px] object-contain object-left sm:h-10"
+            sizes="200px"
+          />
         </div>
         <nav className="flex flex-wrap justify-center gap-4 sm:gap-6 md:gap-8">
           <Link

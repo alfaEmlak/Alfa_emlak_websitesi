@@ -12,12 +12,12 @@ export default async function NewListingPage() {
   const [{ data: agents }, lookups, meResult] = await Promise.all([
     supabaseAdmin
       .from("agents")
-      .select("id, name, email, phone, photo, title, is_active")
+      .select("id, name, email, phone, whatsapp, photo, title, is_active")
       .eq("is_active", true)
       .order("name"),
     loadFeedLookups(),
     user.role === "CONSULTANT" && user.agentId
-      ? supabaseAdmin.from("agents").select("id, name, email, phone, photo").eq("id", user.agentId).maybeSingle()
+      ? supabaseAdmin.from("agents").select("id, name, email, phone, whatsapp, photo").eq("id", user.agentId).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
   ]);
   const settings = await getSiteSettingsOrFallback();
@@ -30,6 +30,7 @@ export default async function NewListingPage() {
         name: meResult.data.name as string,
         email: meResult.data.email as string,
         phone: (meResult.data.phone as string | null) ?? "",
+        whatsapp: (meResult.data as { whatsapp?: string | null }).whatsapp ?? null,
         photo: (meResult.data.photo as string | null) ?? "",
       }
     : null;

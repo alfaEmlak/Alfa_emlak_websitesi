@@ -1066,6 +1066,7 @@ export async function saveMyConsultantProfile(formData: FormData) {
 
   const name = String(formData.get("name") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
+  const whatsapp = String(formData.get("whatsapp") ?? "").trim();
   const photo = String(formData.get("photo") ?? "").trim();
 
   if (!name) {
@@ -1077,6 +1078,7 @@ export async function saveMyConsultantProfile(formData: FormData) {
     .update({
       name,
       phone: phone || null,
+      whatsapp: whatsapp || null,
       photo: photo || null,
       updated_at: new Date().toISOString(),
     })

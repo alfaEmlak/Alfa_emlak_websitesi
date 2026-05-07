@@ -11,6 +11,7 @@ type Props = {
     name: string;
     email: string;
     phone: string | null;
+    whatsapp: string | null;
     photo: string | null;
     title: string | null;
     role: string;
@@ -33,6 +34,7 @@ export function AgentEditor({ agent }: Props) {
     name: agent?.name ?? "",
     email: agent?.email ?? "",
     phone: agent?.phone ?? "",
+    whatsapp: agent?.whatsapp ?? "",
     photo: agent?.photo ?? "",
     title: agent?.title ?? "Emlak Danismani",
     role: defaultRole,
@@ -100,6 +102,7 @@ export function AgentEditor({ agent }: Props) {
           email: form.email,
           password: form.password || undefined,
           phone: form.phone,
+          whatsapp: form.whatsapp,
           photo: form.photo,
           title: form.title,
           role: form.role,
@@ -180,6 +183,11 @@ export function AgentEditor({ agent }: Props) {
           <label className="block text-sm font-medium text-zinc-700">
             Telefon
             <input className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" value={form.phone} onChange={(e) => set("phone", e.target.value)} />
+          </label>
+
+          <label className="block text-sm font-medium text-zinc-700">
+            WhatsApp
+            <input className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" value={form.whatsapp} onChange={(e) => set("whatsapp", e.target.value)} placeholder="905321234567" />
           </label>
 
           <label className="block text-sm font-medium text-zinc-700">

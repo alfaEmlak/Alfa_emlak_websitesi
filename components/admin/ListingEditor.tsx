@@ -194,12 +194,28 @@ type Props = {
       })
     | null;
   suggestedId: string;
-  agents?: { id: string; name: string; email: string; phone: string | null; photo: string | null; title: string | null; is_active?: boolean }[];
+  agents?: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string | null;
+    whatsapp: string | null;
+    photo: string | null;
+    title: string | null;
+    is_active?: boolean;
+  }[];
   viewerRole: "ADMIN" | "CONSULTANT";
   lookups: FeedLookups;
   fixedOfficeName: string;
   fixedOfficeLogo: string;
-  lockedConsultant?: { id: string; name: string; email: string; phone: string | null; photo: string | null } | null;
+  lockedConsultant?: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string | null;
+    whatsapp: string | null;
+    photo: string | null;
+  } | null;
 };
 
 function parseExt101(v: unknown): Ext101evler {
@@ -608,7 +624,7 @@ export function ListingEditor({
     badgePriceDrop: listing?.badgePriceDrop ?? false,
     consultantName: lockedConsultant?.name ?? listing?.consultantName ?? "",
     consultantPhone: lockedConsultant?.phone ?? listing?.consultantPhone ?? "",
-    consultantWhatsapp: listing?.consultantWhatsapp ?? "",
+    consultantWhatsapp: lockedConsultant?.whatsapp ?? listing?.consultantWhatsapp ?? "",
     consultantEmail: lockedConsultant?.email ?? listing?.consultantEmail ?? "",
     consultantOffice: fixedOfficeName,
     consultantPhoto: lockedConsultant?.photo ?? listing?.consultantPhoto ?? "",
@@ -862,6 +878,7 @@ export function ListingEditor({
     if (agent) {
       set("consultantName", agent.name);
       set("consultantPhone", agent.phone ?? "");
+      set("consultantWhatsapp", agent.whatsapp ?? "");
       set("consultantEmail", agent.email);
       set("consultantPhoto", agent.photo ?? "");
     }

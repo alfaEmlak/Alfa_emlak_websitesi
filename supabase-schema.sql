@@ -113,6 +113,7 @@ create table if not exists agents (
   email text unique not null,
   password_hash text not null,
   phone text,
+  whatsapp text,
   photo text,
   title text,
   role text not null default 'CONSULTANT' check (role in ('ADMIN', 'CONSULTANT')),

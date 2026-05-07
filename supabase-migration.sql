@@ -252,3 +252,6 @@ begin
       check (status in ('new', 'contacted', 'in_progress', 'closed', 'rejected'));
   end if;
 end $$;
+
+-- Danışman WhatsApp (ilan oluştururken consultant_whatsapp için kaynak)
+alter table agents add column if not exists whatsapp text;

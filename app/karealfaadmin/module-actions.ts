@@ -133,6 +133,7 @@ export async function saveAgent(data: {
   email: string;
   password?: string;
   phone?: string;
+  whatsapp?: string;
   photo?: string;
   title?: string;
   role: string;
@@ -149,6 +150,7 @@ export async function saveAgent(data: {
       name: data.name.trim(),
       email: data.email.trim(),
       phone: data.phone?.trim() || null,
+      whatsapp: data.whatsapp?.trim() || null,
       photo: data.photo?.trim() || null,
       title: data.title?.trim() || "Emlak Danışmanı",
       role: normalizedRole,
@@ -170,6 +172,7 @@ export async function saveAgent(data: {
       email: data.email.trim(),
       password_hash: hashPassword(data.password),
       phone: data.phone?.trim() || null,
+      whatsapp: data.whatsapp?.trim() || null,
       photo: data.photo?.trim() || null,
       title: data.title?.trim() || "Emlak Danışmanı",
       role: normalizedRole,

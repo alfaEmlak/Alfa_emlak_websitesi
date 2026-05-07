@@ -11,17 +11,18 @@ export default async function ConsultantSettingsPage() {
 
   const { data: agent } = await supabaseAdmin
     .from("agents")
-    .select("name, phone, photo, email")
+    .select("name, phone, whatsapp, photo, email")
     .eq("id", user.agentId)
     .maybeSingle();
 
   return (
     <div className="p-6 lg:p-10">
       <h1 className="text-3xl font-extrabold">Danışman Ayarları</h1>
-      <p className="mt-1 text-sm text-zinc-500">Adınız, telefonunuz ve profil fotoğrafınızı güncelleyin.</p>
+      <p className="mt-1 text-sm text-zinc-500">Adınız, iletişim bilgileriniz ve profil fotoğrafınızı güncelleyin.</p>
       <ConsultantProfileForm
         initialName={agent?.name ?? user.name ?? ""}
         initialPhone={agent?.phone ?? ""}
+        initialWhatsapp={agent?.whatsapp ?? ""}
         initialPhoto={agent?.photo ?? ""}
         email={agent?.email ?? ""}
       />

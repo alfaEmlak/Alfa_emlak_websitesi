@@ -21,11 +21,12 @@ function SubmitButton() {
 type Props = {
   initialName: string;
   initialPhone: string;
+  initialWhatsapp: string;
   initialPhoto: string;
   email: string;
 };
 
-export function ConsultantProfileForm({ initialName, initialPhone, initialPhoto, email }: Props) {
+export function ConsultantProfileForm({ initialName, initialPhone, initialWhatsapp, initialPhoto, email }: Props) {
   const [photoUrl, setPhotoUrl] = useState(initialPhoto);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -79,6 +80,18 @@ export function ConsultantProfileForm({ initialName, initialPhone, initialPhoto,
               defaultValue={initialPhone}
               className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
             />
+          </label>
+          <label className="block text-sm font-medium text-zinc-700 sm:col-span-2">
+            WhatsApp numaranız
+            <input
+              name="whatsapp"
+              defaultValue={initialWhatsapp}
+              placeholder="Örn: 905321234567"
+              className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+            />
+            <span className="mt-1 block text-xs text-zinc-500">
+              İlanlarda WhatsApp bağlantısı için; ülke kodu ile yazın (başında + olmadan).
+            </span>
           </label>
           <label className="block text-sm font-medium text-zinc-700 sm:col-span-2">
             E-posta

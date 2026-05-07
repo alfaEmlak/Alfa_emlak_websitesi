@@ -170,6 +170,7 @@ model Agent {
   email        String   @unique
   passwordHash String
   phone        String?
+  whatsapp     String?
   photo        String?
   title        String?  @default("Emlak Danışmanı")
   /// ADMIN | CONSULTANT

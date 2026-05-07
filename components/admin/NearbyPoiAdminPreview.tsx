@@ -14,8 +14,14 @@ export function NearbyPoiAdminPreview({ lat, lng, categories }: Props) {
   const [rows, setRows] = useState<NearbyPoiRow[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const categoriesKey = useMemo(() => JSON.stringify(categories), [categories]);
+  const anyPoiEnabled = useMemo(() => Object.values(categories).some(Boolean), [categories]);
 
   useEffect(() => {
+    if (!anyPoiEnabled) {
+      setRows([]);
+      setErr(null);
+      return;
+    }
     if (lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) {
       setRows(null);
       setErr(null);
@@ -46,12 +52,20 @@ export function NearbyPoiAdminPreview({ lat, lng, categories }: Props) {
     }, 450);
 
     return () => window.clearTimeout(handle);
-  }, [lat, lng, categoriesKey]);
+  }, [lat, lng, categoriesKey, anyPoiEnabled]);
 
   if (lat == null || lng == null) {
     return (
       <p className="mt-2 text-sm text-(--on-surface)/55">
         Önizleme için Özellikler bölümünden geçerli harita koordinatları girin.
+      </p>
+    );
+  }
+
+  if (!anyPoiEnabled) {
+    return (
+      <p className="mt-2 text-sm text-amber-800">
+        Yakındaki yerleri görmek için yukarıdan en az bir kategori seçin.
       </p>
     );
   }
@@ -67,7 +81,8 @@ export function NearbyPoiAdminPreview({ lat, lng, categories }: Props) {
   if (rows.length === 0) {
     return (
       <p className="mt-2 text-sm text-(--on-surface)/55">
-        Bu konum için OSM verisinde sonuç bulunamadı. Farklı koordinat veya daha yoğun bir bölge deneyin.
+        Bu konumun çevresinde (yaklaşık 22 km) eşleşen bir kayıt bulunamadı. Koordinatın doğru olduğundan emin olun;
+        veri OpenStreetMap’e bağlıdır — çok ücra bölgelerde sonuç az olabilir.
       </p>
     );
   }
