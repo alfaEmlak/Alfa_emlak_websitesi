@@ -13,6 +13,35 @@ const tabIds = [
   { id: "GUNLUK", tur: "gunluk", key: "daily" },
 ] as const;
 
+type TabId = (typeof tabIds)[number]["id"];
+
+/** Aktif sekme + arama butonu rengi (Satılık: marka turuncusu; Proje: mavi; Kiralık: mor; Günlük: yeşil). */
+const TAB_ACCENTS: Record<
+  TabId,
+  { tabActive: string; submit: string }
+> = {
+  SATILIK: {
+    tabActive: "bg-secondary shadow-lg shadow-black/30",
+    submit:
+      "bg-secondary shadow-lg shadow-secondary/25 hover:opacity-90 focus-visible:ring-secondary/40",
+  },
+  PROJE: {
+    tabActive: "bg-blue-600 shadow-lg shadow-blue-900/20",
+    submit:
+      "bg-blue-600 shadow-lg shadow-blue-600/30 hover:opacity-90 focus-visible:ring-blue-500/45",
+  },
+  KIRALIK: {
+    tabActive: "bg-violet-600 shadow-lg shadow-violet-900/25",
+    submit:
+      "bg-violet-600 shadow-lg shadow-violet-600/30 hover:opacity-90 focus-visible:ring-violet-500/45",
+  },
+  GUNLUK: {
+    tabActive: "bg-emerald-600 shadow-lg shadow-emerald-900/20",
+    submit:
+      "bg-emerald-600 shadow-lg shadow-emerald-600/30 hover:opacity-90 focus-visible:ring-emerald-500/45",
+  },
+};
+
 const heatingKeys = ["ac", "central", "floor", "stove", "combi"] as const;
 const featureKeys = ["balcony", "parking", "elevator", "security", "pool"] as const;
 const rooms = ["1+0", "1+1", "2+1", "3+1", "4+1", "5+"];
@@ -199,9 +228,9 @@ export function HeroSearch({ variant = "light" }: { variant?: "light" | "overlay
     ? "w-full rounded-2xl border border-white/15 bg-white/5 p-3 backdrop-blur-md"
     : "w-full rounded-2xl border border-slate-200/90 bg-white p-3 shadow-[var(--shadow-ambient)]";
 
-  const tabBtn = (active: boolean) =>
+  const tabBtn = (active: boolean, id: TabId) =>
     active
-      ? "flex-1 sm:flex-none whitespace-nowrap rounded-lg sm:rounded-xl bg-secondary px-2 sm:px-6 py-2.5 sm:py-3 font-headline text-[10px] sm:text-sm font-bold uppercase tracking-[0.05em] sm:tracking-[0.12em] text-white shadow-lg shadow-black/30 transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+      ? `flex-1 sm:flex-none whitespace-nowrap rounded-lg sm:rounded-xl px-2 sm:px-6 py-2.5 sm:py-3 font-headline text-[10px] sm:text-sm font-bold uppercase tracking-[0.05em] sm:tracking-[0.12em] text-white transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${TAB_ACCENTS[id].tabActive}`
       : "flex-1 sm:flex-none whitespace-nowrap rounded-lg sm:rounded-xl border border-white/30 bg-white/15 px-2 sm:px-6 py-2.5 sm:py-3 font-headline text-[10px] sm:text-sm font-bold uppercase tracking-[0.05em] sm:tracking-[0.12em] text-white shadow-sm backdrop-blur-md transition hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50";
 
   // Şehir listesini de çevir (placeholder yerine "Şehir seçin")
@@ -228,7 +257,7 @@ export function HeroSearch({ variant = "light" }: { variant?: "light" | "overlay
             role="tab"
             aria-selected={tab === tDef.id}
             onClick={() => setTab(tDef.id)}
-            className={tabBtn(tab === tDef.id)}
+            className={tabBtn(tab === tDef.id, tDef.id)}
           >
             {t(`tabs.${tDef.key}`)}
           </button>
@@ -252,7 +281,7 @@ export function HeroSearch({ variant = "light" }: { variant?: "light" | "overlay
           <button
             type="button"
             onClick={onSearch}
-            className="btn-tactile min-h-[50px] sm:min-h-[58px] rounded-xl bg-secondary py-3 sm:py-5 font-headline text-xs sm:text-sm font-bold uppercase tracking-[0.12em] text-white shadow-lg shadow-secondary/25 transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-secondary/40 md:min-h-0 md:self-stretch md:px-8"
+            className={`btn-tactile min-h-[50px] sm:min-h-[58px] rounded-xl py-3 sm:py-5 font-headline text-xs sm:text-sm font-bold uppercase tracking-[0.12em] text-white transition focus-visible:outline-none focus-visible:ring-4 md:min-h-0 md:self-stretch md:px-8 ${TAB_ACCENTS[tab].submit}`}
           >
             {t("submit")}
           </button>
