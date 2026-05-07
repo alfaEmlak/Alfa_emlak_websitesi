@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ListingPublic } from "@/lib/listings-query";
-import { formatMoney } from "@/lib/listing-utils";
+import { ListingPriceWithFx } from "@/components/site/ListingPriceWithFx";
 
 export function HeroSpotlight({ listing }: { listing: ListingPublic }) {
   const loc = [listing.neighborhood, listing.region].filter(Boolean).join(", ") || listing.city;
@@ -15,7 +15,13 @@ export function HeroSpotlight({ listing }: { listing: ListingPublic }) {
           <h4 className="font-headline text-lg font-bold leading-tight text-white">{listing.title}</h4>
           <p className="mt-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-sky-100/75">{loc}</p>
         </div>
-        <span className="shrink-0 font-headline text-lg font-bold text-secondary">{formatMoney(listing.price, listing.currency)}</span>
+        <div className="shrink-0 text-right">
+          <ListingPriceWithFx
+            price={Number(listing.price ?? 0)}
+            currency={String(listing.currency ?? "EUR")}
+            variant="hero"
+          />
+        </div>
       </div>
       <div className="flex flex-wrap gap-6">
         {listing.bedrooms != null ? (

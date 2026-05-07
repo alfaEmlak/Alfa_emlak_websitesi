@@ -47,6 +47,12 @@
     "videoTitle": "Anzeigenvideo",
     "locationTitle": "Standort auf der Karte",
     "cyprus": "Zypern",
+    "fxConvert": "Andere Währungen",
+    "fxLoading": "Kurse werden geladen…",
+    "fxRatesNote": "Ungefähre Gegenwerte nach sundoviz.com Verkaufskurs.",
+    "fxLoadError": "Kurse konnten nicht geladen werden.",
+    "fxListingCurrency": "Inseratspreis",
+    "fxUnsupported": "Umrechnung für diese Währung nicht möglich.",
     "listingKinds": {
       "SATILIK": "Kauf",
       "KIRALIK": "Miete",

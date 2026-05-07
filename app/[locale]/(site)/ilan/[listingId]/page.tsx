@@ -10,13 +10,14 @@ import { getAdminSession } from "@/lib/admin-auth";
 import { getSimilarListingsSafe, incrementListingViewsSupabase, unpublishedListingAccessFromSession } from "@/lib/listings-query";
 import { getSiteSettingsOrFallback, getDefaultConsultant } from "@/lib/site-settings";
 import { resolveConsultant } from "@/lib/consultant";
-import { sortImages, visibleDetailRows, parseNearby, formatMoney, primaryImageUrl, daysAgo, mergeListingHighlightLines } from "@/lib/listing-utils";
+import { sortImages, visibleDetailRows, parseNearby, primaryImageUrl, daysAgo, mergeListingHighlightLines } from "@/lib/listing-utils";
 import { getNearbyPoiRowsForListing } from "@/lib/osm-nearby";
 import { toVideoEmbedUrl } from "@/lib/video-embed";
 import { PhotoGallery } from "@/components/site/PhotoGallery";
 import { PropertyCard } from "@/components/site/PropertyCard";
 import { ConsultantPhoneCta } from "@/components/site/ConsultantPhoneCta";
 import { ListingShareButton } from "@/components/site/ListingShareButton";
+import { ListingPriceWithFx } from "@/components/site/ListingPriceWithFx";
 
 type Props = { params: Promise<{ listingId: string; locale: string }> };
 
@@ -132,9 +133,11 @@ export default async function ListingDetailPage({ params }: Props) {
               <p className="mt-2 text-on-surface/50">{locLine}</p>
             </div>
             <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
-              <p className="font-headline text-3xl font-extrabold text-secondary md:text-4xl">
-                {formatMoney(Number(listing.price ?? 0), listing.currency ?? "EUR")}
-              </p>
+              <ListingPriceWithFx
+                price={Number(listing.price ?? 0)}
+                currency={listing.currency ?? "EUR"}
+                variant="detail"
+              />
               <div className="flex gap-2">
                 <ListingShareButton title={listing.title} label={t("share")} copiedMessage={t("shareCopied")} />
               </div>

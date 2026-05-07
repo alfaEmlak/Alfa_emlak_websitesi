@@ -3,7 +3,8 @@
 import Image from "next/image";
 import { Link } from "@/i18n/routing";
 import type { ListingPublic } from "@/lib/listings-query";
-import { formatMoney, primaryImageUrl } from "@/lib/listing-utils";
+import { primaryImageUrl } from "@/lib/listing-utils";
+import { ListingPriceWithFx } from "@/components/site/ListingPriceWithFx";
 import { titleDeedOwnershipLabel } from "@/lib/title-deed-ownership";
 import { useTranslations } from "next-intl";
 
@@ -66,9 +67,11 @@ export function PropertyCard({ listing, stagger }: { listing: ListingPublic; sta
             </Link>
           </h3>
         </div>
-        <span className="shrink-0 font-headline text-lg font-extrabold text-primary">
-          {formatMoney(listing.price, listing.currency)}
-        </span>
+        <ListingPriceWithFx
+          price={Number(listing.price ?? 0)}
+          currency={String(listing.currency ?? "EUR")}
+          variant="card"
+        />
       </div>
       <div className="flex flex-wrap gap-6 pt-1">
         {listing.bedrooms != null ? (

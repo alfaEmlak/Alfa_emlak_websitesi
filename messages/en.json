@@ -47,6 +47,12 @@
     "videoTitle": "Listing Video",
     "locationTitle": "Location on Map",
     "cyprus": "Cyprus",
+    "fxConvert": "Other currencies",
+    "fxLoading": "Loading rates…",
+    "fxRatesNote": "Approximate equivalents using sundoviz.com sell rates.",
+    "fxLoadError": "Could not load rates.",
+    "fxListingCurrency": "listing price",
+    "fxUnsupported": "Conversion is not available for this currency.",
     "listingKinds": {
       "SATILIK": "For Sale",
       "KIRALIK": "For Rent",

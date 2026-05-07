@@ -47,6 +47,12 @@
     "videoTitle": "ویدیوی ملک",
     "locationTitle": "موقعیت روی نقشه",
     "cyprus": "قبرس",
+    "fxConvert": "سایر ارزها",
+    "fxLoading": "در حال بارگذاری نرخ‌ها…",
+    "fxRatesNote": "معادل تقریبی بر اساس نرخ فروش sundoviz.com.",
+    "fxLoadError": "بارگذاری نرخ‌ها ناموفق بود.",
+    "fxListingCurrency": "قیمت آگهی",
+    "fxUnsupported": "تبدیل برای این ارز در دسترس نیست.",
     "listingKinds": {
       "SATILIK": "فروشی",
       "KIRALIK": "اجاره‌ای",

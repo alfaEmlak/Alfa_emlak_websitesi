@@ -227,11 +227,13 @@ export function primaryImageUrl(listing: any) {
 }
 
 export function formatMoney(price: number, currency: string) {
-  const cur = currency || "EUR";
+  const cur = (currency || "EUR").toUpperCase();
+  const iso =
+    cur === "TRY" ? "TRY" : cur === "USD" ? "USD" : cur === "GBP" ? "GBP" : "EUR";
   try {
     return new Intl.NumberFormat("tr-TR", {
       style: "currency",
-      currency: cur === "TRY" ? "TRY" : cur === "GBP" ? "GBP" : "EUR",
+      currency: iso,
       maximumFractionDigits: 0,
     }).format(price);
   } catch {

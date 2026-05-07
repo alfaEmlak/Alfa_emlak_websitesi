@@ -47,6 +47,12 @@
     "videoTitle": "Видео объекта",
     "locationTitle": "Местоположение на карте",
     "cyprus": "Кипр",
+    "fxConvert": "Другие валюты",
+    "fxLoading": "Загрузка курсов…",
+    "fxRatesNote": "Приблизительные суммы по курсу продажи sundoviz.com.",
+    "fxLoadError": "Не удалось загрузить курсы.",
+    "fxListingCurrency": "цена объявления",
+    "fxUnsupported": "Конвертация недоступна для этой валюты.",
     "listingKinds": {
       "SATILIK": "Продажа",
       "KIRALIK": "Аренда",

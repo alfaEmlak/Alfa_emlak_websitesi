@@ -114,7 +114,8 @@ export function AiSalesAssistant({ locale }: { locale: string }) {
       if (Array.isArray(data.listings)) {
         setListings(data.listings);
       }
-      if (data.shouldShowLeadForm) {
+      const hasRecommendations = Array.isArray(data.listings) && data.listings.length > 0;
+      if (data.shouldShowLeadForm || hasRecommendations) {
         setShowLeadForm(true);
         setLeadSubmitted(false);
       }

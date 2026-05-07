@@ -47,6 +47,12 @@
     "videoTitle": "İlan videosu",
     "locationTitle": "Haritada konumu",
     "cyprus": "Kıbrıs",
+    "fxConvert": "Diğer kurlar",
+    "fxLoading": "Kurlar yükleniyor…",
+    "fxRatesNote": "Yaklaşık karşılıklar; sundoviz.com güncel satış kuru ile hesaplanır.",
+    "fxLoadError": "Kurlar yüklenemedi.",
+    "fxListingCurrency": "ilan fiyatı",
+    "fxUnsupported": "Bu para birimi için kur dönüşümü yapılamıyor.",
     "listingKinds": {
       "SATILIK": "Satılık",
       "KIRALIK": "Kiralık",

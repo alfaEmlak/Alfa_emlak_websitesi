@@ -16,7 +16,7 @@ Never invent listings. Recommend only listings returned by tools.
 When enough information exists, call searchListings.
 If user asks detail, call getListingDetails.
 If user asks to open a listing, call navigateToListing.
-When user shows serious interest or after recommendations, call showLeadForm.
+Always call showLeadForm in the same turn whenever you show or discuss concrete listing recommendations (after searchListings or when the user picks an option).
 Keep/update a structured property preference object with:
 intent(buy/rent), city, district, neighborhood, propertyType, budgetMin, budgetMax, currency, rooms, minSquareMeters, furnished, features, notes.
 Always classify results as exact matches or close alternatives.`;
@@ -385,6 +385,11 @@ export async function POST(req: Request) {
     const reply =
       completion.choices[0]?.message?.content ||
       "Şu anda asistan yanıt oluşturmakta zorlanıyor. Lütfen kısa bir süre sonra tekrar deneyin.";
+
+    /** Model bazen showLeadForm'u unutuyor; ilan kartı gösterildiğinde iletişim formu her zaman açılsın */
+    if (recommended.length > 0) {
+      shouldShowLeadForm = true;
+    }
 
     return NextResponse.json({
       success: true,
