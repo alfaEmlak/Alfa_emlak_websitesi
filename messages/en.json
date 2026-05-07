@@ -108,6 +108,7 @@
     "share": "Share",
     "shareCopied": "Link copied",
     "isDraft": "Manager preview — listing is draft.",
+    "isPendingApproval": "Manager preview — listing is not published yet (pending approval).",
     "isHidden": "Manager preview — listing is hidden.",
     "otherListings": "Agent's other listings",
     "officeListings": "All office listings",
@@ -508,7 +509,20 @@
       "consultants": "Consultants",
       "consultantSettings": "Consultant settings",
       "lookups": "Lookup lists",
-      "siteSettings": "Site settings"
+      "siteSettings": "Site settings",
+      "deedsDocuments": "Title deeds & documents"
+    },
+    "deedsDocuments": {
+      "title": "Title deeds & documents",
+      "subtitle": "Deed / title photos and PDFs uploaded under owner contacts are listed together. Files match those in each listing editor.",
+      "summary": "{listingsCount} listings · {documentsCount} files",
+      "empty": "No title deeds or documents uploaded yet.",
+      "docCountLabel": "{count} files",
+      "openFile": "Open in new tab",
+      "pdfBadge": "PDF",
+      "fileBadge": "File",
+      "publicId": "Listing code",
+      "openListing": "Edit listing"
     },
     "loginHeading": "Panel sign-in",
     "loginSubtitle": "Sign in with your super admin or approved consultant account.",
@@ -626,6 +640,7 @@
       "badgePending": "Pending approval",
       "approvePublish": "Approve & publish",
       "reject": "Reject",
+      "previewOnSite": "Preview on site",
       "queryError": "Error: {message}"
     },
     "errors": {
@@ -708,6 +723,7 @@
       "titleNew": "Create new listing",
       "subtitleSteps": "Follow the steps to create your listing",
       "preview": "Preview",
+      "previewNeedSave": "Save a draft at least once before opening the site preview.",
       "saveDraft": "Save draft",
       "publishAdmin": "Publish",
       "submitApproval": "Submit for admin approval",
@@ -762,6 +778,8 @@
       "consultantCardSub": "Consultant details are filled in automatically.",
       "selectRegisteredConsultant": "Select a registered consultant",
       "selectConsultantOption": "— Select consultant —",
+      "basicsStepIncomplete": "Choose a property type and enter a valid price greater than zero before continuing.",
+      "ownerStepIncomplete": "Enter the owner’s first name, last name, and phone before continuing to the next steps.",
       "navPrev": "Previous",
       "navNext": "Next"
     }

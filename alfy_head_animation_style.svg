@@ -88,7 +88,7 @@
     <circle cx="779" cy="507" r="31" fill="#10204A" stroke="#FF8A00" stroke-width="8"/>
   </g>
 
-  <!-- Small ALFY A mark on forehead -->
+  <!-- Small ALFI A mark on forehead -->
   <g transform="translate(448 284) scale(0.35)" stroke="url(#orange)" stroke-width="36" stroke-linecap="round" stroke-linejoin="round" fill="none">
     <path d="M183 0L330 270H36L183 0Z"/>
     <path d="M92 205H276"/>
@@ -98,7 +98,7 @@
 
   <!-- Bottom mini label -->
   <g font-family="Arial, Helvetica, sans-serif" text-anchor="middle">
-    <text x="512" y="877" font-size="62" font-weight="800" letter-spacing="6" fill="#0A3B91">ALFY</text>
+    <text x="512" y="877" font-size="62" font-weight="800" letter-spacing="6" fill="#0A3B91">ALFI</text>
     <text x="512" y="918" font-size="26" font-weight="600" letter-spacing="10" fill="#FF8A00">AI ASİSTANI</text>
   </g>
 </svg>

@@ -50,7 +50,7 @@ npm run dev
 ```
 
 Site: [http://localhost:3000](http://localhost:3000)  
-Yönetim paneli girişi: [http://localhost:3000/admin](http://localhost:3000/admin)
+Yönetim paneli girişi: [http://localhost:3000/karealfaadmin](http://localhost:3000/karealfaadmin)
 
 Diğer komutlar:
 

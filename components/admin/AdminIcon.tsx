@@ -7,6 +7,7 @@ import {
   CircleHelp,
   CirclePlus,
   AlertTriangle,
+  FolderOpen,
   FilePenLine,
   Hand,
   Headset,
@@ -77,7 +78,8 @@ export type AdminIconName =
   | "slideshow"
   | "image"
   | "list"
-  | "analytics";
+  | "analytics"
+  | "documents";
 
 const ICONS: Record<AdminIconName, LucideIcon> = {
   dashboard: LayoutDashboard,
@@ -117,6 +119,7 @@ const ICONS: Record<AdminIconName, LucideIcon> = {
   image: ImageIcon,
   list: List,
   analytics: BarChart3,
+  documents: FolderOpen,
 };
 
 type AdminIconProps = {

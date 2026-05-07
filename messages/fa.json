@@ -108,6 +108,7 @@
     "share": "اشتراک‌گذاری",
     "shareCopied": "لینک کپی شد",
     "isDraft": "پیش‌نمایش مدیریت — آگهی پیش‌نویس است.",
+    "isPendingApproval": "پیش‌نمایش مدیریت — هنوز منتشر نشده (در انتظار تأیید).",
     "isHidden": "پیش‌نمایش مدیریت — آگهی مخفی است.",
     "otherListings": "سایر املاک مشاور",
     "officeListings": "تمام املاک دفتر",
@@ -508,7 +509,20 @@
       "consultants": "مشاوران",
       "consultantSettings": "تنظیمات مشاور",
       "lookups": "فهرست‌های ثابت",
-      "siteSettings": "تنظیمات سایت"
+      "siteSettings": "تنظیمات سایت",
+      "deedsDocuments": "سند تاپو و مدارک"
+    },
+    "deedsDocuments": {
+      "title": "سند تاپو و مدارک",
+      "subtitle": "تصاویر و پی‌دی‌اف‌های بارگذاری‌شده برای مالک در یک صفحه نمایش داده می‌شوند و همان فایل‌های بخش مالک در ویرایشگر آگهی هستند.",
+      "summary": "{listingsCount} آگهی · {documentsCount} پرونده",
+      "empty": "هنوز سند یا مدرکی بارگذاری نشده است.",
+      "docCountLabel": "{count} پرونده",
+      "openFile": "باز کردن در تب جدید",
+      "pdfBadge": "PDF",
+      "fileBadge": "پرونده",
+      "publicId": "کد آگهی",
+      "openListing": "ویرایش آگهی"
     },
     "loginHeading": "ورود به پنل",
     "loginSubtitle": "با حساب سوپرادمین یا مشاور تأییدشده وارد شوید.",
@@ -626,6 +640,7 @@
       "badgePending": "در انتظار تأیید",
       "approvePublish": "تأیید و انتشار",
       "reject": "رد",
+      "previewOnSite": "پیش‌نمایش در سایت",
       "queryError": "خطا: {message}"
     },
     "errors": {
@@ -708,6 +723,7 @@
       "titleNew": "آگهی جدید",
       "subtitleSteps": "مراحل را دنبال کنید",
       "preview": "پیش‌نمایش",
+      "previewNeedSave": "حداقل یک‌بار پیش‌نویس را ذخیره کنید، سپس پیش‌نمایش سایت را باز کنید.",
       "saveDraft": "ذخیره پیش‌نویس",
       "publishAdmin": "انتشار",
       "submitApproval": "ارسال برای تأیید مدیر",
@@ -762,6 +778,8 @@
       "consultantCardSub": "اطلاعات مشاور به‌صورت خودکار پر می‌شود.",
       "selectRegisteredConsultant": "انتخاب مشاور ثبت‌شده",
       "selectConsultantOption": "— مشاور را انتخاب کنید —",
+      "basicsStepIncomplete": "نوع ملک را انتخاب کنید و قیمت معتبر بزرگ‌تر از صفر وارد کنید، سپس ادامه دهید.",
+      "ownerStepIncomplete": "برای رفتن به مراحل بعد، نام، نام خانوادگی و تلفن مالک را تکمیل کنید.",
       "navPrev": "قبلی",
       "navNext": "بعدی"
     }

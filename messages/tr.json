@@ -108,6 +108,7 @@
     "share": "Paylaş",
     "shareCopied": "Bağlantı kopyalandı",
     "isDraft": "Yönetici önizlemesi — ilan taslak.",
+    "isPendingApproval": "Yönetici önizlemesi — ilan henüz yayında değil (onay bekliyor).",
     "isHidden": "Yönetici önizlemesi — ilan gizli.",
     "otherListings": "Danışmanın diğer ilanları",
     "officeListings": "Ofisin tüm ilanları",
@@ -517,7 +518,20 @@
       "consultants": "Danışmanlar",
       "consultantSettings": "Danışman ayarları",
       "lookups": "Sabit listeler",
-      "siteSettings": "Site ayarları"
+      "siteSettings": "Site ayarları",
+      "deedsDocuments": "Koçan ve belgeler"
+    },
+    "deedsDocuments": {
+      "title": "Koçan ve belgeler",
+      "subtitle": "İlanlara eklenen tapu ve köçan görselleri ile PDF belgeler tek sayfada listelenir. Bu dosyalar ilan düzenleyicideki mal sahibi bölümüyle eşleniktir.",
+      "summary": "{listingsCount} ilan · {documentsCount} dosya",
+      "empty": "Henüz yüklenmiş köçan veya belge yok.",
+      "docCountLabel": "{count} belge",
+      "openFile": "Yeni sekmede aç",
+      "pdfBadge": "PDF",
+      "fileBadge": "Dosya",
+      "publicId": "İlan kodu",
+      "openListing": "İlanı düzenle"
     },
     "loginHeading": "Panel girişi",
     "loginSubtitle": "Süper admin veya onaylı danışman hesabınızla giriş yapın.",
@@ -635,6 +649,7 @@
       "badgePending": "Onay bekliyor",
       "approvePublish": "Onayla ve yayınla",
       "reject": "Reddet",
+      "previewOnSite": "Ön izle",
       "queryError": "Hata: {message}"
     },
     "errors": {
@@ -717,6 +732,7 @@
       "titleNew": "Yeni ilan oluştur",
       "subtitleSteps": "Adımları takip ederek ilanınızı oluşturun",
       "preview": "Önizleme",
+      "previewNeedSave": "Sitede önizlemek için önce en az bir kez taslağı kaydedin.",
       "saveDraft": "Taslak kaydet",
       "publishAdmin": "Yayınla",
       "submitApproval": "Admin onayına gönder",
@@ -771,6 +787,8 @@
       "consultantCardSub": "Danışman bilgileri otomatik doldurulur.",
       "selectRegisteredConsultant": "Kayıtlı danışman seç",
       "selectConsultantOption": "— Danışman seçin —",
+      "basicsStepIncomplete": "Sonraki adıma geçmek için bir emlak tipi seçmeli ve sıfırdan büyük geçerli bir fiyat girmelisiniz.",
+      "ownerStepIncomplete": "Mal sahibi adımından sonra devam etmek için ad, soyad ve telefon numarasını doldurmalısınız.",
       "navPrev": "Önceki",
       "navNext": "Sonraki"
     }

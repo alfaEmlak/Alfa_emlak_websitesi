@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PropertyPreferences } from "@/lib/ai/types";
-import alfyLogo from "@/alfy_logo.png";
+import alfiLogo from "@/alfi_logo.png";
 
 type UiMessage = {
   role: "user" | "assistant";
@@ -37,7 +37,7 @@ export function AiSalesAssistant({ locale }: { locale: string }) {
     {
       role: "assistant",
       content:
-        "Merhaba 👋 Ben Alfy, yapay zeka emlak danışmanınızım. Ne arıyorsunuz? Örnek: satılık ev, günlük kiralık ev, satılık arsa, kiralık ev.\nYou can also speak in other languages.",
+        "Merhaba 👋 Ben Alfi, Alfa Emlak yapay zeka emlak asistanınıyım. Ne arıyorsunuz? Örnek: satılık ev, günlük kiralık ev, satılık arsa, kiralık ev.\nYou can also write in other languages.",
     },
   ]);
   const [preferences, setPreferences] = useState<PropertyPreferences>({
@@ -175,7 +175,7 @@ export function AiSalesAssistant({ locale }: { locale: string }) {
           <div className="pointer-events-none absolute -inset-5 flex items-center justify-center">
             <svg width="180" height="180" viewBox="0 0 180 180" aria-hidden className="overflow-visible rotate-[270deg]">
               <defs>
-                <path id="alfy-circle-text" d="M 90,90 m -72,0 a 72,72 0 1,1 144,0 a 72,72 0 1,1 -144,0" />
+                <path id="alfi-circle-text" d="M 90,90 m -72,0 a 72,72 0 1,1 144,0 a 72,72 0 1,1 -144,0" />
               </defs>
               <text
                 fill="#ffffff"
@@ -190,8 +190,8 @@ export function AiSalesAssistant({ locale }: { locale: string }) {
                   paintOrder: "stroke fill",
                 }}
               >
-                <textPath href="#alfy-circle-text" startOffset="50%" textAnchor="middle">
-                  ALFY YAPAY ZEKA ASISTANI
+                <textPath href="#alfi-circle-text" startOffset="50%" textAnchor="middle">
+                  ALFI YAPAY ZEKA ASISTANI
                 </textPath>
               </text>
             </svg>
@@ -201,10 +201,10 @@ export function AiSalesAssistant({ locale }: { locale: string }) {
           type="button"
           onClick={() => setOpen((v) => !v)}
           className="inline-flex h-28 w-28 items-center justify-center rounded-full bg-white p-2 shadow-[0_14px_36px_rgba(0,0,0,0.28)] ring-1 ring-slate-200 transition hover:scale-[1.02] hover:opacity-90"
-          aria-label="Yapay zeka danışmanını aç"
-          title="Ev bulmanıza yardımcı olayım"
+          aria-label="Alfi yapay zeka asistanını aç"
+          title="Alfi ile ev arayın"
         >
-          <Image src={alfyLogo} alt="Alfy" width={104} height={104} className="h-24 w-24 object-contain" priority />
+          <Image src={alfiLogo} alt="Alfi" width={104} height={104} className="h-24 w-24 object-contain" priority />
         </button>
       </div>
 
@@ -212,7 +212,7 @@ export function AiSalesAssistant({ locale }: { locale: string }) {
         <div className="fixed bottom-24 right-6 z-50 h-[min(78vh,620px)] w-[min(95vw,410px)] rounded-2xl bg-white shadow-[0_16px_55px_rgba(0,0,0,0.25)] ring-1 ring-black/10">
           <div className="flex items-center justify-between border-b border-black/10 px-4 py-3">
             <div>
-              <p className="text-sm font-bold text-slate-900">Alfy</p>
+              <p className="text-sm font-bold text-slate-900">Alfi</p>
               <p className="text-xs text-emerald-600">● Çevrimiçi</p>
             </div>
             <button type="button" onClick={() => setOpen(false)} className="text-xs font-semibold text-slate-500">Kapat</button>

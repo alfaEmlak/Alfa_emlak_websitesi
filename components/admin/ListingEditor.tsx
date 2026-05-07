@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { useLocale } from "next-intl";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import type { Listing, ListingImage } from "@prisma/client";
 import { saveListing, suggestListingId, type ListingSavePayload } from "@/app/karealfaadmin/actions";
 import { kktcCities, kktcRegions, kktcCityCoords, kktcRegionCoords } from "@/lib/kktc-regions";
@@ -56,6 +57,8 @@ import { type FeedLookups, type LookupOption, groupAreasByCity } from "@/lib/fee
 import { AdminIcon, type AdminIconName } from "@/components/admin/AdminIcon";
 import { NearbyPoiAdminPreview } from "@/components/admin/NearbyPoiAdminPreview";
 import dynamic from "next/dynamic";
+import { GripVertical } from "lucide-react";
+import { nanoid } from "nanoid";
 import { useTranslations } from "next-intl";
 
 const LocationPicker = dynamic(() => import("@/components/admin/LocationPicker"), { ssr: false });
@@ -63,7 +66,12 @@ const LocationPicker = dynamic(() => import("@/components/admin/LocationPicker")
 const LOCATION_SELECT_CLASS =
   "mt-1 w-full rounded-xl border border-[var(--ghost-outline)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--secondary)] focus:ring-2 focus:ring-[var(--secondary)]/20";
 
-type GalleryRow = { url: string; sortOrder: number; isPrimary: boolean };
+type GalleryRow = { nid: string; url: string; sortOrder: number; isPrimary: boolean };
+
+type SavedGalleryRow = Pick<GalleryRow, "url" | "sortOrder" | "isPrimary">;
+
+/** HTML5 drag — galeri satır sırası (ListingEditor) */
+const GALLERY_DND_PAYLOAD = "application/x-alfa-gallery-idx";
 
 const LIKELY_IMAGE_EXT = /\.(jpe?g|jfif|png|gif|webp|bmp|heic|heif|avif|tif{1,2})$/i;
 
@@ -72,6 +80,67 @@ function isSelectableImageFile(f: File): boolean {
   if (t.startsWith("image/")) return true;
   if ((t === "" || t === "application/octet-stream") && LIKELY_IMAGE_EXT.test(f.name)) return true;
   return false;
+}
+
+/** Wizard basics step: sıfırdan büyük geçerli fiyat */
+function wizardPricePositive(raw: string): boolean {
+  const t = raw.trim().replace(/\s/g, "");
+  if (!t) return false;
+  const nSimple = Number(t);
+  if (Number.isFinite(nSimple) && nSimple > 0) return true;
+  if (t.includes(",")) {
+    const n = Number(t.replace(/\./g, "").replace(",", "."));
+    return Number.isFinite(n) && n > 0;
+  }
+  const dots = t.match(/\./g);
+  if (dots && dots.length > 1) {
+    const n = Number(t.replace(/\./g, ""));
+    return Number.isFinite(n) && n > 0;
+  }
+  return false;
+}
+
+function wizardBasicsStepComplete(f: { propertySubtypeKey: string; price: string }): boolean {
+  return f.propertySubtypeKey.trim().length > 0 && wizardPricePositive(f.price);
+}
+
+/** Sihirbazda adım sırası: 4 = mal sahibi (`stepOwner`), sonrası danışman / yayın seçenekleri */
+const WIZARD_OWNER_STEP_INDEX = 4;
+
+function wizardOwnerStepComplete(f: {
+  ownerFirstName: string;
+  ownerLastName: string;
+  ownerPhone: string;
+}): boolean {
+  return (
+    f.ownerFirstName.trim().length > 0 &&
+    f.ownerLastName.trim().length > 0 &&
+    f.ownerPhone.trim().length > 0
+  );
+}
+
+function floorDropdownValue(stored: string): string {
+  const normalized = normalizeFloorFromListing(stored).trim();
+  if (!normalized) return "";
+  if (isBasementFloorStored(normalized)) return FLOOR_BASEMENT_CANONICAL;
+  if (isGroundFloorStored(normalized)) return FLOOR_GROUND_CANONICAL;
+  if (/^\d+$/.test(normalized)) {
+    const n = Number(normalized);
+    if (n >= 1 && n <= 20) return String(n);
+  }
+  return normalized;
+}
+
+/** 1–20 / zemin / bodrum dışında kalan mevcut DB değeri (ekstra option) */
+function legacyFloorOutsideDropdown(stored: string): string | null {
+  const normalized = normalizeFloorFromListing(stored).trim();
+  if (!normalized) return null;
+  if (isBasementFloorStored(normalized) || isGroundFloorStored(normalized)) return null;
+  if (/^\d+$/.test(normalized)) {
+    const n = Number(normalized);
+    if (n >= 1 && n <= 20) return null;
+  }
+  return normalized;
 }
 
 type Ext101evler = {
@@ -286,7 +355,17 @@ function getInitialRegion(cityVal: string, val?: string | null) {
   return match ? match.v : val;
 }
 
-export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookups, fixedOfficeName, fixedOfficeLogo, lockedConsultant = null }: Props) {
+export function ListingEditor({
+  listing,
+  suggestedId,
+  agents,
+  viewerRole,
+  lookups,
+  fixedOfficeName,
+  fixedOfficeLogo,
+  lockedConsultant = null,
+}: Props) {
+  const locale = useLocale();
   const t = useTranslations("Wizard");
   const th = useTranslations("HeroSearch");
   const tp = useTranslations("Panel");
@@ -321,6 +400,8 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
   const [message, setMessage] = useState<string | null>(null);
   const [wizardStep, setWizardStep] = useState(0);
   const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
+  /** Temel bilgiler / mal sahibi uyarısı: koşul sağlanınca efekt ile sıfırlanır */
+  const [wizardNavBlock, setWizardNavBlock] = useState<null | "basics" | "owner">(null);
 
   // ── DB lookup'lar (101evler & Hangiev) ─────────────────────────────
   const TYPE_ID_OPTIONS = lookups.ext101.types;
@@ -392,12 +473,22 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
 
   const initialGallery = useMemo((): GalleryRow[] => {
     if (!listing?.images?.length) return [];
-    return [...listing.images]
-      .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map((im, i) => ({ url: im.url, sortOrder: i, isPrimary: im.isPrimary }));
+    const sorted = [...listing.images].sort((a, b) => a.sortOrder - b.sortOrder);
+    const pi = sorted.findIndex((im) => im.isPrimary);
+    /** Eski kayıtta kapak listenin başında olmayabilir; kapak satırını öne taşı */
+    const ordered =
+      pi > 0 ? [sorted[pi]!, ...sorted.filter((_, i) => i !== pi)] : sorted;
+    return ordered.map((im, i) => ({
+      nid: nanoid(),
+      url: im.url,
+      sortOrder: i,
+      isPrimary: i === 0,
+    }));
   }, [listing]);
 
   const [gallery, setGallery] = useState<GalleryRow[]>(initialGallery);
+  const [galleryDraggingIdx, setGalleryDraggingIdx] = useState<number | null>(null);
+  const [galleryDragOverIdx, setGalleryDragOverIdx] = useState<number | null>(null);
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadHint, setUploadHint] = useState("");
   const [ownerDocUploadBusy, setOwnerDocUploadBusy] = useState(false);
@@ -465,7 +556,6 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
     neighborhood: "",
     fullAddress: listing?.fullAddress ?? "",
     longDescription: listing?.longDescription ?? "",
-    coverImage: listing?.coverImage ?? "",
     bedrooms: listing?.bedrooms != null ? String(listing.bedrooms) : "",
     bathrooms: listing?.bathrooms != null ? String(listing.bathrooms) : "",
     toilets: listing?.toilets != null ? String(listing.toilets) : "",
@@ -559,6 +649,34 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
     ownerDocumentUrls: [...initialOwnerContact.documentUrls],
   });
   const consultantFieldsReadOnly = consultantLocked || (viewerRole === "ADMIN" && !!form.selectedAgentId);
+
+  useEffect(() => {
+    if (wizardNavBlock === "basics" && wizardBasicsStepComplete({ propertySubtypeKey: form.propertySubtypeKey, price: form.price })) {
+      setWizardNavBlock(null);
+      setMessage(null);
+      setMessageType(null);
+      return;
+    }
+    if (
+      wizardNavBlock === "owner" &&
+      wizardOwnerStepComplete({
+        ownerFirstName: form.ownerFirstName,
+        ownerLastName: form.ownerLastName,
+        ownerPhone: form.ownerPhone,
+      })
+    ) {
+      setWizardNavBlock(null);
+      setMessage(null);
+      setMessageType(null);
+    }
+  }, [
+    wizardNavBlock,
+    form.propertySubtypeKey,
+    form.price,
+    form.ownerFirstName,
+    form.ownerLastName,
+    form.ownerPhone,
+  ]);
 
   function with101Defaults(current: typeof form, overwrite = false): typeof form {
     const apply = (existing: string, inferred: string) => (overwrite ? inferred || existing : existing || inferred);
@@ -774,30 +892,6 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
     });
   }
 
-  async function onCoverFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const input = e.target;
-    const picked = input.files?.length ? Array.from(input.files) : [];
-    input.value = "";
-    const file = picked[0];
-    if (!file) return;
-    if (!isSelectableImageFile(file)) {
-      setMessage(t("messages.uploadNotImage"));
-      return;
-    }
-    setMessage(null);
-    setUploadBusy(true);
-    setUploadHint(t("messages.uploadingCover"));
-    try {
-      const url = await postUploadFile(file);
-      set("coverImage", url);
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : t("messages.uploadError"));
-    } finally {
-      setUploadBusy(false);
-      setUploadHint("");
-    }
-  }
-
   function isOwnerDocumentFile(f: File): boolean {
     if (isSelectableImageFile(f)) return true;
     const t = (f.type || "").trim().toLowerCase();
@@ -812,10 +906,14 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
     if (!picked.length) return;
     const list = picked.filter(isOwnerDocumentFile);
     if (!list.length) {
+      setWizardNavBlock(null);
       setMessage(t("messages.imageNotRecognized"));
+      setMessageType("error");
       return;
     }
     setMessage(null);
+    setMessageType(null);
+    setWizardNavBlock(null);
     setOwnerDocUploadBusy(true);
     try {
       const urls: string[] = [];
@@ -826,7 +924,9 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
         setForm((prev) => ({ ...prev, ownerDocumentUrls: [...prev.ownerDocumentUrls, ...urls] }));
       }
     } catch (err) {
+      setWizardNavBlock(null);
       setMessage(err instanceof Error ? err.message : t("messages.uploadError"));
+      setMessageType("error");
     } finally {
       setOwnerDocUploadBusy(false);
     }
@@ -846,10 +946,14 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
     if (!picked.length) return;
     const list = picked.filter(isSelectableImageFile);
     if (!list.length) {
+      setWizardNavBlock(null);
       setMessage(t("messages.imageNotRecognized"));
+      setMessageType("error");
       return;
     }
     setMessage(null);
+    setMessageType(null);
+    setWizardNavBlock(null);
     setUploadBusy(true);
     try {
       const urls: string[] = [];
@@ -860,38 +964,41 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
       setGallery((g) => {
         const had = g.filter((x) => x.url.trim());
         const merged: GalleryRow[] = [
-          ...had.map((x, i) => ({ ...x, sortOrder: i })),
+          ...had.map((x, i) => ({ ...x, sortOrder: i, isPrimary: i === 0 })),
           ...urls.map((url, i) => ({
+            nid: nanoid(),
             url,
             sortOrder: had.length + i,
             isPrimary: had.length === 0 && i === 0,
           })),
         ];
-        const withPrimary =
-          merged.some((x) => x.isPrimary) || !merged.length
-            ? merged
-            : merged.map((x, j) => ({ ...x, isPrimary: j === 0 }));
-        return withPrimary.map((x, j) => ({ ...x, sortOrder: j }));
-      });
-      setForm((f) => {
-        if (f.coverImage.trim()) return f;
-        return { ...f, coverImage: urls[0] ?? f.coverImage };
+        return merged.map((x, j) => ({
+          ...x,
+          sortOrder: j,
+          isPrimary: j === 0,
+        }));
       });
     } catch (err) {
+      setWizardNavBlock(null);
       setMessage(err instanceof Error ? err.message : t("messages.uploadError"));
+      setMessageType("error");
     } finally {
       setUploadBusy(false);
       setUploadHint("");
     }
   }
 
-  function moveGallery(idx: number, dir: -1 | 1) {
+  /** Sürükleyerek sıra: HTML5 drag — kaynak indeksinden hedef satırına taşır */
+  function reorderGalleryDrag(fromIdx: number, toIdx: number) {
+    if (fromIdx === toIdx) return;
     setGallery((prev) => {
-      const j = idx + dir;
-      if (j < 0 || j >= prev.length) return prev;
+      if (fromIdx < 0 || toIdx < 0 || fromIdx >= prev.length || toIdx >= prev.length) return prev;
       const copy = [...prev];
-      [copy[idx], copy[j]] = [copy[j], copy[idx]];
-      return copy.map((row, i) => ({ ...row, sortOrder: i }));
+      const [moved] = copy.splice(fromIdx, 1);
+      let insertAt = toIdx;
+      if (fromIdx < toIdx) insertAt = toIdx - 1;
+      copy.splice(insertAt, 0, moved!);
+      return copy.map((row, i) => ({ ...row, sortOrder: i, isPrimary: i === 0 }));
     });
   }
 
@@ -899,40 +1006,19 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
     setGallery((prev) => {
       const row = prev[idx];
       if (!row) return prev;
-      const removedUrl = row.url.trim();
       const next = prev.filter((_, i) => i !== idx);
-      const withPrimary =
-        row.isPrimary && next.length
-          ? next.map((r, i) => ({ ...r, sortOrder: i, isPrimary: i === 0 }))
-          : next.map((r, i) => ({ ...r, sortOrder: i }));
-      if (removedUrl) {
-        const nextCover = (withPrimary.find((r) => r.isPrimary) ?? withPrimary[0])?.url?.trim() ?? "";
-        requestAnimationFrame(() => {
-          setForm((f) => (f.coverImage.trim() !== removedUrl ? f : { ...f, coverImage: nextCover }));
-        });
-      }
-      return withPrimary;
+      return next.map((r, i) => ({ ...r, sortOrder: i, isPrimary: i === 0 }));
     });
   }
 
-  function makeGalleryPrimary(idx: number) {
-    setGallery((prev) => {
-      const url = prev[idx]?.url?.trim() ?? "";
-      if (url) {
-        requestAnimationFrame(() => setForm((f) => ({ ...f, coverImage: url })));
-      }
-      return prev.map((g, i) => ({ ...g, isPrimary: i === idx }));
-    });
-  }
-
-  function normalizeGalleryForSave(rows: GalleryRow[]): GalleryRow[] {
+  function normalizeGalleryForSave(rows: GalleryRow[]): SavedGalleryRow[] {
     const trimmed = rows.filter((g) => g.url.trim());
     if (!trimmed.length) return [];
-    let next = trimmed.map((g, i) => ({ ...g, sortOrder: i }));
-    if (!next.some((g) => g.isPrimary)) {
-      next = next.map((g, i) => ({ ...g, isPrimary: i === 0 }));
-    }
-    return next;
+    return trimmed.map((g, i) => ({
+      url: g.url.trim(),
+      sortOrder: i,
+      isPrimary: i === 0,
+    }));
   }
 
   function saveDraft() {
@@ -951,6 +1037,7 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
   async function doSave(statusOverride?: string) {
     setMessage(null);
     setMessageType(null);
+    setWizardNavBlock(null);
     let preparedForm = form;
     if (preparedForm.exportTo101evler) preparedForm = with101Defaults(preparedForm);
     if (preparedForm.exportToHangiev) preparedForm = withHangievDefaults(preparedForm);
@@ -1057,11 +1144,7 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
 
     if (statusOverride === "PUBLISHED") {
       const ng = normalizeGalleryForSave(gallery);
-      let coverCheck = f.coverImage.trim();
-      if (!coverCheck && ng.length > 0) {
-        coverCheck = (ng.find((g) => g.isPrimary) ?? ng[0])?.url?.trim() ?? "";
-      }
-      if (ng.length === 0 && !coverCheck) {
+      if (ng.length === 0) {
         setMessage(tp("errors.saveNeedPhoto"));
         setMessageType("error");
         setWizardStep(3);
@@ -1077,11 +1160,7 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
     }
 
     const normGallery = normalizeGalleryForSave(gallery);
-    let coverOut = f.coverImage.trim();
-    if (!coverOut && normGallery.length > 0) {
-      const primary = normGallery.find((g) => g.isPrimary) ?? normGallery[0];
-      coverOut = primary.url;
-    }
+    const coverOut = normGallery.length > 0 ? normGallery[0]!.url.trim() : "";
 
     const mergedOwnerDetailFields = mergeDetailFieldsWithOwnerAndPreset(
       listing?.detailFields,
@@ -1256,6 +1335,36 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
     { icon: "settings" as AdminIconName, label: tp("listingEditor.stepHangiev") },
   ];
 
+  function goWizardStep(target: number) {
+    const leavingIncompleteBasics =
+      wizardStep === 0 &&
+      target > 0 &&
+      !wizardBasicsStepComplete({ propertySubtypeKey: form.propertySubtypeKey, price: form.price });
+    if (leavingIncompleteBasics) {
+      setWizardNavBlock("basics");
+      setMessage(tp("listingEditor.basicsStepIncomplete"));
+      setMessageType("error");
+      return;
+    }
+
+    const skippingOwnerIncomplete =
+      target > WIZARD_OWNER_STEP_INDEX &&
+      !wizardOwnerStepComplete({
+        ownerFirstName: form.ownerFirstName,
+        ownerLastName: form.ownerLastName,
+        ownerPhone: form.ownerPhone,
+      });
+    if (skippingOwnerIncomplete) {
+      setWizardNavBlock("owner");
+      setMessage(tp("listingEditor.ownerStepIncomplete"));
+      setMessageType("error");
+      return;
+    }
+
+    setWizardNavBlock(null);
+    setWizardStep(target);
+  }
+
   const isArsa = form.propertyCategory === "arsa";
   const isTicari = form.propertyCategory === "ticari" && !isArsa;
 
@@ -1263,6 +1372,11 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
     viewerRole === "ADMIN" &&
     (agents?.filter((a) => a.is_active ?? true).length ?? 0) > 0 &&
     !form.selectedAgentId.trim();
+
+  const siteListingPreviewHref =
+    listing?.id && form.listingId.trim()
+      ? `/${locale}/ilan/${encodeURIComponent(form.listingId.trim())}`
+      : null;
 
   return (
     <div className="space-y-8 pb-28">
@@ -1272,14 +1386,23 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
           <p className="mt-1 text-sm text-zinc-500">{tp("listingEditor.subtitleSteps")}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <a
-            href={`/ilan/${form.listingId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50"
-          >
-            {tp("listingEditor.preview")}
-          </a>
+          {siteListingPreviewHref ? (
+            <a
+              href={siteListingPreviewHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50"
+            >
+              {tp("listingEditor.preview")}
+            </a>
+          ) : (
+            <span
+              className="inline-flex cursor-not-allowed rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm font-semibold text-zinc-400 opacity-65"
+              title={tp("listingEditor.previewNeedSave")}
+            >
+              {tp("listingEditor.preview")}
+            </span>
+          )}
           <button
             type="button"
             onClick={saveDraft}
@@ -1341,7 +1464,7 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
           <button
             key={i}
             type="button"
-            onClick={() => setWizardStep(i)}
+            onClick={() => goWizardStep(i)}
             className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
               wizardStep === i
                 ? "bg-emerald-600 text-white shadow-md"
@@ -1833,63 +1956,31 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
                 </label>
               );
             })}
-            <div className="sm:col-span-2 lg:col-span-3 rounded-xl border border-zinc-200 bg-zinc-50/60 p-4">
-              <p className="text-sm font-medium text-zinc-800">{PROPERTY_LABELS.floor}</p>
-              <p className="mt-0.5 text-xs text-zinc-500">
-                Zemin / bodrum kat veya bulunduğu kat numarasını belirtin (isteğe bağlı)
-              </p>
-              <div className="mt-3 flex flex-wrap gap-4">
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
-                  <input
-                    type="radio"
-                    name="listingFloorMode"
-                    className="h-4 w-4 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
-                    checked={isGroundFloorStored(form.floor)}
-                    onChange={() => set("floor", FLOOR_GROUND_CANONICAL)}
-                  />
-                  Zemin kat
-                </label>
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
-                  <input
-                    type="radio"
-                    name="listingFloorMode"
-                    className="h-4 w-4 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
-                    checked={isBasementFloorStored(form.floor)}
-                    onChange={() => set("floor", FLOOR_BASEMENT_CANONICAL)}
-                  />
-                  Bodrum kat
-                </label>
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
-                  <input
-                    type="radio"
-                    name="listingFloorMode"
-                    className="h-4 w-4 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
-                    checked={!isPresetFloorChoiceStored(form.floor)}
-                    onChange={() => set("floor", "")}
-                  />
-                  Elle kat gir
-                </label>
-              </div>
-              {!isPresetFloorChoiceStored(form.floor) ? (
-                <label className="mt-3 block text-sm font-medium text-zinc-700">
-                  <span className="flex items-center justify-between">
-                    <span>Kat numarası</span>
-                    <span className="text-[11px] font-normal text-zinc-400">-5 ile 100</span>
-                  </span>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={-5}
-                    max={100}
-                    step={1}
-                    className="mt-1 w-full max-w-xs rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                    value={form.floor}
-                    onChange={(e) => set("floor", e.target.value)}
-                    placeholder="Örn. 1, 2, 3…"
-                  />
-                </label>
-              ) : null}
-            </div>
+            <label className="sm:col-span-2 lg:col-span-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+              <span className="shrink-0 text-sm font-medium text-zinc-800">{PROPERTY_LABELS.floor}</span>
+              <select
+                className="w-full max-w-xs rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 sm:max-w-sm"
+                value={floorDropdownValue(form.floor)}
+                onChange={(e) => set("floor", e.target.value)}
+              >
+                <option value="">—</option>
+                <option value={FLOOR_BASEMENT_CANONICAL}>Bodrum kat</option>
+                <option value={FLOOR_GROUND_CANONICAL}>Zemin kat</option>
+                {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
+                  <option key={n} value={String(n)}>
+                    {n}
+                  </option>
+                ))}
+                {(() => {
+                  const lv = legacyFloorOutsideDropdown(form.floor);
+                  return lv ? (
+                    <option value={lv}>
+                      {lv}
+                    </option>
+                  ) : null;
+                })()}
+              </select>
+            </label>
 
             <div className="sm:col-span-2 lg:col-span-3 rounded-xl border border-zinc-200 bg-zinc-50/60 p-4">
               <p className="text-sm font-medium text-zinc-800">Sahip olunan kat</p>
@@ -2165,35 +2256,19 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
             <p className="mt-1 text-sm text-zinc-500">İlan fotoğraflarını yükleyin</p>
 
             <div className="mt-4 space-y-4">
-              <div className="rounded-xl bg-zinc-50 p-4">
-                <p className="text-sm font-semibold text-zinc-800">Kapak Fotoğrafı</p>
-                <div className="mt-3 flex flex-wrap items-center gap-3">
-                  <label className={`inline-flex cursor-pointer items-center justify-center rounded-xl bg-zinc-800 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-zinc-900 ${uploadBusy ? "pointer-events-none opacity-50" : ""}`}>
-                    <input type="file" accept="image/*,.heic,.heif,.avif" className="sr-only" onChange={onCoverFileChange} disabled={uploadBusy} />
-                    Kapak Seç
-                  </label>
-                  {form.coverImage.trim() ? (
-                    <div className="relative h-20 w-28 overflow-hidden rounded-lg border border-zinc-200 bg-white">
-                      <Image src={form.coverImage.trim()} alt="" fill className="object-cover" sizes="112px" unoptimized />
-                    </div>
-                  ) : (
-                    <span className="text-sm text-zinc-400">Kapak fotoğrafı seçilmedi</span>
-                  )}
-                </div>
-                <details className="mt-3">
-                  <summary className="cursor-pointer text-sm text-zinc-500 underline decoration-zinc-300 underline-offset-2 hover:text-zinc-700">
-                    URL ile kapak ekle
-                  </summary>
-                  <input className="mt-2 w-full max-w-xl rounded-lg border border-zinc-200 px-3 py-2 text-sm" placeholder="https://..." value={form.coverImage} onChange={(e) => set("coverImage", e.target.value)} />
-                </details>
-              </div>
-
               <div>
-                <p className="text-sm font-semibold text-zinc-800">Galeri</p>
-                <label className={`mt-3 inline-flex cursor-pointer items-center justify-center rounded-lg border-2 border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 hover:bg-zinc-50 ${uploadBusy ? "pointer-events-none opacity-50" : ""}`}>
+                <p className="text-sm text-zinc-600">
+                  İlk sıradaki fotoğraf liste ve kartlarda <strong className="text-zinc-800">kapak</strong> olarak kullanılır; alttaki sırayı sürükleyerek kapak seçimini de değiştirmiş olursunuz. İkinci ve sonrası sıralarda yer alanlar galeride{" "}
+                  <strong className="text-zinc-800">1.</strong>, <strong className="text-zinc-800">2.</strong>,{" "}
+                  <strong className="text-zinc-800">3.</strong> … resim olarak gösterilir.
+                </p>
+                <label className={`mt-4 inline-flex cursor-pointer items-center justify-center rounded-lg border-2 border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 hover:bg-zinc-50 ${uploadBusy ? "pointer-events-none opacity-50" : ""}`}>
                   <input type="file" accept="image/*,.heic,.heif,.avif" multiple className="sr-only" onChange={onGalleryFilesChange} disabled={uploadBusy} />
-                  {uploadBusy ? "Yükleniyor..." : "Fotoğraf Yükle"}
+                  {uploadBusy ? "Yükleniyor..." : "Fotoğraf yükle (birden çok seçilebilir)"}
                 </label>
+                <p className="mt-2 text-xs text-zinc-500">
+                  Sırayı değiştirmek için küçük tutamacı (<GripVertical size={14} strokeWidth={2} className="inline-block align-middle text-zinc-400" />) tutup başka bir fotoğraf kutusunun üzerine bırakın.
+                </p>
 
                 {gallery.filter((g) => g.url.trim()).length === 0 ? (
                   <p className="mt-4 rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-8 text-center text-sm text-zinc-400">Henüz fotoğraf eklenmedi</p>
@@ -2202,39 +2277,86 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
                     {gallery.map((g, idx) => {
                       const url = g.url.trim();
                       if (!url) return null;
+                      const showDropHover = galleryDragOverIdx === idx && galleryDraggingIdx !== idx;
+                      const faded = galleryDraggingIdx === idx;
                       return (
-                        <li key={`${url}-${idx}`} className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 shadow-sm">
+                        <li
+                          key={g.nid}
+                          className={`overflow-hidden rounded-xl border bg-zinc-50 shadow-sm transition-colors ${
+                            showDropHover ? "border-emerald-500 ring-2 ring-emerald-400" : "border-zinc-200"
+                          } ${faded ? "opacity-[0.42]" : ""}`}
+                          onDragOver={(e) => {
+                            const ok =
+                              [...e.dataTransfer.types].includes(GALLERY_DND_PAYLOAD) ||
+                              [...e.dataTransfer.types].includes("text/plain");
+                            if (!ok) return;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.dataTransfer.dropEffect = "move";
+                            setGalleryDragOverIdx(idx);
+                          }}
+                          onDragLeave={(e) => {
+                            const rel = e.relatedTarget as Node | null;
+                            if (rel && e.currentTarget.contains(rel)) return;
+                            setGalleryDragOverIdx((cur) => (cur === idx ? null : cur));
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const raw =
+                              e.dataTransfer.getData(GALLERY_DND_PAYLOAD) ||
+                              e.dataTransfer.getData("text/plain") ||
+                              "";
+                            const from = Number.parseInt(raw, 10);
+                            setGalleryDragOverIdx(null);
+                            setGalleryDraggingIdx(null);
+                            if (!Number.isFinite(from)) return;
+                            if (from === idx) return;
+                            reorderGalleryDrag(from, idx);
+                          }}
+                        >
                           <div className="relative aspect-4/3 bg-zinc-200">
-                            <Image src={url} alt="" fill className="object-cover" sizes="(max-width:640px) 50vw, 25vw" unoptimized />
-                            {g.isPrimary && (
-                              <span className="absolute left-2 top-2 rounded bg-emerald-600 px-2 py-0.5 text-xs font-bold text-white">Kapak</span>
+                            <Image
+                              src={url}
+                              alt=""
+                              fill
+                              className="object-cover pointer-events-none select-none"
+                              draggable={false}
+                              sizes="(max-width:640px) 50vw, 25vw"
+                              unoptimized
+                            />
+                            <button
+                              type="button"
+                              draggable
+                              title="Sürükleyerek sırayı değiştirin"
+                              aria-label="Sürükleyerek sırayı değiştirin"
+                              onDragStart={(e) => {
+                                try {
+                                  e.dataTransfer.setData(GALLERY_DND_PAYLOAD, String(idx));
+                                  e.dataTransfer.setData("text/plain", String(idx));
+                                } catch {
+                                  e.dataTransfer.setData("text/plain", String(idx));
+                                }
+                                e.dataTransfer.effectAllowed = "move";
+                                setGalleryDraggingIdx(idx);
+                              }}
+                              onDragEnd={() => {
+                                setGalleryDraggingIdx(null);
+                                setGalleryDragOverIdx(null);
+                              }}
+                              className="absolute left-2 top-2 z-10 cursor-grab rounded-lg border border-zinc-200/90 bg-white/95 p-1.5 text-zinc-600 shadow-md hover:bg-white active:cursor-grabbing touch-none"
+                            >
+                              <GripVertical size={18} strokeWidth={2} aria-hidden />
+                            </button>
+                            {idx === 0 ? (
+                              <span className="absolute right-2 top-2 z-[5] rounded bg-emerald-600 px-2 py-0.5 text-xs font-bold text-white shadow-sm">Kapak</span>
+                            ) : (
+                              <span className="absolute bottom-2 left-2 rounded bg-black/65 px-2 py-0.5 text-xs font-semibold text-white">
+                                {idx}. resim
+                              </span>
                             )}
-                            <span className="absolute bottom-2 left-2 rounded bg-black/65 px-2 py-0.5 text-xs font-semibold text-white">
-                              Sıra: {idx + 1}
-                            </span>
                           </div>
                           <div className="flex flex-wrap gap-1 p-2">
-                            <button
-                              type="button"
-                              className="rounded border border-zinc-200 bg-white px-2 py-1 text-xs font-medium hover:bg-zinc-100 disabled:opacity-40"
-                              title="Fotoğrafı bir sıra yukarı taşı"
-                              aria-label="Fotoğrafı bir sıra yukarı taşı"
-                              disabled={idx === 0}
-                              onClick={() => moveGallery(idx, -1)}
-                            >
-                              Yukarı
-                            </button>
-                            <button
-                              type="button"
-                              className="rounded border border-zinc-200 bg-white px-2 py-1 text-xs font-medium hover:bg-zinc-100 disabled:opacity-40"
-                              title="Fotoğrafı bir sıra aşağı taşı"
-                              aria-label="Fotoğrafı bir sıra aşağı taşı"
-                              disabled={idx >= gallery.length - 1}
-                              onClick={() => moveGallery(idx, 1)}
-                            >
-                              Aşağı
-                            </button>
-                            <button type="button" className="rounded border border-zinc-200 bg-white px-2 py-1 text-xs font-medium hover:bg-zinc-100" onClick={() => makeGalleryPrimary(idx)}>Kapak Yap</button>
                             <button type="button" className="ml-auto rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50" onClick={() => removeGalleryRow(idx)}>Sil</button>
                           </div>
                         </li>
@@ -2291,12 +2413,12 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
         <section className="rounded-2xl border border-amber-200 bg-amber-50/50 p-6 shadow-sm">
           <h2 className="text-lg font-bold text-zinc-800">Mal sahibi bilgileri</h2>
           <p className="mt-1 text-sm text-zinc-600">
-            Ad, soyad, iletişim ve notlar yalnızca <strong>admin</strong> ve bu ilanı oluşturan{" "}
-            <strong>danışman</strong> tarafından görülebilir. İlan web sitesinde ve XML yayınlarında yer almaz.
+            <strong>Ad, soyad ve telefon</strong> zorunludur; doldurmadan sonraki adımlara geçilemez. E-posta ve notlar isteğe bağlıdır. Bu bilgiler yalnızca{" "}
+            <strong>admin</strong> ve bu ilanı oluşturan <strong>danışman</strong> tarafından görülebilir; sitede ve XML’de yayımlanmaz.
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <label className="block text-sm font-medium text-zinc-700">
-              Ad
+              Ad <span className="text-red-600">*</span>
               <input
                 className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                 value={form.ownerFirstName}
@@ -2305,7 +2427,7 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
               />
             </label>
             <label className="block text-sm font-medium text-zinc-700">
-              Soyad
+              Soyad <span className="text-red-600">*</span>
               <input
                 className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                 value={form.ownerLastName}
@@ -2314,7 +2436,7 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
               />
             </label>
             <label className="block text-sm font-medium text-zinc-700">
-              Telefon
+              Telefon <span className="text-red-600">*</span>
               <input
                 type="tel"
                 className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
@@ -2476,7 +2598,9 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
                           const url = await postUploadFile(file);
                           set("consultantPhoto", url);
                         } catch (err) {
+                          setWizardNavBlock(null);
                           setMessage(err instanceof Error ? err.message : "Yükleme hatası");
+                          setMessageType("error");
                         }
                       }} />
                       Yükle
@@ -2964,7 +3088,7 @@ export function ListingEditor({ listing, suggestedId, agents, viewerRole, lookup
         <button
           type="button"
           disabled={wizardStep === steps.length - 1}
-          onClick={() => setWizardStep((s) => Math.min(steps.length - 1, s + 1))}
+          onClick={() => goWizardStep(wizardStep + 1)}
           className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-emerald-600/25 transition hover:bg-emerald-700 disabled:opacity-30"
         >
           {tp("listingEditor.navNext")}

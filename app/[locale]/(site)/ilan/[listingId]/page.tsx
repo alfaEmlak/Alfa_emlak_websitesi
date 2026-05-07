@@ -7,7 +7,7 @@ import { listingPropertyTypeDisplayLabel } from "@/lib/listing-property-taxonomy
 import { stripOwnerContactPrivateFromDetailFields } from "@/lib/owner-contact-private";
 import { getListingDetailForLocale } from "@/lib/listing-detail-data";
 import { getAdminSession } from "@/lib/admin-auth";
-import { getSimilarListingsSafe, incrementListingViewsSupabase } from "@/lib/listings-query";
+import { getSimilarListingsSafe, incrementListingViewsSupabase, unpublishedListingAccessFromSession } from "@/lib/listings-query";
 import { getSiteSettingsOrFallback, getDefaultConsultant } from "@/lib/site-settings";
 import { resolveConsultant } from "@/lib/consultant";
 import { sortImages, visibleDetailRows, parseNearby, formatMoney, primaryImageUrl, daysAgo, mergeListingHighlightLines } from "@/lib/listing-utils";
@@ -23,15 +23,21 @@ type Props = { params: Promise<{ listingId: string; locale: string }> };
 export async function generateMetadata({ params }: Props) {
   try {
     const { listingId, locale } = await params;
-    const enriched = await getListingDetailForLocale(listingId, locale, false);
-    if (!enriched || enriched.publishStatus !== "PUBLISHED") {
+    const session = await getAdminSession();
+    const access = unpublishedListingAccessFromSession(session);
+    const enriched = await getListingDetailForLocale(listingId, locale, access);
+    if (!enriched) {
       return { title: "İlan | ALFA EMLAK", robots: { index: false } };
     }
     const tr = getTranslatedListing(enriched, locale);
-    return {
+    const base = {
       title: `${tr.title} | ALFA EMLAK`,
       description: tr.shortDescription || tr.title,
     };
+    if (enriched.publishStatus !== "PUBLISHED") {
+      return { ...base, robots: { index: false } };
+    }
+    return base;
   } catch {
     return { title: "İlan | ALFA EMLAK" };
   }
@@ -43,8 +49,8 @@ export default async function ListingDetailPage({ params }: Props) {
   const tc = await getTranslations("Common");
 
   const session = await getAdminSession();
-  const isAdmin = !!session?.isAdmin;
-  const listingEnriched = await getListingDetailForLocale(listingId, locale, isAdmin);
+  const access = unpublishedListingAccessFromSession(session);
+  const listingEnriched = await getListingDetailForLocale(listingId, locale, access);
   if (!listingEnriched) notFound();
 
   const listingTranslated = getTranslatedListing(listingEnriched, locale);
@@ -77,9 +83,13 @@ export default async function ListingDetailPage({ params }: Props) {
 
   return (
     <main className="mx-auto max-w-[1440px] flex-1 bg-surface px-6 py-10 md:px-8 lg:py-14">
-      {isAdmin && listing.publishStatus !== "PUBLISHED" ? (
+      {listing.publishStatus !== "PUBLISHED" && access.mode !== "none" ? (
         <div className="mb-4 rounded-lg bg-amber-100 px-4 py-2 text-sm text-amber-900">
-          {listing.publishStatus === "DRAFT" ? t("isDraft") : t("isHidden")}
+          {listing.publishStatus === "DRAFT"
+            ? t("isDraft")
+            : listing.publishStatus === "PENDING_APPROVAL"
+              ? t("isPendingApproval")
+              : t("isHidden")}
         </div>
       ) : null}
 
@@ -122,7 +132,9 @@ export default async function ListingDetailPage({ params }: Props) {
               <p className="mt-2 text-on-surface/50">{locLine}</p>
             </div>
             <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
-              <p className="font-headline text-3xl font-extrabold text-secondary md:text-4xl">{formatMoney(listing.price, listing.currency)}</p>
+              <p className="font-headline text-3xl font-extrabold text-secondary md:text-4xl">
+                {formatMoney(Number(listing.price ?? 0), listing.currency ?? "EUR")}
+              </p>
               <div className="flex gap-2">
                 <ListingShareButton title={listing.title} label={t("share")} copiedMessage={t("shareCopied")} />
               </div>
@@ -175,7 +187,9 @@ export default async function ListingDetailPage({ params }: Props) {
             <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
               {listing.statsShowViews ? (
                 <div>
-                  <p className="font-headline text-2xl font-bold text-primary">{listing.views.toLocaleString(locale === 'tr' ? 'tr-TR' : 'en-US')}</p>
+                  <p className="font-headline text-2xl font-bold text-primary">
+                    {(Number(listing.views ?? 0) || 0).toLocaleString(locale === "tr" ? "tr-TR" : "en-US")}
+                  </p>
                   <p className="text-xs text-on-surface/50">{t("views")}</p>
                 </div>
               ) : null}

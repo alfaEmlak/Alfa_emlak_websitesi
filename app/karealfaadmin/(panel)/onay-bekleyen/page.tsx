@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { reviewListing } from "@/app/karealfaadmin/actions";
 import { displayListingCity } from "@/lib/listing-city";
+import { getPanelLocale } from "@/lib/panel-locale";
 import { getPanelTranslations } from "@/lib/panel-translations";
 import { requirePanelUser } from "@/lib/panel-auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -27,65 +28,86 @@ function isRejectedLike(row: ApprovalRow): boolean {
 
 function ListingCard({
   row,
-  showActions,
+  showModerationActions,
+  showPreviewStrip,
+  siteLocale,
   labels,
 }: {
   row: ApprovalRow;
-  showActions: boolean;
+  showModerationActions: boolean;
+  showPreviewStrip: boolean;
+  siteLocale: string;
   labels: {
     badgeRejected: string;
     badgePending: string;
     edit: string;
+    previewOnSite: string;
     approvePublish: string;
     reject: string;
   };
 }) {
   const rejected = isRejectedLike(row);
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">{row.listing_id}</p>
-          <h2 className="mt-1 text-lg font-bold text-zinc-900">{row.title}</h2>
-          <p className="mt-1 text-sm text-zinc-500">
-            {displayListingCity(row.city)} / {row.region}
-            {row.created_by_name ? ` • ${row.created_by_name}` : ""}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className={`rounded-full px-3 py-1 text-xs font-bold ${rejected ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-800"}`}>
-            {rejected ? labels.badgeRejected : labels.badgePending}
-          </span>
+    <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+      {showPreviewStrip && !rejected ? (
+        <div className="flex items-center border-b border-zinc-200 bg-zinc-50 px-5 py-2.5">
           <Link
-            href={`/karealfaadmin/ilanlar/${row.id}/duzenle`}
-            className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
+            href={`/${siteLocale}/ilan/${encodeURIComponent(row.listing_id)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm font-semibold text-zinc-800 underline-offset-2 hover:text-zinc-950 hover:underline"
           >
-            {labels.edit}
+            {labels.previewOnSite}
           </Link>
-          {showActions && !rejected ? (
-            <>
-              <form
-                action={async () => {
-                  "use server";
-                  await reviewListing(row.id, "approve");
-                }}
+        </div>
+      ) : null}
+      <div className="p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">{row.listing_id}</p>
+            <h2 className="mt-1 text-lg font-bold text-zinc-900">{row.title}</h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              {displayListingCity(row.city)} / {row.region}
+              {row.created_by_name ? ` • ${row.created_by_name}` : ""}
+            </p>
+          </div>
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-2 sm:flex-nowrap sm:justify-end">
+            <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${rejected ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-800"}`}>
+              {rejected ? labels.badgeRejected : labels.badgePending}
+            </span>
+            <div className="inline-flex shrink-0 flex-nowrap items-center gap-2">
+              <Link
+                href={`/karealfaadmin/ilanlar/${row.id}/duzenle`}
+                className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
               >
-                <button type="submit" className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700">
-                  {labels.approvePublish}
-                </button>
-              </form>
-              <form
-                action={async () => {
-                  "use server";
-                  await reviewListing(row.id, "reject");
-                }}
-              >
-                <button type="submit" className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-700">
-                  {labels.reject}
-                </button>
-              </form>
-            </>
-          ) : null}
+                {labels.edit}
+              </Link>
+            </div>
+            {showModerationActions && !rejected ? (
+              <div className="inline-flex shrink-0 flex-nowrap items-center gap-2">
+                <form
+                  action={async () => {
+                    "use server";
+                    await reviewListing(row.id, "approve");
+                  }}
+                >
+                  <button type="submit" className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700">
+                    {labels.approvePublish}
+                  </button>
+                </form>
+                <form
+                  action={async () => {
+                    "use server";
+                    await reviewListing(row.id, "reject");
+                  }}
+                >
+                  <button type="submit" className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-700">
+                    {labels.reject}
+                  </button>
+                </form>
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
     </div>
@@ -99,6 +121,7 @@ export default async function PendingApprovalPage({
 }) {
   const user = await requirePanelUser();
   const t = await getPanelTranslations();
+  const siteLocale = await getPanelLocale();
   const sp = await searchParams;
   const reviewFailed = sp.review === "fail";
   const reviewNoPhoto = sp.review === "nophoto";
@@ -107,6 +130,7 @@ export default async function PendingApprovalPage({
     badgeRejected: t("approval.badgeRejected"),
     badgePending: t("approval.badgePending"),
     edit: t("common.edit"),
+    previewOnSite: t("approval.previewOnSite"),
     approvePublish: t("approval.approvePublish"),
     reject: t("approval.reject"),
   };
@@ -180,7 +204,16 @@ export default async function PendingApprovalPage({
           ) : pendingRows.length === 0 ? (
             <div className="rounded-2xl border border-zinc-200 bg-white p-10 text-center text-sm text-zinc-500">{t("approval.emptyPending")}</div>
           ) : (
-            pendingRows.map((row) => <ListingCard key={row.id} row={row} showActions={user.role === "ADMIN"} labels={cardLabels} />)
+            pendingRows.map((row) => (
+              <ListingCard
+                key={row.id}
+                row={row}
+                showModerationActions={user.role === "ADMIN"}
+                showPreviewStrip
+                siteLocale={siteLocale}
+                labels={cardLabels}
+              />
+            ))
           )}
         </div>
       </div>
@@ -194,7 +227,16 @@ export default async function PendingApprovalPage({
           {rejectedRows.length === 0 ? (
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50/80 p-10 text-center text-sm text-zinc-500">{t("approval.emptyRejected")}</div>
           ) : (
-            rejectedRows.map((row) => <ListingCard key={row.id} row={row} showActions={false} labels={cardLabels} />)
+            rejectedRows.map((row) => (
+              <ListingCard
+                key={row.id}
+                row={row}
+                showModerationActions={false}
+                showPreviewStrip={false}
+                siteLocale={siteLocale}
+                labels={cardLabels}
+              />
+            ))
           )}
         </div>
       </div>

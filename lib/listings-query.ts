@@ -3,6 +3,20 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { ListingKind } from "@/lib/listing-kinds";
 import { normalizeListings } from "@/lib/listing-normalize";
 import { kktcRegions } from "@/lib/kktc-regions";
+import type { PanelSessionData } from "@/lib/session";
+
+/** Panel oturumu: yayında olmayan ilanı kimler görebilir (önizleme). */
+export type UnpublishedListingAccess =
+  | { mode: "none" }
+  | { mode: "admin" }
+  | { mode: "owner"; agentId: string };
+
+export function unpublishedListingAccessFromSession(session: PanelSessionData | null | undefined): UnpublishedListingAccess {
+  if (!session?.role) return { mode: "none" };
+  if (session.role === "ADMIN") return { mode: "admin" };
+  if (session.role === "CONSULTANT" && session.agentId) return { mode: "owner", agentId: session.agentId };
+  return { mode: "none" };
+}
 
 export type ListingPublic = any;
 
@@ -213,21 +227,24 @@ export async function getLatestByKind(kind: ListingKind, limit = 4) {
   return normalizeListings(data || []);
 }
 
-export async function getListingByPublicId(listingId: string, allowDraftForAdmin: boolean) {
+export async function getListingByPublicId(listingId: string, access: UnpublishedListingAccess) {
   const { data: base } = await supabaseAdmin
     .from("listings")
     .select("*, listing_images(*)")
     .eq("listing_id", listingId)
     .single();
-  
+
   if (!base) return null;
-  if (base.publish_status !== "PUBLISHED" && !allowDraftForAdmin) return null;
-  return normalizeListings([base])[0];
+  if (base.publish_status === "PUBLISHED") return normalizeListings([base])[0];
+  if (access.mode === "none") return null;
+  if (access.mode === "admin") return normalizeListings([base])[0];
+  if (access.mode === "owner" && base.created_by_agent_id === access.agentId) return normalizeListings([base])[0];
+  return null;
 }
 
-export async function getListingByPublicIdSafe(listingId: string, allowDraftForAdmin: boolean) {
+export async function getListingByPublicIdSafe(listingId: string, access: UnpublishedListingAccess) {
   try {
-    return await getListingByPublicId(listingId, allowDraftForAdmin);
+    return await getListingByPublicId(listingId, access);
   } catch (e) {
     console.error("[getListingByPublicIdSafe]", e);
     return null;

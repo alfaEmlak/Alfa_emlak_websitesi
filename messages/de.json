@@ -108,6 +108,7 @@
     "share": "Teilen",
     "shareCopied": "Link kopiert",
     "isDraft": "Vorschau — Entwurf.",
+    "isPendingApproval": "Vorschau — noch nicht veröffentlicht (Genehmigung ausstehend).",
     "isHidden": "Vorschau — versteckt.",
     "otherListings": "Weitere Angebote des Beraters",
     "officeListings": "Alle Angebote des Büros",
@@ -508,7 +509,20 @@
       "consultants": "Berater",
       "consultantSettings": "Berater-Einstellungen",
       "lookups": "Auswahllisten",
-      "siteSettings": "Website-Einstellungen"
+      "siteSettings": "Website-Einstellungen",
+      "deedsDocuments": "Grundbuch & Dokumente"
+    },
+    "deedsDocuments": {
+      "title": "Grundbuch & Dokumente",
+      "subtitle": "Hochgeladene Fotos und PDF-Dokumente zu Eigentümerdaten sind hier gebündelt. Sie entsprechen den Dateien im Inseratseditor.",
+      "summary": "{listingsCount} Inserate · {documentsCount} Dateien",
+      "empty": "Noch keine Grundbuch- oder sonstigen Dokumente.",
+      "docCountLabel": "{count} Dateien",
+      "openFile": "In neuem Tab öffnen",
+      "pdfBadge": "PDF",
+      "fileBadge": "Datei",
+      "publicId": "Inseratscode",
+      "openListing": "Inserat bearbeiten"
     },
     "loginHeading": "Panel-Anmeldung",
     "loginSubtitle": "Melden Sie sich mit Ihrem Super-Admin- oder freigegebenen Beraterkonto an.",
@@ -626,6 +640,7 @@
       "badgePending": "Genehmigung ausstehend",
       "approvePublish": "Genehmigen & veröffentlichen",
       "reject": "Ablehnen",
+      "previewOnSite": "Auf Website ansehen",
       "queryError": "Fehler: {message}"
     },
     "errors": {
@@ -708,6 +723,7 @@
       "titleNew": "Neues Inserat",
       "subtitleSteps": "Folgen Sie den Schritten",
       "preview": "Vorschau",
+      "previewNeedSave": "Speichern Sie zuerst einen Entwurf, bevor Sie die Website-Vorschau öffnen.",
       "saveDraft": "Entwurf speichern",
       "publishAdmin": "Veröffentlichen",
       "submitApproval": "Zur Admin-Freigabe senden",
@@ -762,6 +778,8 @@
       "consultantCardSub": "Beraterdaten werden automatisch ausgefüllt.",
       "selectRegisteredConsultant": "Registrierten Berater wählen",
       "selectConsultantOption": "— Berater wählen —",
+      "basicsStepIncomplete": "Wählen Sie einen Immobilientyp und geben Sie einen gültigen Preis über null ein, bevor Sie fortfahren.",
+      "ownerStepIncomplete": "Geben Sie Vorname, Nachname und Telefon des Eigentümers ein, bevor Sie fortfahren.",
       "navPrev": "Zurück",
       "navNext": "Weiter"
     }

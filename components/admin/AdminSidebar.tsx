@@ -34,6 +34,13 @@ const navGroups: NavGroup[] = [
       { href: "/karealfaadmin/ilanlar/yeni", labelKey: "nav.newListing", icon: "add_circle", match: "exact" },
       { href: "/karealfaadmin/onay-bekleyen", labelKey: "nav.approval", icon: "warning", match: "prefix" },
       { href: "/karealfaadmin/ilanlar/vitrin", labelKey: "nav.showcase", icon: "star", match: "exact", adminOnly: true },
+      {
+        href: "/karealfaadmin/kocan-belgeler",
+        labelKey: "nav.deedsDocuments",
+        icon: "documents",
+        match: "exact",
+        adminOnly: true,
+      },
     ],
   },
   {
