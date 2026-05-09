@@ -15,7 +15,12 @@ export async function GET() {
   try {
     const res = await fetch(SUNDOVIZ_API, {
       next: { revalidate: 300 }, // 5 minutes ISR cache
-      headers: { "User-Agent": "AlfaEmlak/1.0" },
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Accept: "application/json, text/plain, */*",
+        Referer: "https://online.sundoviz.com/",
+      },
     });
 
     if (!res.ok) throw new Error(`Sundoviz API ${res.status}`);
