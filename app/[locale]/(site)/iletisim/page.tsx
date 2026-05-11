@@ -1,20 +1,47 @@
 import { Link } from "@/i18n/routing";
 import { getTranslations } from "next-intl/server";
-import { getSiteSettingsOrFallback } from "@/lib/site-settings";
+import { getSiteSettingsOrFallback, getSocialLinks } from "@/lib/site-settings";
 import { ContactForm } from "@/components/site/ContactForm";
 import { getTranslatedSiteSettings } from "@/lib/i18n-utils";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { SocialLinksBar } from "@/components/site/SocialLinksBar";
 
 interface Props {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ listing?: string }>;
 }
 
-export default async function ContactPage({ params }: Props) {
+export default async function ContactPage({ params, searchParams }: Props) {
   const { locale } = await params;
+  const sp = await searchParams;
+  const listingParam = typeof sp.listing === "string" ? sp.listing.trim() : "";
+
+  let listingBanner: { listingId: string; title: string } | null = null;
+  if (listingParam) {
+    const { data } = await supabaseAdmin
+      .from("listings")
+      .select("listing_id, title")
+      .eq("listing_id", listingParam)
+      .eq("publish_status", "PUBLISHED")
+      .maybeSingle();
+    if (data?.listing_id && typeof data.title === "string" && data.title.trim()) {
+      listingBanner = { listingId: data.listing_id, title: data.title.trim() };
+    }
+  }
+
   const rawSettings = await getSiteSettingsOrFallback();
   const s = getTranslatedSiteSettings(rawSettings, locale);
+  const social = getSocialLinks(rawSettings);
   
   const t = await getTranslations("ContactPage");
   const tc = await getTranslations("Common");
+
+  const defaultSubject =
+    listingBanner != null
+      ? t("listingSubjectDefault", { id: listingBanner.listingId, title: listingBanner.title })
+      : undefined;
+  const listingDetailHref =
+    listingBanner != null ? `/${locale}/ilan/${encodeURIComponent(listingBanner.listingId)}` : null;
 
   return (
     <main className="mx-auto max-w-[1440px] flex-1 bg-surface px-6 py-16 md:px-8 md:py-24">
@@ -83,8 +110,18 @@ export default async function ContactPage({ params }: Props) {
               </li>
             ) : null}
           </ul>
+
+          <SocialLinksBar
+            social={social}
+            title={tc("socialTitle")}
+            align="start"
+            className="mt-14 border-t border-(--ghost-outline)/60 pt-10"
+          />
         </div>
         <ContactForm
+          listingContext={listingBanner}
+          listingDetailHref={listingDetailHref}
+          defaultSubject={defaultSubject}
           labels={{
             formTitle: t("formTitle"),
             formSubtitle: t("formSubtitle"),
@@ -98,6 +135,8 @@ export default async function ContactPage({ params }: Props) {
             errorMessage: t("errorMessage"),
             validationNamePhone: t("validationNamePhone"),
             sending: tc("sending"),
+            listingContextBadge: t("listingContextBadge"),
+            viewListing: t("viewListing"),
           }}
         />
       </div>

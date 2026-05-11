@@ -1,9 +1,28 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { requireAdmin } from "@/lib/panel-auth";
+import { requireAdmin, requirePanelUser } from "@/lib/panel-auth";
 import { hashPassword } from "@/lib/password";
+
+async function assertContactMessageAccess(messageId: string) {
+  const user = await requirePanelUser();
+  if (user.role === "ADMIN") return user;
+
+  const { data, error } = await supabaseAdmin
+    .from("contact_messages")
+    .select("agent_id")
+    .eq("id", messageId)
+    .maybeSingle();
+
+  if (error || !data) redirect("/karealfaadmin/dashboard");
+
+  const aid = typeof data.agent_id === "string" ? data.agent_id : null;
+  if (user.role === "CONSULTANT" && user.agentId && aid === user.agentId) return user;
+
+  redirect("/karealfaadmin/dashboard");
+}
 
 export type SubmitContactResult =
   | { ok: true }
@@ -24,14 +43,31 @@ export async function submitContactMessage(data: {
     return { ok: false, error: "name_phone_required" };
   }
 
-  const { error } = await supabaseAdmin.from("contact_messages").insert({
+  const listingPublicId = data.listingId?.trim() || null;
+  let agentId: string | null = null;
+  if (listingPublicId) {
+    const { data: listingRow } = await supabaseAdmin
+      .from("listings")
+      .select("created_by_agent_id")
+      .eq("listing_id", listingPublicId)
+      .maybeSingle();
+    const raw = listingRow?.created_by_agent_id as string | null | undefined;
+    agentId = typeof raw === "string" && raw ? raw : null;
+  }
+
+  const insertPayload: Record<string, unknown> = {
     name,
     email: data.email?.trim() || null,
     phone: data.phone?.trim() || null,
     subject: data.subject?.trim() || null,
     message,
-    listing_id: data.listingId?.trim() || null,
-  });
+    listing_id: listingPublicId,
+  };
+  if (agentId) {
+    insertPayload.agent_id = agentId;
+  }
+
+  const { error } = await supabaseAdmin.from("contact_messages").insert(insertPayload as never);
 
   if (error) throw new Error(`Message submit failed: ${error.message}`);
 
@@ -39,7 +75,7 @@ export async function submitContactMessage(data: {
 }
 
 export async function markMessageRead(id: string) {
-  await requireAdmin();
+  await assertContactMessageAccess(id);
 
   const { error } = await supabaseAdmin.from("contact_messages").update({ is_read: true }).eq("id", id);
 
@@ -50,7 +86,7 @@ export async function markMessageRead(id: string) {
 }
 
 export async function deleteMessage(id: string) {
-  await requireAdmin();
+  await assertContactMessageAccess(id);
 
   const { error } = await supabaseAdmin.from("contact_messages").delete().eq("id", id);
 
@@ -61,12 +97,12 @@ export async function deleteMessage(id: string) {
 }
 
 export async function updateMessageCrmData(id: string, data: { status?: string; notes?: string; agentId?: string }) {
-  await requireAdmin();
+  const user = await assertContactMessageAccess(id);
 
   const updatePayload: Record<string, unknown> = {};
   if (data.status !== undefined) updatePayload.status = data.status;
   if (data.notes !== undefined) updatePayload.notes = data.notes;
-  if (data.agentId !== undefined) updatePayload.agent_id = data.agentId;
+  if (data.agentId !== undefined && user.role === "ADMIN") updatePayload.agent_id = data.agentId;
 
   const { error } = await supabaseAdmin.from("contact_messages").update(updatePayload).eq("id", id);
 
@@ -112,6 +148,7 @@ export async function saveBlogPost(data: {
 
   revalidatePath("/karealfaadmin/blog");
   revalidatePath("/blog");
+  revalidatePath("/", "layout");
   return { ok: true as const };
 }
 
@@ -124,6 +161,7 @@ export async function deleteBlogPost(id: string) {
 
   revalidatePath("/karealfaadmin/blog");
   revalidatePath("/blog");
+  revalidatePath("/", "layout");
   return { ok: true as const };
 }
 

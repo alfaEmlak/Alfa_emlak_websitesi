@@ -1,16 +1,31 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { AdminIcon } from "@/components/admin/AdminIcon";
-import { requireAdmin } from "@/lib/panel-auth";
+import { splitContactAiLeadMessage } from "@/lib/ai-forms-checkpoint";
+import { requirePanelUser } from "@/lib/panel-auth";
 import { MessageList } from "./MessageList";
 
 export default async function MessagesPage() {
-  await requireAdmin();
-  const { data: messages } = await supabaseAdmin
-    .from("contact_messages")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const user = await requirePanelUser();
+
+  let query = supabaseAdmin.from("contact_messages").select("*").order("created_at", { ascending: false });
+  if (user.role === "CONSULTANT" && user.agentId) {
+    query = query.eq("agent_id", user.agentId);
+  }
+
+  const { data: messages } = await query;
 
   const messagesList = messages || [];
+
+  const listingIds = [...new Set(messagesList.map((m) => m.listing_id).filter((x): x is string => typeof x === "string" && x.length > 0))];
+  const titleByListingId = new Map<string, string>();
+  if (listingIds.length > 0) {
+    const { data: listingRows } = await supabaseAdmin.from("listings").select("listing_id, title").in("listing_id", listingIds);
+    for (const row of listingRows ?? []) {
+      if (typeof row.listing_id === "string" && typeof row.title === "string") {
+        titleByListingId.set(row.listing_id, row.title);
+      }
+    }
+  }
   const unreadCount = messagesList.filter((m) => !m.is_read).length;
 
   return (
@@ -24,7 +39,9 @@ export default async function MessagesPage() {
         )}
       </div>
       <p className="mt-1 text-sm text-(--on-surface)/55">
-        Siteden gelen iletişim mesajları
+        {user.role === "ADMIN"
+          ? "Siteden gelen iletişim mesajları"
+          : "İlanlarınız üzerinden size iletilen mesajlar"}
       </p>
 
       {messagesList.length === 0 ? (
@@ -36,20 +53,26 @@ export default async function MessagesPage() {
           </p>
         </div>
       ) : (
-        <MessageList messages={messagesList.map(m => ({
-          id: m.id,
-          name: m.name,
-          email: m.email,
-          phone: m.phone,
-          subject: m.subject,
-          message: m.message,
-          listingId: m.listing_id,
-          isRead: m.is_read,
-          createdAt: m.created_at,
-          status: m.status || "NEW",
-          notes: m.notes || "",
-          agentId: m.agent_id || null
-        }))} />
+        <MessageList
+          messages={messagesList.map((m) => ({
+            id: m.id,
+            name: m.name,
+            email: m.email,
+            phone: m.phone,
+            subject: m.subject,
+            message:
+              m.subject === "AI_LEAD"
+                ? splitContactAiLeadMessage(m.message).summary || m.message || ""
+                : m.message || "",
+            listingId: m.listing_id,
+            listingTitle: m.listing_id ? titleByListingId.get(m.listing_id) ?? null : null,
+            isRead: m.is_read,
+            createdAt: m.created_at,
+            status: m.status || "NEW",
+            notes: m.notes || "",
+            agentId: m.agent_id || null,
+          }))}
+        />
       )}
     </div>
   );

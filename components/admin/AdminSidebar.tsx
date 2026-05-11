@@ -46,7 +46,7 @@ const navGroups: NavGroup[] = [
   {
     titleKey: "groups.contact",
     items: [
-      { href: "/karealfaadmin/mesajlar", labelKey: "nav.inbox", icon: "mail", match: "prefix", adminOnly: true },
+      { href: "/karealfaadmin/mesajlar", labelKey: "nav.inbox", icon: "mail", match: "prefix" },
       { href: "/karealfaadmin/kariyer", labelKey: "nav.career", icon: "person_add", match: "prefix", adminOnly: true },
       { href: "/karealfaadmin/kullanici-formlari", labelKey: "nav.userForms", icon: "forum", match: "prefix", adminOnly: true },
     ],
@@ -85,11 +85,14 @@ export function AdminSidebar({
   role,
   pendingCount,
   unreadInboxCount = 0,
+  newUserFormsCount = 0,
   userName,
 }: {
   role: PanelRole;
   pendingCount: number;
   unreadInboxCount?: number;
+  /** Son ziyaretten sonra gelen AI lead formları (yalnızca admin) */
+  newUserFormsCount?: number;
   userName?: string;
 }) {
   const pathname = usePathname();
@@ -154,6 +157,7 @@ export function AdminSidebar({
                 const active = isLinkActive(pathname, item.href, item.match);
                 const showApprovalBadge = item.href === "/karealfaadmin/onay-bekleyen" && pendingCount > 0;
                 const showInboxBadge = item.href === "/karealfaadmin/mesajlar" && unreadInboxCount > 0;
+                const showUserFormsBadge = item.href === "/karealfaadmin/kullanici-formlari" && newUserFormsCount > 0;
 
                 return (
                   <Link
@@ -176,6 +180,11 @@ export function AdminSidebar({
                     {showInboxBadge ? (
                       <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
                         {unreadInboxCount > 99 ? "99+" : unreadInboxCount}
+                      </span>
+                    ) : null}
+                    {showUserFormsBadge ? (
+                      <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                        {newUserFormsCount > 99 ? "99+" : newUserFormsCount}
                       </span>
                     ) : null}
                   </Link>

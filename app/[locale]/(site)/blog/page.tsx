@@ -1,16 +1,12 @@
-import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { prisma } from "@/lib/prisma";
+import { Link } from "@/i18n/routing";
+import { getPublishedBlogPosts } from "@/lib/blog-public";
 
 export default async function BlogPage() {
   const t = await getTranslations("BlogPage");
   const tc = await getTranslations("Common");
 
-  const posts = await prisma.blogPost.findMany({
-    where: { status: "PUBLISHED" },
-    orderBy: { publishedAt: "desc" },
-    select: { id: true, title: true, slug: true, excerpt: true, coverImage: true, authorName: true, publishedAt: true },
-  });
+  const posts = await getPublishedBlogPosts();
 
   return (
     <main className="mx-auto max-w-[1440px] flex-1 bg-surface px-6 py-16 md:px-8 md:py-24">

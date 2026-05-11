@@ -9,6 +9,8 @@ import { HeroSlider } from "@/components/site/HeroSlider";
 import { PropertyCard } from "@/components/site/PropertyCard";
 import { Link } from "@/i18n/routing";
 import { SundovizRatesStrip } from "@/components/site/SundovizRatesStrip";
+import { HomeBlogSection } from "@/components/site/HomeBlogSection";
+import { getRecentPublishedBlogPosts } from "@/lib/blog-public";
 
 const heroImage = "/pexels-tolgaaslanturk-10785667.jpg";
 
@@ -24,11 +26,13 @@ interface Props {
 export default async function HomePage({ params }: Props) {
   const { locale } = await params;
   const t = await getTranslations("HomePage");
+  const tBlog = await getTranslations("BlogPage");
 
-  const [settingsRaw, featuredRaw, sundovizRates] = await Promise.all([
+  const [settingsRaw, featuredRaw, sundovizRates, blogPosts] = await Promise.all([
     getSiteSettingsOrFallback(),
     getFeaturedListingsSafe(9),
     getSundovizRates(),
+    getRecentPublishedBlogPosts(6),
   ]);
 
   const settings = getTranslatedSiteSettings(settingsRaw, locale);
@@ -123,6 +127,15 @@ export default async function HomePage({ params }: Props) {
         </div>
       </section>
 
+      <HomeBlogSection
+        posts={blogPosts}
+        locale={locale}
+        label={t("blogLabel")}
+        title={t("blogTitle")}
+        viewAll={t("blogViewAll")}
+        readMore={tBlog("readMore")}
+      />
+
       <section className="relative overflow-hidden bg-primary px-6 py-20 text-white md:px-8 md:py-28 lg:py-32">
         <div className="mx-auto grid max-w-[1440px] grid-cols-1 items-center gap-14 md:grid-cols-2 md:gap-20">
           <div>
@@ -188,31 +201,31 @@ export default async function HomePage({ params }: Props) {
                 <span className="label-sm mb-4 block text-secondary" style={{ fontSize: "11px", letterSpacing: "0.12em" }}>
                   {t("whyUsLabel")}
                 </span>
-                <h2 className="mb-8 font-headline text-4xl font-extrabold tracking-tight text-primary md:text-5xl">{t("whyUsTitle")}</h2>
+                <h2 className="mb-6 font-headline text-4xl font-extrabold tracking-tight text-primary md:text-5xl">{t("whyUsTitle")}</h2>
+                <p className="text-sm leading-relaxed text-on-surface/55 whitespace-pre-line">{t("whyUsIntro")}</p>
               </div>
               <div className="space-y-10">
-                <div className="group flex gap-6">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-surface-lowest font-headline font-bold text-primary shadow-[var(--shadow-ambient)] transition-all group-hover:bg-primary group-hover:text-white">
-                    01
+                {(["01", "02", "03", "04", "05", "06"] as const).map((id) => (
+                  <div key={id} className="group flex gap-6">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-surface-lowest font-headline font-bold text-primary shadow-[var(--shadow-ambient)] transition-all group-hover:bg-primary group-hover:text-white">
+                      {id}
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="mb-2 font-headline text-lg font-extrabold text-primary">
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                        {t(`whyUs${id}Title` as any)}
+                      </h4>
+                      <p className="text-sm leading-relaxed text-on-surface/50 whitespace-pre-line">
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                        {t(`whyUs${id}Desc` as any)}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="mb-2 font-headline text-lg font-extrabold text-primary">{t("whyUs01Title")}</h4>
-                    <p className="text-sm leading-relaxed text-on-surface/50">
-                      {t("whyUs01Desc")}
-                    </p>
-                  </div>
-                </div>
-                <div className="group flex gap-6">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-surface-lowest font-headline font-bold text-primary shadow-[var(--shadow-ambient)] transition-all group-hover:bg-primary group-hover:text-white">
-                    02
-                  </div>
-                  <div>
-                    <h4 className="mb-2 font-headline text-lg font-extrabold text-primary">{t("whyUs02Title")}</h4>
-                    <p className="text-sm leading-relaxed text-on-surface/50">
-                      {t("whyUs02Desc")}
-                    </p>
-                  </div>
-                </div>
+                ))}
+              </div>
+              <div className="rounded-2xl border border-primary/10 bg-surface-lowest/70 p-6 shadow-[var(--shadow-ambient)]">
+                <h3 className="mb-3 font-headline text-lg font-extrabold text-primary">{t("whyUsResultTitle")}</h3>
+                <p className="text-sm leading-relaxed text-on-surface/55 whitespace-pre-line">{t("whyUsConclusion")}</p>
               </div>
             </div>
           </div>

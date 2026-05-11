@@ -2653,14 +2653,27 @@ export function ListingEditor({
             <h2 className="text-lg font-bold text-zinc-800">Etiketler</h2>
             <p className="mt-1 text-sm text-zinc-500">İlan üzerinde görünecek etiketleri seçin</p>
             <div className="mt-3 flex flex-wrap gap-4">
-              {([
-                ["badgeFeatured", "Öne Çıkan"],
-                ["badgeExclusive", "Özel"],
-                ["badgeVirtualTour", "Sanal Tur"],
-                ["badgeVideo", "Video"],
-                ["badgeNew", "Yeni"],
-                ["badgePriceDrop", "Fiyat Düştü"],
-              ] as const).map(([k, label]) => (
+              {(viewerRole === "ADMIN"
+                ? (
+                    [
+                      ["badgeFeatured", "Öne Çıkan (vitrin)"],
+                      ["badgeExclusive", "Özel"],
+                      ["badgeVirtualTour", "Sanal Tur"],
+                      ["badgeVideo", "Video"],
+                      ["badgeNew", "Yeni"],
+                      ["badgePriceDrop", "Fiyat Düştü"],
+                    ] as const
+                  )
+                : (
+                    [
+                      ["badgeExclusive", "Özel"],
+                      ["badgeVirtualTour", "Sanal Tur"],
+                      ["badgeVideo", "Video"],
+                      ["badgeNew", "Yeni"],
+                      ["badgePriceDrop", "Fiyat Düştü"],
+                    ] as const
+                  )
+              ).map(([k, label]) => (
                 <label key={k} className="flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={form[k]} onChange={(e) => set(k, e.target.checked)} className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500/20" />
                   {label}

@@ -2,7 +2,7 @@ import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { AiSalesAssistant } from "@/components/site/AiSalesAssistant";
 import { parseMenuJson } from "@/lib/default-menu";
-import { getSiteSettingsOrFallback } from "@/lib/site-settings";
+import { getSiteSettingsOrFallback, getSocialLinks } from "@/lib/site-settings";
 import { getTranslatedSiteSettings } from "@/lib/i18n-utils";
 
 interface Props {
@@ -14,14 +14,15 @@ export default async function SiteLayout({ children, params }: Props) {
   const { locale } = await params;
   const rawSettings = await getSiteSettingsOrFallback();
   const settings = getTranslatedSiteSettings(rawSettings, locale);
-  
+  const social = getSocialLinks(rawSettings);
+
   const menu = parseMenuJson(settings.menuJson);
 
   return (
     <>
       <SiteHeader menu={menu} siteName={settings.siteName} />
       {children}
-      <SiteFooter settings={settings} />
+      <SiteFooter settings={settings} social={social} />
       <AiSalesAssistant locale={locale} />
     </>
   );

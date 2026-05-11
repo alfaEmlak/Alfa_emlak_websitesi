@@ -3,6 +3,7 @@ import { reviewListing } from "@/app/karealfaadmin/actions";
 import { displayListingCity } from "@/lib/listing-city";
 import { getPanelLocale } from "@/lib/panel-locale";
 import { getPanelTranslations } from "@/lib/panel-translations";
+import { isListingRejectedLike, isTruePendingApprovalRow } from "@/lib/panel-pending-approval-count";
 import { requirePanelUser } from "@/lib/panel-auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -19,12 +20,6 @@ type ApprovalRow = {
 };
 
 const PENDING_STATUSES = ["PENDING_APPROVAL", "HIDDEN"] as const;
-
-function isRejectedLike(row: ApprovalRow): boolean {
-  if (row.publish_status === "REJECTED") return true;
-  const df = row.detail_fields as Record<string, unknown> | null | undefined;
-  return row.publish_status === "HIDDEN" && df?.adminReject === true;
-}
 
 function ListingCard({
   row,
@@ -46,7 +41,7 @@ function ListingCard({
     reject: string;
   };
 }) {
-  const rejected = isRejectedLike(row);
+  const rejected = isListingRejectedLike(row);
   return (
     <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
       {showPreviewStrip && !rejected ? (
@@ -160,11 +155,7 @@ export default async function PendingApprovalPage({
   ]);
 
   const pendingRowsRaw = (pendingRes.data ?? []) as ApprovalRow[];
-  const pendingRows = pendingRowsRaw.filter((r) => {
-    if (r.publish_status === "PENDING_APPROVAL") return true;
-    if (r.publish_status === "HIDDEN") return !isRejectedLike(r);
-    return false;
-  });
+  const pendingRows = pendingRowsRaw.filter((r) => isTruePendingApprovalRow(r));
 
   const rejectedMerged = [...(rejectedRes.data ?? []), ...(hiddenRejectedRes.data ?? [])] as ApprovalRow[];
   const rejectedById = new Map(rejectedMerged.map((r) => [r.id, r]));

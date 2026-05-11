@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/panel-auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { parseStoredChatTranscript } from "@/lib/ai-forms-checkpoint";
 import { StatusEditor } from "./StatusEditor";
 import type { LeadStatus } from "@/lib/ai/types";
 
@@ -19,6 +20,7 @@ export default async function UserFormDetailPage({ params }: Props) {
     : Array.isArray(data.matched_listing_ids)
       ? data.matched_listing_ids
       : [];
+  const transcript = parseStoredChatTranscript(data.chat_transcript as string | null | undefined);
 
   return (
     <div className="p-6 lg:p-10">
@@ -58,6 +60,35 @@ export default async function UserFormDetailPage({ params }: Props) {
           {data.conversation_summary || data.desired_home_summary || "-"}
         </p>
       </div>
+
+      {transcript && transcript.length > 0 ? (
+        <div className="admin-card mt-6 p-6">
+          <p className="text-xs text-(--on-surface)/45">Tam konuşma</p>
+          <div className="mt-4 flex max-h-[480px] flex-col gap-3 overflow-y-auto rounded-xl border border-(--ghost-outline) bg-slate-50/80 p-4">
+            {transcript.map((line, i) => {
+              const isUser = line.role === "user";
+              const isAssistant = line.role === "assistant";
+              return (
+                <div
+                  key={`${i}-${line.role}`}
+                  className={`max-w-[95%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap ${
+                    isUser
+                      ? "self-end bg-(--primary) text-white"
+                      : isAssistant
+                        ? "self-start border border-slate-200 bg-white text-slate-900"
+                        : "self-start border border-slate-200 bg-white text-slate-800"
+                  }`}
+                >
+                  <p className="mb-1 text-[10px] font-bold uppercase tracking-wide opacity-70">
+                    {isUser ? "Ziyaretçi" : isAssistant ? "Yapay zeka" : line.role}
+                  </p>
+                  {line.content}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
 
       <div className="admin-card mt-6 p-6">
         <p className="text-xs text-(--on-surface)/45">Tercih JSON</p>

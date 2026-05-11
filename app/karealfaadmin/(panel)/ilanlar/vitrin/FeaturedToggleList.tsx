@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { toggleFeatured } from "@/app/karealfaadmin/actions";
 import { AdminIcon } from "@/components/admin/AdminIcon";
+import { SHOWCASE_MAX_PUBLISHED_FEATURED } from "@/lib/showcase-featured";
 
 type Item = {
   id: string;
@@ -20,25 +21,42 @@ export function FeaturedToggleList({ items: initial }: { items: Item[] }) {
   const [items, setItems] = useState(initial);
   const [isPending, startTransition] = useTransition();
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   function handleToggle(id: string, current: boolean) {
+    setErrorMsg(null);
+    const nextFeatured = !current;
+    if (nextFeatured && !current) {
+      const n = items.filter((i) => i.isFeatured).length;
+      if (n >= SHOWCASE_MAX_PUBLISHED_FEATURED) return;
+    }
     setPendingId(id);
     startTransition(async () => {
-      await toggleFeatured(id, !current);
-      setItems((prev) =>
-        prev.map((item) =>
-          item.id === id ? { ...item, isFeatured: !current } : item
-        )
-      );
-      setPendingId(null);
+      try {
+        await toggleFeatured(id, nextFeatured);
+        setItems((prev) =>
+          prev.map((item) =>
+            item.id === id ? { ...item, isFeatured: nextFeatured } : item
+          ),
+        );
+      } catch (e) {
+        setErrorMsg(e instanceof Error ? e.message : "İşlem yapılamadı.");
+      } finally {
+        setPendingId(null);
+      }
     });
   }
 
   const featuredItems = items.filter((i) => i.isFeatured);
   const otherItems = items.filter((i) => !i.isFeatured);
 
+  const atCapacity = featuredItems.length >= SHOWCASE_MAX_PUBLISHED_FEATURED;
+
   return (
     <div className="mt-8 space-y-8">
+      {errorMsg ? (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">{errorMsg}</div>
+      ) : null}
       {/* Featured section */}
       {featuredItems.length > 0 && (
         <div>
@@ -53,6 +71,7 @@ export function FeaturedToggleList({ items: initial }: { items: Item[] }) {
                 item={item}
                 isPending={isPending && pendingId === item.id}
                 onToggle={handleToggle}
+                addBlocked={false}
               />
             ))}
           </div>
@@ -73,6 +92,7 @@ export function FeaturedToggleList({ items: initial }: { items: Item[] }) {
                 item={item}
                 isPending={isPending && pendingId === item.id}
                 onToggle={handleToggle}
+                addBlocked={atCapacity}
               />
             ))}
           </div>
@@ -86,11 +106,15 @@ function ListingRow({
   item,
   isPending,
   onToggle,
+  addBlocked,
 }: {
   item: Item;
   isPending: boolean;
   onToggle: (id: string, current: boolean) => void;
+  addBlocked: boolean;
 }) {
+  const disableAdd = !item.isFeatured && addBlocked;
+
   return (
     <div className="flex items-center gap-4 px-5 py-3.5 transition hover:bg-(--surface-container-low)/50">
       {/* Cover image */}
@@ -131,12 +155,22 @@ function ListingRow({
 
       {/* Toggle switch */}
       <button
-        onClick={() => onToggle(item.id, item.isFeatured)}
-        disabled={isPending}
-        className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50 ${
-          item.isFeatured ? "bg-purple-500" : "bg-(--on-surface)/20"
-        }`}
-        title={item.isFeatured ? "Vitrinden kaldır" : "Vitrine ekle"}
+        type="button"
+        onClick={() => {
+          if (disableAdd) return;
+          onToggle(item.id, item.isFeatured);
+        }}
+        disabled={isPending || disableAdd}
+        className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50 ${
+          disableAdd ? "cursor-not-allowed" : "cursor-pointer"
+        } ${item.isFeatured ? "bg-purple-500" : "bg-(--on-surface)/20"}`}
+        title={
+          disableAdd
+            ? `Vitrinde en fazla ${SHOWCASE_MAX_PUBLISHED_FEATURED} ilan olabilir`
+            : item.isFeatured
+              ? "Vitrinden kaldır"
+              : "Vitrine ekle"
+        }
       >
         <span
           className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-200 ${

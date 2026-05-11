@@ -12,6 +12,7 @@ import { defaultMegaMenu } from "@/lib/default-menu";
 import { menuTopItemsSchema } from "@/lib/menu-schema";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { normalizeListingCitySlug } from "@/lib/listing-city";
+import { countPublishedFeaturedExcluding, SHOWCASE_MAX_PUBLISHED_FEATURED } from "@/lib/showcase-featured";
 import { isUuidString } from "@/lib/listing-identity";
 import { parseTitleDeedOwnership } from "@/lib/title-deed-ownership";
 import { customAlphabet } from "nanoid";
@@ -24,6 +25,8 @@ type ExistingListingForSave = {
   publish_status: string;
   created_by_agent_id: string | null;
   created_by_name: string | null;
+  /** Önceki kayıtta vitrin / öne çıkan etiketi (limit kontrolü için). */
+  badgeFeatured: boolean;
 };
 
 type ActiveConsultantAccount = {
@@ -443,7 +446,7 @@ async function findExistingListingForSave(payload: ListingSavePayload): Promise<
   }
 
   const baseSelect = "id, publish_status";
-  const richSelect = "id, publish_status, created_by_agent_id, created_by_name";
+  const richSelect = "id, publish_status, created_by_agent_id, created_by_name, badges";
   let lastError: { message: string; code?: string } | null = null;
 
   for (const candidate of candidates) {
@@ -463,6 +466,14 @@ async function findExistingListingForSave(payload: ListingSavePayload): Promise<
 
     if (result.data) {
       const row = result.data as ExistingListingRow;
+      let badgeFeatured = false;
+      try {
+        const raw = row.badges;
+        const o = typeof raw === "string" ? JSON.parse(raw) : raw;
+        badgeFeatured = !!(o && typeof o === "object" && (o as { featured?: boolean }).featured);
+      } catch {
+        badgeFeatured = false;
+      }
       return {
         data: {
           id: String(row.id ?? ""),
@@ -471,6 +482,7 @@ async function findExistingListingForSave(payload: ListingSavePayload): Promise<
             typeof row.created_by_agent_id === "string" ? row.created_by_agent_id : null,
           created_by_name:
             typeof row.created_by_name === "string" ? row.created_by_name : null,
+          badgeFeatured,
         },
         error: null,
       };
@@ -564,6 +576,17 @@ export async function saveListing(payload: ListingSavePayload) {
     }
   }
 
+  const effectiveFeatured =
+    user.role === "ADMIN" ? payload.badgeFeatured : (existingListing?.badgeFeatured ?? false);
+
+  if (effectiveFeatured && finalStatus === "PUBLISHED") {
+    const wasFeatured = existingListing?.badgeFeatured ?? false;
+    const others = await countPublishedFeaturedExcluding(existingListing?.id ?? null);
+    if (!wasFeatured && others >= SHOWCASE_MAX_PUBLISHED_FEATURED) {
+      throw new Error(tp("errors.featuredLimit"));
+    }
+  }
+
   const data = {
     listing_id: payload.listingId?.trim() || "",
     title: payload.title?.trim() || "",
@@ -611,7 +634,7 @@ export async function saveListing(payload: ListingSavePayload) {
     nearby_enabled: payload.nearbyEnabled,
     nearby_poi_categories_json: payload.nearbyPoiCategoriesJson || null,
     badges: {
-      featured: payload.badgeFeatured,
+      featured: effectiveFeatured,
       exclusive: payload.badgeExclusive,
       virtualTour: payload.badgeVirtualTour,
       video: payload.badgeVideo,
@@ -906,18 +929,53 @@ export async function reviewListing(id: string, decision: "approve" | "reject") 
 }
 
 export async function deleteListing(id: string) {
-  await requireAdmin();
-  
-  const { error } = await supabaseAdmin
+  const user = await requirePanelUser();
+  const rowId = await resolveListingRowId(String(id ?? "").trim());
+  if (!rowId) {
+    redirect("/karealfaadmin/ilanlar?delete=notfound");
+  }
+
+  const { data: row, error: fetchErr } = await supabaseAdmin
     .from("listings")
-    .delete()
-    .eq("id", id);
-  
-  if (error) throw new Error(`Delete failed: ${error.message}`);
-  
+    .select("created_by_agent_id, listing_id")
+    .eq("id", rowId)
+    .maybeSingle();
+
+  if (fetchErr || !row) {
+    console.error("[deleteListing] fetch:", fetchErr);
+    redirect("/karealfaadmin/ilanlar?delete=notfound");
+  }
+
+  if (user.role !== "ADMIN") {
+    const ownerId = row.created_by_agent_id != null ? String(row.created_by_agent_id) : null;
+    if (!user.agentId || ownerId !== user.agentId) {
+      redirect("/karealfaadmin/ilanlar?delete=forbidden");
+    }
+  }
+
+  const publicListingId = row.listing_id != null ? String(row.listing_id) : "";
+
+  const { error } = await supabaseAdmin.from("listings").delete().eq("id", rowId);
+
+  if (error) {
+    console.error("[deleteListing]", error);
+    redirect("/karealfaadmin/ilanlar?delete=error");
+  }
+
   revalidatePath("/");
   revalidatePath("/ilanlar");
-  return { ok: true as const };
+  revalidatePath("/karealfaadmin/dashboard");
+  revalidatePath("/karealfaadmin/ilanlar");
+  revalidatePath("/karealfaadmin/onay-bekleyen");
+  if (publicListingId) {
+    revalidatePath(`/ilan/${publicListingId}`);
+    for (const loc of routing.locales) {
+      revalidatePath(`/${loc}/ilan/${publicListingId}`);
+      revalidatePath(`/${loc}/ilanlar`);
+    }
+  }
+
+  redirect("/karealfaadmin/ilanlar");
 }
 
 export async function suggestListingId() {
@@ -1142,6 +1200,14 @@ export async function saveMenuJson(json: string) {
 
 export async function toggleFeatured(listingId: string, featured: boolean) {
   await requireAdmin();
+  const tp = await getPanelTranslations();
+
+  if (featured) {
+    const others = await countPublishedFeaturedExcluding(listingId);
+    if (others >= SHOWCASE_MAX_PUBLISHED_FEATURED) {
+      throw new Error(tp("errors.featuredLimit"));
+    }
+  }
 
   // Read current badges
   const { data: listing, error: readError } = await supabaseAdmin

@@ -363,7 +363,7 @@ export default async function ListingDetailPage({ params }: Props) {
               <div className="mt-6 space-y-2">
                 {consultant.phone ? <ConsultantPhoneCta phone={consultant.phone} showLabel={t("showPhone")} /> : null}
                 <Link
-                  href="/iletisim"
+                  href={`/iletisim?listing=${encodeURIComponent(listing.listingId)}`}
                   className="block w-full rounded-xl bg-surface-high py-3 text-center text-sm font-semibold text-primary ring-1 ring-primary/[0.12] transition hover:bg-surface-highest"
                 >
                   {t("sendMessage")}

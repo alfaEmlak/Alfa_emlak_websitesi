@@ -1,21 +1,25 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { prisma } from "@/lib/prisma";
+import { Link } from "@/i18n/routing";
+import { getPublishedBlogPostBySlug } from "@/lib/blog-public";
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const tc = await getTranslations("Common");
 
-  const post = await prisma.blogPost.findUnique({ where: { slug, status: "PUBLISHED" } });
+  const post = await getPublishedBlogPostBySlug(slug);
   if (!post) notFound();
 
   return (
     <main className="mx-auto max-w-[900px] flex-1 bg-surface px-6 py-16 md:px-8 md:py-24">
       <nav className="font-headline text-xs uppercase tracking-widest text-on-surface/45">
-        <Link href="/" className="hover:text-secondary">{tc("home")}</Link>
+        <Link href="/" className="hover:text-secondary">
+          {tc("home")}
+        </Link>
         <span className="mx-2">/</span>
-        <Link href="/blog" className="hover:text-secondary">{tc("blog")}</Link>
+        <Link href="/blog" className="hover:text-secondary">
+          {tc("blog")}
+        </Link>
         <span className="mx-2">/</span>
         <span className="text-primary line-clamp-1">{post.title}</span>
       </nav>

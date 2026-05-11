@@ -25,6 +25,7 @@ type Message = {
   subject: string | null;
   message: string;
   listingId: string | null;
+  listingTitle: string | null;
   isRead: boolean;
   createdAt: string;
   status: string;
@@ -126,6 +127,14 @@ export function MessageList({ messages: initial }: { messages: Message[] }) {
           <div className="flex items-start justify-between border-b border-(--ghost-outline) p-6">
             <div>
               <h2 className="text-lg font-bold text-(--primary)">{active.name}</h2>
+              {active.listingTitle ? (
+                <p className="mt-2 rounded-lg border border-(--primary)/15 bg-(--primary)/5 px-3 py-2 text-sm font-semibold text-(--primary)">
+                  {active.listingTitle}
+                  {active.listingId ? (
+                    <span className="mt-0.5 block font-mono text-xs font-normal text-(--on-surface)/50">{active.listingId}</span>
+                  ) : null}
+                </p>
+              ) : null}
               {active.subject && (
                 <p className="mt-1 text-sm font-medium text-(--on-surface)/70">{active.subject}</p>
               )}
@@ -211,9 +220,9 @@ export function MessageList({ messages: initial }: { messages: Message[] }) {
               <button
                 onClick={() => handleSaveNotes(active.id)}
                 disabled={isPending}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-(--primary) px-4 py-2 text-xs font-bold text-(--on-primary) transition hover:opacity-90 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-(--primary) px-4 py-2 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
               >
-                <AdminIcon name="save" size={14} />
+                <AdminIcon name="save" size={14} className="text-white" />
                 {isPending ? "Kaydediliyor..." : "Notları Kaydet"}
               </button>
 

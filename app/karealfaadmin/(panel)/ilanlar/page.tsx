@@ -1,10 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
-import { displayListingCity, normalizeListingCitySlug } from "@/lib/listing-city";
+import {
+  displayListingCity,
+  excludeFromAdminListingCityFilter,
+  normalizeListingCitySlug,
+} from "@/lib/listing-city";
 import { getPanelLocale } from "@/lib/panel-locale";
 import { getPanelTranslations } from "@/lib/panel-translations";
 import { requirePanelUser } from "@/lib/panel-auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { DeleteListingButton } from "@/components/admin/DeleteListingButton";
 
 async function fetchDistinctListingCities(consultantAgentId?: string | null): Promise<string[]> {
   const seen = new Set<string>();
@@ -81,9 +86,12 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
   const city = first(sp.city)?.trim();
   const kind = first(sp.kind)?.trim();
   const status = first(sp.status)?.trim();
+  const deleteFlash = first(sp.delete)?.trim();
 
   const consultantAgentId = user.role === "CONSULTANT" && user.agentId ? user.agentId : null;
-  const cityOptions = await fetchDistinctListingCities(consultantAgentId);
+  const cityOptions = (await fetchDistinctListingCities(consultantAgentId)).filter(
+    (c) => !excludeFromAdminListingCityFilter(c),
+  );
 
   let query = supabaseAdmin.from("listings").select("*, listing_images(*)");
 
@@ -184,6 +192,60 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
         </button>
       </form>
 
+      {deleteFlash === "forbidden" ? (
+        <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{t("listings.deleteForbidden")}</p>
+      ) : null}
+      {deleteFlash === "notfound" ? (
+        <p className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700">{t("listings.deleteNotFound")}</p>
+      ) : null}
+      {deleteFlash === "error" ? (
+        <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">{t("listings.deleteError")}</p>
+      ) : null}
+
+      <div className="mt-6 space-y-3 lg:hidden">
+        {listings.length === 0 ? (
+          <p className="rounded-2xl border border-zinc-200 bg-white px-4 py-8 text-center text-sm text-zinc-400">{t("listings.empty")}</p>
+        ) : (
+          listings.map((listing) => {
+            const img = getCoverImage(listing);
+            const isRemote = img.startsWith("http");
+            return (
+              <div key={listing.id} className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+                <div className="flex gap-3">
+                  <div className="relative h-16 w-20 shrink-0 overflow-hidden rounded-lg bg-zinc-100 ring-1 ring-zinc-200">
+                    <Image src={img} alt="" fill className="object-cover" sizes="80px" unoptimized={isRemote} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-mono text-xs text-zinc-500">{listing.listing_id}</p>
+                    <p className="mt-0.5 font-semibold text-zinc-900">{listing.title}</p>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      {displayListingCity(listing.city)} / {listing.region}
+                    </p>
+                    <p className="mt-1 tabular-nums text-sm font-medium text-zinc-800">
+                      {formatMoney(Number(listing.price ?? 0), listing.currency, locale)}
+                    </p>
+                    <span className="mt-2 inline-flex rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700">
+                      {publishLabel(listing.publish_status)}
+                    </span>
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-zinc-100 pt-3">
+                  <Link href={`/karealfaadmin/ilanlar/${listing.id}/duzenle`} className="text-sm font-semibold text-emerald-600 hover:underline">
+                    {t("common.edit")}
+                  </Link>
+                  <DeleteListingButton
+                    listingId={listing.id}
+                    label={t("listings.btnDelete")}
+                    confirmMessage={t("listings.deleteConfirm")}
+                    pendingLabel={t("common.loading")}
+                  />
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
       <div className="mt-6 hidden overflow-auto rounded-2xl border border-zinc-200 bg-white lg:block">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase tracking-wide text-zinc-500">
@@ -231,9 +293,17 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
                       </span>
                     </td>
                     <td className="px-3 py-2 text-right">
-                      <Link href={`/karealfaadmin/ilanlar/${listing.id}/duzenle`} className="font-semibold text-emerald-600 hover:underline">
-                        {t("common.edit")}
-                      </Link>
+                      <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1">
+                        <Link href={`/karealfaadmin/ilanlar/${listing.id}/duzenle`} className="font-semibold text-emerald-600 hover:underline">
+                          {t("common.edit")}
+                        </Link>
+                        <DeleteListingButton
+                          listingId={listing.id}
+                          label={t("listings.btnDelete")}
+                          confirmMessage={t("listings.deleteConfirm")}
+                          pendingLabel={t("common.loading")}
+                        />
+                      </div>
                     </td>
                   </tr>
                 );

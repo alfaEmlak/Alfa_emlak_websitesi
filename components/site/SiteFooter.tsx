@@ -2,11 +2,18 @@
 
 import Image from "next/image";
 import { Link } from "@/i18n/routing";
-import type { SiteSettings } from "@prisma/client";
 import { useTranslations } from "next-intl";
 import footerLogo from "@/alfaemlaklogov1-removebg-preview.png";
+import type { SocialLinks } from "@/lib/site-settings";
+import { SocialLinksBar } from "@/components/site/SocialLinksBar";
 
-export function SiteFooter({ settings }: { settings: SiteSettings }) {
+type FooterSettings = {
+  siteName?: string | null;
+  address?: string | null;
+  phone?: string | null;
+};
+
+export function SiteFooter({ settings, social }: { settings: FooterSettings; social: SocialLinks }) {
   const t = useTranslations("Common");
   const year = new Date().getFullYear();
 
@@ -46,6 +53,9 @@ export function SiteFooter({ settings }: { settings: SiteSettings }) {
           © {year} {settings.siteName}. {t("allRightsReserved")}.
         </p>
       </div>
+
+      <SocialLinksBar social={social} title={t("socialTitle")} className="mx-auto mt-8 max-w-[1440px] px-4 sm:px-6 md:px-8" />
+
       {settings.address || settings.phone ? (
         <div className="mx-auto mt-6 max-w-[1440px] border-t border-slate-100/80 px-4 pt-6 text-center sm:mt-8 sm:px-6 sm:pt-8 md:px-8 md:text-left">
           <div className="flex flex-col gap-3 text-sm text-on-surface/50 md:flex-row md:flex-wrap md:justify-center md:gap-8">

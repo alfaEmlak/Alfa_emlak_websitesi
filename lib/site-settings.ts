@@ -87,8 +87,26 @@ export async function getMegaMenu(): Promise<MenuTopItem[]> {
   return parseMenuJson(row.menu_json);
 }
 
-export function getSocialLinks(row: { social_json: string | null }): SocialLinks {
-  return parseJson<SocialLinks>(row.social_json, {});
+export function getSocialLinks(row: { social_json: string | Record<string, unknown> | null }): SocialLinks {
+  const raw = row.social_json;
+  if (raw == null) return {};
+  if (typeof raw === "object" && !Array.isArray(raw)) {
+    return raw as SocialLinks;
+  }
+  if (typeof raw === "string") {
+    return parseJson<SocialLinks>(raw, {});
+  }
+  return {};
+}
+
+/** SocialLinksBar ile aynı filtre: gösterilecek en az bir URL var mı */
+export function hasVisibleSocialLinks(social: SocialLinks): boolean {
+  return Boolean(
+    social.facebook?.trim() ||
+      social.instagram?.trim() ||
+      social.linkedin?.trim() ||
+      social.youtube?.trim(),
+  );
 }
 
 export function getDefaultConsultant(

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AdminIcon, type AdminIconName } from "@/components/admin/AdminIcon";
 import { getPanelTranslations } from "@/lib/panel-translations";
 import { getPanelLocale } from "@/lib/panel-locale";
+import { countTruePendingApprovalBadge, isTruePendingApprovalRow } from "@/lib/panel-pending-approval-count";
 import { requirePanelUser } from "@/lib/panel-auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -14,6 +15,7 @@ type DashboardRow = {
   currency: string;
   updated_at?: string;
   created_by_name?: string | null;
+  detail_fields?: unknown;
 };
 
 const APPROVAL_STATUSES = ["PENDING_APPROVAL", "HIDDEN"] as const;
@@ -66,21 +68,33 @@ export default async function AdminDashboardPage() {
     return query;
   };
 
+  const pendingBadgeAgent =
+    user.role === "CONSULTANT" ? user.agentId ?? undefined : undefined;
+
   const [
     { count: total },
     { count: published },
     { count: drafts },
-    { count: pendingApproval },
+    truePendingCount,
     recentRows,
-    pendingRows,
+    pendingRowsRaw,
   ] = await Promise.all([
     listingsCountSource(),
     listingsCountSource().eq("publish_status", "PUBLISHED"),
     listingsCountSource().eq("publish_status", "DRAFT"),
-    listingsCountSource().in("publish_status", [...APPROVAL_STATUSES]),
+    user.role === "CONSULTANT" && !user.agentId
+      ? Promise.resolve(0)
+      : countTruePendingApprovalBadge(pendingBadgeAgent),
     selectDashboardRows(user, "id, listing_id, title, publish_status, price, currency, created_by_name, updated_at", 6),
-    selectDashboardRows(user, "id, listing_id, title, publish_status, created_by_name, updated_at", 5, APPROVAL_STATUSES),
+    selectDashboardRows(
+      user,
+      "id, listing_id, title, publish_status, created_by_name, updated_at, detail_fields",
+      24,
+      APPROVAL_STATUSES,
+    ),
   ]);
+
+  const pendingRows = (pendingRowsRaw as DashboardRow[]).filter((r) => isTruePendingApprovalRow(r)).slice(0, 5);
 
   const cards: Array<{ label: string; value: number; icon: AdminIconName; color: string; bg: string }> = [
     { label: t("dashboard.cardTotal"), value: total || 0, icon: "apartment", color: "text-blue-600", bg: "bg-blue-50" },
@@ -88,7 +102,7 @@ export default async function AdminDashboardPage() {
     { label: t("dashboard.cardDraft"), value: drafts || 0, icon: "edit_note", color: "text-amber-600", bg: "bg-amber-50" },
     {
       label: user.role === "ADMIN" ? t("dashboard.cardPendingAdmin") : t("dashboard.cardPendingConsultant"),
-      value: pendingApproval || 0,
+      value: truePendingCount || 0,
       icon: "warning",
       color: "text-fuchsia-600",
       bg: "bg-fuchsia-50",

@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { AI_LEAD_TRANSCRIPT_MARKER } from "@/lib/ai-forms-checkpoint";
 import type { PropertyPreferences } from "@/lib/ai/types";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^(?:\+90|0)?5\d{9}$|^\+[1-9]\d{7,14}$/;
+
+type TranscriptLine = { role: string; content: string };
 
 type LeadPayload = {
   name?: string;
@@ -13,6 +17,8 @@ type LeadPayload = {
   conversationSummary?: string;
   propertyPreferences?: PropertyPreferences;
   recommendedListingIds?: string[];
+  /** Kullanıcı + asistan mesajları (kısaltılmış dizi) */
+  conversationTranscript?: TranscriptLine[];
 };
 
 export async function POST(req: Request) {
@@ -28,6 +34,16 @@ export async function POST(req: Request) {
     const recommendedListingIds = Array.isArray(body.recommendedListingIds)
       ? body.recommendedListingIds.filter((x): x is string => typeof x === "string" && x.trim().length > 0)
       : [];
+
+    const transcriptLines: TranscriptLine[] = Array.isArray(body.conversationTranscript)
+      ? body.conversationTranscript
+          .filter(
+            (x): x is TranscriptLine =>
+              !!x && typeof x === "object" && typeof x.role === "string" && typeof x.content === "string",
+          )
+          .slice(-120)
+      : [];
+    const chatTranscriptJson = transcriptLines.length > 0 ? JSON.stringify(transcriptLines) : null;
 
     if (name.length < 2) return NextResponse.json({ success: false, error: "Ad alanı zorunludur." }, { status: 400 });
     if (surname.length < 2) return NextResponse.json({ success: false, error: "Soyad alanı zorunludur." }, { status: 400 });
@@ -57,6 +73,19 @@ export async function POST(req: Request) {
         2,
       )}`;
 
+    const contactMessageBody =
+      chatTranscriptJson != null
+        ? `${summaryText || ""}${AI_LEAD_TRANSCRIPT_MARKER}${chatTranscriptJson}`
+        : summaryText || "(Özet yok)";
+
+    function revalidateAdminAiForms() {
+      try {
+        revalidatePath("/karealfaadmin");
+      } catch {
+        /* build ortamında cache yoksa sorun değil */
+      }
+    }
+
     const { data, error } = await supabaseAdmin
       .from("ai_customer_forms")
       .insert({
@@ -68,6 +97,7 @@ export async function POST(req: Request) {
         desired_home_summary: summaryText || null,
         property_preferences: propertyPreferences,
         conversation_summary: summaryText || null,
+        chat_transcript: chatTranscriptJson,
         matched_listing_ids: recommendedListingIds,
         recommended_listing_ids: recommendedListingIds,
         status: "new",
@@ -85,6 +115,7 @@ export async function POST(req: Request) {
           phone,
           email,
           desired_home_summary: summaryText || null,
+          chat_transcript: chatTranscriptJson,
           matched_listing_ids: recommendedListingIds,
           source: "ai_assistant",
         })
@@ -100,7 +131,7 @@ export async function POST(req: Request) {
             email,
             phone,
             subject: "AI_LEAD",
-            message: summaryText,
+            message: contactMessageBody,
             listing_id: recommendedListingIds.length > 0 ? recommendedListingIds.join(",") : null,
           })
           .select("id")
@@ -110,6 +141,7 @@ export async function POST(req: Request) {
           return NextResponse.json({ success: false, error: "Bilgiler kaydedilirken bir sorun oluştu." }, { status: 500 });
         }
 
+        revalidateAdminAiForms();
         return NextResponse.json({
           success: true,
           leadId: contactData?.id || null,
@@ -117,6 +149,7 @@ export async function POST(req: Request) {
         });
       }
 
+      revalidateAdminAiForms();
       return NextResponse.json({
         success: true,
         leadId: fallback.data?.id || null,
@@ -124,6 +157,7 @@ export async function POST(req: Request) {
       });
     }
 
+    revalidateAdminAiForms();
     return NextResponse.json({
       success: true,
       leadId: data?.id || null,

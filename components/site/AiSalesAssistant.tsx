@@ -66,6 +66,8 @@ export function AiSalesAssistant({ locale }: { locale: string }) {
     consent: false,
   });
   const [summary, setSummary] = useState("");
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
 
   const desiredHomeSummary = useMemo(() => {
     const userLines = messages
@@ -149,6 +151,7 @@ export function AiSalesAssistant({ locale }: { locale: string }) {
         conversationSummary: summary || desiredHomeSummary,
         propertyPreferences: preferences,
         recommendedListingIds: listings.map((l) => l.listingId),
+        conversationTranscript: messagesRef.current.slice(-120).map((m) => ({ role: m.role, content: m.content })),
       };
       const res = await fetch("/api/ai/leads", {
         method: "POST",

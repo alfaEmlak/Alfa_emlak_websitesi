@@ -98,6 +98,7 @@ export type Database = {
           subject: string | null
           message: string
           listing_id: string | null
+          agent_id: string | null
           is_read: boolean
           created_at: string
         }

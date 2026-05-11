@@ -80,6 +80,14 @@ export function expandListingCityFilterValues(slugOrRaw: string): string[] {
   return Array.from(new Set([canonical, base, label].filter((x): x is string => Boolean(x?.trim()))));
 }
 
+/**
+ * Admin ilan listesi şehir filtresinde gösterilmeyecek değerler (ör. bölgenin şehir alanına yanlış yazılması).
+ */
+export function excludeFromAdminListingCityFilter(raw: string | null | undefined): boolean {
+  if (raw == null || !String(raw).trim()) return false;
+  return foldCityKey(String(raw)) === foldCityKey("Bahçeler");
+}
+
 /** Arayüz / kart metni — slug veya ham DB değeri → Türkçe şehir adı (mümkünse). */
 export function displayListingCity(raw: string | null | undefined): string {
   const trimmed = raw?.trim() ?? "";

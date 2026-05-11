@@ -1,4 +1,5 @@
 import { displayListingCity } from "@/lib/listing-city";
+import { SHOWCASE_MAX_PUBLISHED_FEATURED } from "@/lib/showcase-featured";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { AdminIcon } from "@/components/admin/AdminIcon";
 import { requireAdmin } from "@/lib/panel-auth";
@@ -44,7 +45,8 @@ export default async function VitrinPage() {
         </span>
       </div>
       <p className="mt-1 text-sm text-(--on-surface)/55">
-        Ana sayfada öne çıkacak ilanları buradan seçin. Yıldız açık olan ilanlar vitrine çıkar.
+        Ana sayfada öne çıkacak ilanları buradan seçin. Yıldız açık olan ilanlar vitrine çıkar. Yayında en fazla{" "}
+        {SHOWCASE_MAX_PUBLISHED_FEATURED} ilan vitrinde tutulabilir.
       </p>
 
       {items.length === 0 ? (

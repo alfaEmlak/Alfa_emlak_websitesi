@@ -1,9 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { submitContactMessage } from "@/app/karealfaadmin/module-actions";
 
-export function ContactForm({ labels }: {
+export function ContactForm({
+  labels,
+  listingContext,
+  listingDetailHref,
+  defaultSubject,
+}: {
+  listingContext?: { listingId: string; title: string } | null;
+  listingDetailHref?: string | null;
+  defaultSubject?: string;
   labels: {
     formTitle: string;
     formSubtitle: string;
@@ -17,11 +25,19 @@ export function ContactForm({ labels }: {
     errorMessage: string;
     validationNamePhone: string;
     sending: string;
+    listingContextBadge: string;
+    viewListing: string;
   };
 }) {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [errorKind, setErrorKind] = useState<"validation" | "generic" | null>(null);
   const [form, setForm] = useState({ name: "", email: "", phone: "", subject: "", message: "" });
+
+  useEffect(() => {
+    if (defaultSubject) {
+      setForm((f) => ({ ...f, subject: defaultSubject }));
+    }
+  }, [defaultSubject]);
 
   function set(key: keyof typeof form, value: string) {
     setForm((p) => ({ ...p, [key]: value }));
@@ -41,7 +57,12 @@ export function ContactForm({ labels }: {
     }
     setStatus("sending");
     try {
-      const res = await submitContactMessage({ ...form, name, message: msg });
+      const res = await submitContactMessage({
+        ...form,
+        name,
+        message: msg,
+        listingId: listingContext?.listingId,
+      });
       if (!res.ok) {
         setErrorKind("validation");
         setStatus("error");
@@ -80,6 +101,18 @@ export function ContactForm({ labels }: {
 
   return (
     <form noValidate onSubmit={handleSubmit} className="rounded-2xl bg-surface-lowest p-8 shadow-[var(--shadow-ambient)] ring-1 ring-primary/[0.12]">
+      {listingContext ? (
+        <div className="mb-6 rounded-2xl border border-secondary/25 bg-secondary/5 p-4 ring-1 ring-secondary/10">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-secondary">{labels.listingContextBadge}</p>
+          <p className="mt-2 font-headline text-lg font-semibold leading-snug text-primary">{listingContext.title}</p>
+          <p className="mt-1 font-mono text-xs text-on-surface/45">{listingContext.listingId}</p>
+          {listingDetailHref ? (
+            <a href={listingDetailHref} className="mt-3 inline-flex text-sm font-semibold text-secondary underline-offset-2 hover:underline">
+              {labels.viewListing}
+            </a>
+          ) : null}
+        </div>
+      ) : null}
       <p className="font-headline text-lg font-bold text-primary">{labels.formTitle}</p>
       <p className="mt-2 text-sm leading-relaxed text-on-surface/50">{labels.formSubtitle}</p>
       <div className="mt-6 space-y-4">
