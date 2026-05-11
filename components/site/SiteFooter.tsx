@@ -64,7 +64,6 @@ export function SiteFooter({ settings, social }: { settings: FooterSettings; soc
     social.youtube && { label: "YouTube", href: normalizeUrl(social.youtube), external: true },
     social.linkedin && { label: "LinkedIn", href: normalizeUrl(social.linkedin), external: true },
     social.x && { label: "X (Twitter)", href: normalizeUrl(social.x), external: true },
-    social.tiktok && { label: "TikTok", href: normalizeUrl(social.tiktok), external: true },
   ].filter(Boolean) as ColLink[];
 
   return (
