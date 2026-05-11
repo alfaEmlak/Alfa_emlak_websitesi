@@ -43,7 +43,7 @@ export default async function AboutPage() {
           {t("ctaButton")}
         </Link>
 
-        <section className="mt-20 border-t border-primary/10 pt-16">
+        <section id="sss" className="mt-20 scroll-mt-24 border-t border-primary/10 pt-16">
           <h2 className="font-headline text-2xl font-extrabold tracking-tight text-primary md:text-3xl">{t("faqTitle")}</h2>
           <div className="mt-10 space-y-3">
             {FAQ_IDS.map((id) => (

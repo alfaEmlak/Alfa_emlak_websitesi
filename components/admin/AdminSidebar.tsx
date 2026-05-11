@@ -41,6 +41,13 @@ const navGroups: NavGroup[] = [
         match: "exact",
         adminOnly: true,
       },
+      {
+        href: "/karealfaadmin/feed-durum",
+        labelKey: "nav.feedStatus",
+        icon: "analytics",
+        match: "prefix",
+        adminOnly: true,
+      },
     ],
   },
   {

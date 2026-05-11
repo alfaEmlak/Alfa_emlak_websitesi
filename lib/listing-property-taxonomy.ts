@@ -25,7 +25,7 @@ export const LISTING_SUBTYPE_MAP: Record<ListingCategoryKey, readonly string[]> 
     "metrukBina",
     "yarimInsaat",
   ],
-  arsa: ["konutImarli", "ticariImarli", "tarla", "bagBahce", "sanayiArsasi"],
+  arsa: ["konutImarli", "ticariImarli", "tarla", "sanayiArsasi", "bagBahce"],
   ticari: ["ofis", "dukkan", "magaza", "otel", "restoran", "depo", "fabrika"],
   proje: ["devamEden", "tamamlanmis"],
 };

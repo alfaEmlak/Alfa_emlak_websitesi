@@ -31,9 +31,9 @@ const TAB_ACCENTS: Record<
       "bg-blue-600 shadow-lg shadow-blue-600/30 hover:opacity-90 focus-visible:ring-blue-500/45",
   },
   KIRALIK: {
-    tabActive: "bg-violet-600 shadow-lg shadow-violet-900/25",
+    tabActive: "bg-red-600 shadow-lg shadow-red-900/25",
     submit:
-      "bg-violet-600 shadow-lg shadow-violet-600/30 hover:opacity-90 focus-visible:ring-violet-500/45",
+      "bg-red-600 shadow-lg shadow-red-600/30 hover:opacity-90 focus-visible:ring-red-500/45",
   },
   GUNLUK: {
     tabActive: "bg-emerald-600 shadow-lg shadow-emerald-900/20",
@@ -163,13 +163,28 @@ export function HeroSearch({ variant = "light" }: { variant?: "light" | "overlay
   const [m2Min, setM2Min] = useState("");
   const [m2Max, setM2Max] = useState("");
 
+  const allowedCategoriesByTab: Record<TabId, string[]> = {
+    SATILIK: ["konut", "arsa", "ticari", "proje"],
+    PROJE: ["proje"],
+    KIRALIK: ["konut", "arsa", "ticari"],
+    GUNLUK: ["konut", "proje"],
+  };
+  const allowed = allowedCategoriesByTab[tab];
   const categories: Option[] = [
     { v: "", l: t("selectCategory") },
-    { v: "konut", l: t("catKonut") },
-    { v: "arsa", l: t("catArsa") },
-    { v: "ticari", l: t("catTicari") },
-    { v: "proje", l: t("catProje") },
+    ...(allowed.includes("konut") ? [{ v: "konut", l: t("catKonut") }] : []),
+    ...(allowed.includes("arsa") ? [{ v: "arsa", l: t("catArsa") }] : []),
+    ...(allowed.includes("ticari") ? [{ v: "ticari", l: t("catTicari") }] : []),
+    ...(allowed.includes("proje") ? [{ v: "proje", l: t("catProje") }] : []),
   ];
+
+  useEffect(() => {
+    if (kategori && !allowedCategoriesByTab[tab].includes(kategori)) {
+      setKategori("");
+      setEmlakTipi("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
 
   const emlakTipiOptions: Option[] = kategori
     ? [

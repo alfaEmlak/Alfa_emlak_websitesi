@@ -155,27 +155,11 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
                   </Link>
                 </div>
               ) : null}
-              {dahaFazla ? (
-                <div className="relative" onMouseEnter={() => {
-                  cancelDesktopClose();
-                  setDesktopOpenId("daha-fazla");
-                }}>
-                  <button type="button" className={`${navItemClass(false)} cursor-default bg-transparent`}>
-                    {t("more")}
-                  </button>
-                </div>
-              ) : null}
               <Link href="/ilanlar" className={navItemClass(active === "ilanlar")} onMouseEnter={() => {
                 cancelDesktopClose();
                 setDesktopOpenId(null);
               }}>
                 {t("allListings")}
-              </Link>
-              <Link href="/hakkimizda" className={navItemClass(active === "hakkimizda")} onMouseEnter={() => {
-                cancelDesktopClose();
-                setDesktopOpenId(null);
-              }}>
-                {t("aboutUs")}
               </Link>
               <button
                 type="button"
@@ -188,6 +172,16 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
               >
                 {t("career")}
               </button>
+              {dahaFazla ? (
+                <div className="relative" onMouseEnter={() => {
+                  cancelDesktopClose();
+                  setDesktopOpenId("daha-fazla");
+                }}>
+                  <button type="button" className={`${navItemClass(false)} cursor-default bg-transparent`}>
+                    {t("more")}
+                  </button>
+                </div>
+              ) : null}
               </div>
               {desktopActiveMega ? (
                 <MegaPanel item={desktopActiveMega} onMouseEnter={cancelDesktopClose} onMouseLeave={scheduleDesktopClose} />
@@ -404,6 +398,12 @@ function SiteHeaderFallback({ menu, siteName }: { menu: MenuTopItem[]; siteName:
                   </Link>
                 </div>
               ) : null}
+              <Link href="/ilanlar" className={navItemClass(false)} onMouseEnter={() => {
+                cancelDesktopClose();
+                setDesktopOpenId(null);
+              }}>
+                Tüm İlanlar
+              </Link>
               {dahaFazla ? (
                 <div className="relative" onMouseEnter={() => {
                   cancelDesktopClose();
@@ -414,18 +414,6 @@ function SiteHeaderFallback({ menu, siteName }: { menu: MenuTopItem[]; siteName:
                   </button>
                 </div>
               ) : null}
-              <Link href="/ilanlar" className={navItemClass(false)} onMouseEnter={() => {
-                cancelDesktopClose();
-                setDesktopOpenId(null);
-              }}>
-                Tüm İlanlar
-              </Link>
-              <Link href="/hakkimizda" className={navItemClass(false)} onMouseEnter={() => {
-                cancelDesktopClose();
-                setDesktopOpenId(null);
-              }}>
-                Hakkımızda
-              </Link>
               </div>
               {desktopActiveMega ? (
                 <MegaPanel item={desktopActiveMega} onMouseEnter={cancelDesktopClose} onMouseLeave={scheduleDesktopClose} />

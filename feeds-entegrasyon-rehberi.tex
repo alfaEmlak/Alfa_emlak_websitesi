@@ -1,0 +1,363 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[turkish]{babel}
+\usepackage[a4paper,margin=2.4cm]{geometry}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{tcolorbox}
+\usepackage{titling}
+\usepackage{titlesec}
+\usepackage{parskip}
+
+% Renkler
+\definecolor{brand}{HTML}{1E3A8A}
+\definecolor{brandAcc}{HTML}{F97316}
+\definecolor{soft}{HTML}{F8FAFC}
+\definecolor{warn}{HTML}{B45309}
+\definecolor{ok}{HTML}{047857}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=brand,
+  urlcolor=brand,
+  pdftitle={Alfa Emlak — 101evler ve hangiev XML Entegrasyon Rehberi},
+  pdfauthor={Alfa Emlak}
+}
+
+\titleformat{\section}{\Large\bfseries\color{brand}}{\thesection.}{0.6em}{}
+\titleformat{\subsection}{\large\bfseries\color{brand}}{\thesubsection.}{0.6em}{}
+
+\lstdefinestyle{xmlstyle}{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{soft},
+  frame=single,
+  rulecolor=\color{black!10},
+  framerule=0.4pt,
+  breaklines=true,
+  showstringspaces=false,
+  literate={ş}{{\c s}}1 {ğ}{{\u g}}1 {ı}{{\i}}1 {İ}{{\.I}}1 {Ş}{{\c S}}1 {Ğ}{{\u G}}1 {ç}{{\c c}}1 {Ç}{{\c C}}1 {ö}{{\"o}}1 {Ö}{{\"O}}1 {ü}{{\"u}}1 {Ü}{{\"U}}1
+}
+
+\newtcolorbox{infobox}[1][]{
+  colback=soft, colframe=brand, boxrule=0.5pt, arc=2pt,
+  left=8pt, right=8pt, top=6pt, bottom=6pt,
+  fonttitle=\bfseries\color{white},
+  coltitle=white, colbacktitle=brand,
+  title=#1
+}
+
+\newtcolorbox{warnbox}[1][]{
+  colback=yellow!8, colframe=warn, boxrule=0.5pt, arc=2pt,
+  left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title=#1, coltitle=white, colbacktitle=warn,
+  fonttitle=\bfseries
+}
+
+\newtcolorbox{okbox}[1][]{
+  colback=green!5, colframe=ok, boxrule=0.5pt, arc=2pt,
+  left=8pt, right=8pt, top=6pt, bottom=6pt,
+  title=#1, coltitle=white, colbacktitle=ok,
+  fonttitle=\bfseries
+}
+
+\title{\vspace{-1cm}\Huge\color{brand}\textbf{Alfa Emlak}\\[4pt]\Large\color{black}\normalfont XML İlan Aktarımı — Entegrasyon Rehberi}
+\author{\normalfont\large 101evler ve hangiev portalları için teknik dokümantasyon}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+
+\vspace{-0.5cm}
+
+\begin{infobox}[Site Bilgisi]
+\textbf{Site adresi:} \url{https://alfa-emlak-websitesi.onrender.com/tr} \\
+\textbf{Doküman amacı:} Alfa Emlak portföyündeki ilanların 101evler ve hangiev platformlarına XML feed üzerinden otomatik aktarımının nasıl yapılacağını anlatmaktır. \\
+\textbf{Hedef kitle:} 101evler ve hangiev teknik / entegrasyon ekipleri.
+\end{infobox}
+
+\tableofcontents
+\vspace{0.5cm}
+\hrule
+\vspace{0.5cm}
+
+% ============================================================
+\section{Genel Bakış}
+
+Alfa Emlak; web sitesinde yayında olan tüm ilanları, her iki portala özel XML uç noktaları (\textbf{feed endpoint}) üzerinden \textbf{anlık} olarak sunar. Portal tarafının yapması gereken yalnızca aşağıda belirtilen URL'leri belirli bir aralıkla (önerilen: 15--30 dakika) çağırıp dönen XML çıktısını işlemektir. Veri tabanı erişimi, FTP, e-posta veya manuel yükleme gerekmez.
+
+\begin{itemize}[leftmargin=*]
+\item \textbf{Format:} XML (UTF-8 kodlamalı)
+\item \textbf{Yöntem:} HTTPS GET
+\item \textbf{Kimlik doğrulama:} Sorgu parametresi olarak verilen statik \textbf{token}
+\item \textbf{Önbellek:} 5 dakika (sunucu tarafı). Bu süre boyunca cevap aynı kalır.
+\item \textbf{Diller:} Başlık ve açıklamalar TR/EN/RU/DE/FA olarak çoklu dilde gönderilir.
+\end{itemize}
+
+% ============================================================
+\section{Feed Adresleri}
+
+\subsection{101evler için}
+
+\begin{lstlisting}[style=xmlstyle]
+GET https://alfa-emlak-websitesi.onrender.com/api/feeds/101evler.xml?token=<TOKEN>
+\end{lstlisting}
+
+\subsection{hangiev için}
+
+\begin{lstlisting}[style=xmlstyle]
+GET https://alfa-emlak-websitesi.onrender.com/api/feeds/hangiev.xml?token=<TOKEN>
+\end{lstlisting}
+
+\begin{warnbox}[TOKEN değerleri]
+Her iki uç nokta için tarafınıza \textbf{özel olarak iletilecek} statik bir token kullanılır. Bu token gizli tutulmalıdır; üçüncü kişilerle paylaşılmamalıdır. Talep üzerine değiştirilebilir.
+
+\smallskip
+\textbf{Yanlış / eksik token:} \texttt{HTTP 401 Unauthorized} \\
+\textbf{Token sunucuda tanımlı değil:} \texttt{HTTP 500} (operasyon tarafına bildirin)
+\end{warnbox}
+
+% ============================================================
+\section{İstemci Tarafının Yapması Gerekenler}
+
+\begin{enumerate}[leftmargin=*]
+\item Yukarıdaki URL'ye, tarafınıza özel \texttt{token} parametresi ile HTTPS GET isteği atın.
+\item Cevap \texttt{Content-Type: application/xml; charset=utf-8} olarak gelir.
+\item Kök etiket \textbf{101evler için} \texttt{<ads>}, \textbf{hangiev için} \texttt{<listings>}'tir. Her ilan kök etiketin altında ayrı bir \texttt{<ad>} (101evler) veya \texttt{<listing>} (hangiev) çocuğu olarak bulunur.
+\item İlanın benzersiz kimliği olarak \texttt{ad\_key} / \texttt{listing\_id} alanını kullanın. Aynı kimlikle tekrar gelen bir ilan \textbf{güncelleme} olarak değerlendirilmelidir; yeni kayıt açılmamalıdır.
+\item Bir önceki feed çekiminizde gelmiş ancak güncel çekimde \textbf{bulunmayan} ilanlar; sitemizde yayından kaldırılmış veya silinmiş demektir. Portal tarafında bunları da kaldırmanız beklenir.
+\item Önerilen çağrı sıklığı: \textbf{15 ila 30 dakikada bir}. Daha sık çağrılar, sunucu önbelleği nedeniyle aynı içeriği döndürür ve avantaj sağlamaz.
+\end{enumerate}
+
+\begin{okbox}[Tavsiye — Hata yönetimi]
+HTTP 200 dışı yanıtlarda mevcut portföyü silmeyin; bir sonraki başarılı çekimi bekleyin. Bu yaklaşım, geçici ağ/servis problemlerinde ilan kaybını önler.
+\end{okbox}
+
+% ============================================================
+\section{XML Yapısı — Genel Çerçeve}
+
+\subsection{101evler örnek çıktı}
+
+\begin{lstlisting}[style=xmlstyle]
+<?xml version="1.0" encoding="UTF-8"?>
+<ads>
+  <ad>
+    <lastupdate>2026-05-12 14:21:00</lastupdate>
+    <type_id>...</type_id>
+    <first_realtor_id>...</first_realtor_id>
+    <second_realtor_id>...</second_realtor_id>
+    <area_id>...</area_id>
+    <reference_no>AE-2026-12345</reference_no>
+    <title_type_id>...</title_type_id>
+    <sale_or_rent>S</sale_or_rent>     <!-- S: Satilik, R: Kiralik -->
+    <ad_title_tr>...</ad_title_tr>
+    <ad_title_en>...</ad_title_en>
+    <ad_description_tr>...</ad_description_tr>
+    <price>185000</price>
+    <price_for>T</price_for>           <!-- T: Toplam, M: Aylik vb. -->
+    <currency>602</currency>           <!-- 601=TRY, 602=USD, 603=EUR, 604=GBP -->
+    <room_count_id>...</room_count_id>
+    <is_new>N</is_new>
+    <bedroom_count>3</bedroom_count>
+    <bathroom_count>2</bathroom_count>
+    <floor>2</floor>
+    <total_area>120</total_area>
+    <build_age_id>...</build_age_id>
+    <furnishing_id>...</furnishing_id>
+    <map_available>1</map_available>
+    <lat>35.1856</lat>
+    <lng>33.3823</lng>
+    <ad_key>123e4567-e89b-12d3-a456-426614174000</ad_key>
+    <url>https://alfa-emlak-websitesi.onrender.com/tr/ilan/AE-2026-12345</url>
+    <ad_specs>...</ad_specs>
+    <ad_pictures>
+      <ad_picture>
+        <url>https://.../image1.jpg</url>
+        <sort_order>0</sort_order>
+      </ad_picture>
+      ...
+    </ad_pictures>
+  </ad>
+</ads>
+\end{lstlisting}
+
+\subsection{hangiev örnek çıktı}
+
+\begin{lstlisting}[style=xmlstyle]
+<?xml version="1.0" encoding="UTF-8"?>
+<listings>
+  <listing>
+    <portal_id>...</portal_id>
+    <agent_id>...</agent_id>
+    <office_id>...</office_id>
+    <listing_id>AE-2026-12345</listing_id>
+    <last_update>2026-05-12 14:21:00</last_update>
+    <listing_status>active</listing_status>
+    <sale_or_rent>sale</sale_or_rent>  <!-- sale | rent -->
+    <title_tr>...</title_tr>
+    <description_tr>...</description_tr>
+    <price>185000</price>
+    <currency>EUR</currency>           <!-- TRY | USD | EUR | GBP -->
+    <property_type>apartment</property_type>
+    <rooms>3+1</rooms>
+    <area>120</area>
+    <bedrooms>3</bedrooms>
+    <bathrooms>2</bathrooms>
+    <floor>2</floor>
+    <lat>35.1856</lat>
+    <lng>33.3823</lng>
+    <url>https://alfa-emlak-websitesi.onrender.com/tr/ilan/AE-2026-12345</url>
+    <photos>
+      <photo>https://.../image1.jpg</photo>
+      ...
+    </photos>
+  </listing>
+</listings>
+\end{lstlisting}
+
+\begin{infobox}[Tam alan listesi]
+Yukarıdaki örnekler kısaltılmıştır. Üretilen XML; tüm fotoğraflar, özellik etiketleri (\texttt{ad\_specs} / \texttt{features}), referans numarası, koordinatlar, çoklu dil başlık ve açıklamalarını içerir. \textbf{Lütfen entegrasyona başlamadan önce gerçek bir çıktı örneği talep edin}; tarafınıza canlı XML örneği iletilecektir.
+\end{infobox}
+
+% ============================================================
+\section{Desteklenen Para Birimleri}
+
+\begin{tabular}{lll}
+\textbf{Para birimi} & \textbf{101evler kodu} & \textbf{hangiev kodu} \\
+Türk Lirası & 601 & TRY \\
+ABD Doları & 602 & USD \\
+Avro & 603 & EUR \\
+İngiliz Sterlini & 604 & GBP \\
+\end{tabular}
+
+\begin{warnbox}[101evler için önemli]
+101evler tarafında \textbf{EUR (603)} ve \textbf{GBP (604)} kodları, resmi dokümantasyonda belirtilmediği için bizim tarafımızda \textbf{sıralı olarak atanmıştır}. Bu kodların 101evler sisteminde doğru karşılığa sahip olduğunu lütfen teyit ediniz; gerekirse doğru kodları tarafımıza iletin, hızla güncelleyelim.
+\end{warnbox}
+
+% ============================================================
+\section{Filtreleme ve Atlama Kuralları}
+
+Site veritabanındaki her ilan otomatik olarak feed'e dahil edilmez. Yalnızca aşağıdaki koşulları sağlayan ilanlar XML çıktısında yer alır:
+
+\subsection{Ortak ön koşullar (her iki portal)}
+
+\begin{enumerate}[leftmargin=*]
+\item Yayın durumu \texttt{PUBLISHED} (Yayında) olmalı.
+\item İlan editöründe ilgili portalın \textbf{export} (gönderim) bayrağı açık olmalı:
+  \begin{itemize}
+  \item 101evler için \texttt{export\_to\_101evler = true}
+  \item hangiev için \texttt{export\_to\_hangiev = true}
+  \end{itemize}
+\item İlanın türü \textbf{Satılık} veya \textbf{Kiralık} olmalı (proje/günlük dahil).
+\item İlanın \textbf{fiyatı} ve \textbf{para birimi} tanımlı olmalı (fiyat $> 0$).
+\item Para birimi desteklenen değerlerden biri olmalı (TRY, USD, EUR, GBP).
+\end{enumerate}
+
+\subsection{101evler için ek koşullar}
+
+101evler taksonomisinin kendine özgü olması nedeniyle aşağıdaki eşleştirmeler de yapılmış olmalıdır:
+
+\begin{itemize}[leftmargin=*]
+\item \textbf{type\_id} — 101evler emlak tipi kodu (Daire, Villa vb.)
+\item \textbf{area\_id} — 101evler bölge kodu (şehir / mahalle)
+\end{itemize}
+
+Bu eşleştirmeler ilan editöründe ya da Sabit Listeler (\texttt{lookups}) panelinde 101evler tarafından sağlanan kod tablolarına göre yapılmaktadır.
+
+\subsection{Atlama sebepleri}
+
+Feed üreticisi her ilan için aşağıdaki kontrolleri sırayla uygular; başarısız olan ilan XML'e \textbf{eklenmez} ve dahili olarak sebep işaretlenir:
+
+\begin{tabular}{ll}
+\textbf{Kod} & \textbf{Anlamı} \\
+\texttt{missing\_type\_id} & 101evler emlak tipi eşleştirilmemiş \\
+\texttt{missing\_area\_id} & 101evler bölge kodu eşleştirilmemiş \\
+\texttt{missing\_sale\_or\_rent} & Satılık/Kiralık bilgisi yok \\
+\texttt{unsupported\_currency} & Para birimi desteklenmiyor \\
+\texttt{missing\_price} & Fiyat tanımsız veya $\leq 0$ \\
+\end{tabular}
+
+% ============================================================
+\section{Hata Ayıklama / Test Modu}
+
+Her iki URL, \texttt{\&debug=1} parametresi eklendiğinde XML yerine \textbf{JSON özet} döner. Bu sayede portföyün hangi ilanlarının atlandığı görülebilir:
+
+\begin{lstlisting}[style=xmlstyle]
+GET https://alfa-emlak-websitesi.onrender.com/api/feeds/101evler.xml?token=<TOKEN>&debug=1
+
+{
+  "total": 142,
+  "included": 138,
+  "skipped": [
+    { "listingId": "AE-2026-11001", "reason": "missing_area_id" },
+    { "listingId": "AE-2026-11042", "reason": "unsupported_currency" }
+  ]
+}
+\end{lstlisting}
+
+Bu uç nokta entegrasyon sırasında doğrulama amaçlı kullanılabilir; ancak üretim ortamında düzenli olarak \textbf{çağrılmamalıdır}.
+
+% ============================================================
+\section{Önbellek (Cache) Davranışı}
+
+Sunucu, XML çıktısını HTTP başlığı ile \texttt{Cache-Control: public, max-age=300, s-maxage=300} olarak servis eder. Yani:
+
+\begin{itemize}[leftmargin=*]
+\item Aynı URL'ye 5 dakika içinde yapılan tüm istekler aynı yanıtı döndürür.
+\item Yayın değişikliklerinin (yeni ilan, fiyat güncellemesi, yayından kaldırma) feed'e yansıması \textbf{en fazla 5 dakika} sürer.
+\item Çekim sıklığını 15--30 dakikaya ayarlamanız hem sizin hem de kaynak kullanımı açısından idealdir.
+\end{itemize}
+
+% ============================================================
+\section{Görsel ve Medya}
+
+\begin{itemize}[leftmargin=*]
+\item Tüm görseller \textbf{HTTPS} adresleri üzerinden sunulur.
+\item Görsel sıralaması \texttt{sort\_order} alanı ile belirlenir; en küçük değer kapak görselidir.
+\item Görseller doğrudan portal tarafına \textbf{indirilebilir} (CDN üzerinden anonim erişime açık).
+\item Sanal tur (\texttt{t\_360}) ve video (\texttt{youtube}) alanları, ilanda mevcutsa boş olmayan değerle gönderilir.
+\end{itemize}
+
+% ============================================================
+\section{Sıkça Sorulan Sorular}
+
+\subsection*{Bir ilanı portala manuel olarak ekleyebilir miyiz?}
+Hayır, manuel ekleme gerekmiyor. Feed otomatik tüm yayında olan ilanları içerir.
+
+\subsection*{Belirli ilanları feed'e dahil etmek istemiyorum, mümkün mü?}
+Evet. Alfa Emlak panelinde her ilanın editöründe 101evler ve hangiev için ayrı ayrı gönderim bayrakları vardır. Bu bayrak kapatılan ilanlar feed'e girmez.
+
+\subsection*{Çoklu dil desteği nasıl çalışıyor?}
+Başlık (\texttt{ad\_title\_*}) ve açıklama (\texttt{ad\_description\_*}) alanları TR, EN, RU, DE ve FA dilleri için ayrı etiketlerle gönderilir. İlanın o dilde çevirisi yoksa ilgili etiket boş kalır veya hiç üretilmez.
+
+\subsection*{İlan silindiğinde portala nasıl haber verilir?}
+Silinmiş ya da yayından kaldırılmış ilanlar bir sonraki feed çekiminde XML'de \textbf{bulunmazlar}. Bunu portal tarafının fark edip ilanı pasifleştirmesi beklenir.
+
+\subsection*{Aynı ilan iki kere geliyor mu?}
+Hayır. \texttt{ad\_key} / \texttt{listing\_id} alanları benzersizdir; aynı ilan tek kayıt olarak gelir.
+
+% ============================================================
+\section{İletişim ve Destek}
+
+Entegrasyon süreciyle ilgili her türlü teknik soru için iletişime geçebilirsiniz:
+
+\begin{itemize}[leftmargin=*]
+\item \textbf{Telefon:} +90 533 860 65 35
+\item \textbf{Web:} \url{https://alfa-emlak-websitesi.onrender.com/tr/iletisim}
+\item \textbf{Tasarım \& Yazılım:} Emy Software Studios — \url{https://emysoft.com}
+\end{itemize}
+
+\vspace{0.4cm}
+\hrule
+\vspace{0.4cm}
+\begin{center}
+\small\itshape\color{black!60}
+Bu doküman, 101evler ve hangiev entegrasyonu için hazırlanmıştır. Belge versiyonu: 1.0 — \today
+\end{center}
+
+\end{document}

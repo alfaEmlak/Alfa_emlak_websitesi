@@ -219,13 +219,15 @@ export const PHOTO_GROUP_OPTIONS: Option[] = [
 ];
 
 /* ────────── Para Birimi kodları (currency) ──────────
- * PDF örneğinde 601 (TRY) ve 602 (USD/HOA) görüldü. GBP/EUR kodları 101evler
- * tarafından teyit edilmediği için tahmin etmiyoruz; bilinmeyen kur feed'den düşer.
+ * PDF örneğinde 601 (TRY) ve 602 (USD) görüldü. EUR ve GBP için resmî kod
+ * 101evler dokümantasyonunda yok; sıralı tahmin (603, 604) kullanıldı.
+ * UYARI: 101evler'den resmî kod teyidi alınmalı, gerekirse güncellenmeli.
  */
 export const CURRENCY_CODE_MAP: Record<string, number> = {
   TRY: 601,
   USD: 602,
-  // GBP, EUR — 101evler'den teyit alınınca eklenecek
+  EUR: 603,
+  GBP: 604,
 };
 
 /* ────────── İlan Özellikleri <ad_specs> ──────────

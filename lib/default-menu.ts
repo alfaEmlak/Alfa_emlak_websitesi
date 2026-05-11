@@ -65,15 +65,25 @@ export const defaultMegaMenu: MenuTopItem[] = [
         title: "Kurumsal",
         links: [
           { label: "Hakkımızda", href: "/hakkimizda" },
+          { label: "Sıkça Sorulan Sorular", href: "/hakkimizda#sss" },
+          { label: "Danışmanlarımız", href: "/danismanlar" },
           { label: "İletişim", href: "/iletisim" },
-          { label: "İlanlarımız", href: "/ilanlar" },
+        ],
+      },
+      {
+        title: "İçerik",
+        links: [
+          { label: "Blog", href: "/blog" },
+          { label: "Tüm İlanlar", href: "/ilanlar" },
+          { label: "Vitrin İlanlar", href: "/ilanlar" },
         ],
       },
       {
         title: "Yardım",
         links: [
-          { label: "Sıkça Sorulan Sorular", href: "/iletisim" },
-          { label: "Gizlilik", href: "/iletisim" },
+          { label: "Gizlilik Politikası", href: "/gizlilik" },
+          { label: "KVKK Aydınlatma Metni", href: "/kvkk" },
+          { label: "İletişim", href: "/iletisim" },
         ],
       },
     ],

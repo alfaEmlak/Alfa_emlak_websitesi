@@ -14,8 +14,7 @@ import { getRecentPublishedBlogPosts } from "@/lib/blog-public";
 
 const heroImage = "/pexels-tolgaaslanturk-10785667.jpg";
 
-const whyMain =
-  "https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=900&q=80";
+const whyMain = "/alfa-anahtar.png";
 const whySide =
   "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80";
 

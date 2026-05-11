@@ -578,7 +578,8 @@
       "consultantSettings": "Danışman ayarları",
       "lookups": "Sabit listeler",
       "siteSettings": "Site ayarları",
-      "deedsDocuments": "Koçan ve belgeler"
+      "deedsDocuments": "Koçan ve belgeler",
+      "feedStatus": "Feed durumu"
     },
     "deedsDocuments": {
       "title": "Koçan ve belgeler",

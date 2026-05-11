@@ -128,6 +128,7 @@ export function ContactForm({
         />
         <div className="grid gap-4 sm:grid-cols-2">
           <input
+            suppressHydrationWarning
             className={inputCls}
             type="email"
             autoComplete="email"
