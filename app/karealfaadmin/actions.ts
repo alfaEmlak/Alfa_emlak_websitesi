@@ -928,6 +928,64 @@ export async function reviewListing(id: string, decision: "approve" | "reject") 
   return { ok: true as const, status };
 }
 
+/**
+ * İlan listesindeki dropdown'dan yayın durumunu değiştirir (Yayına al / Yayından kaldır).
+ * Yönlendirme yapmaz; istemci sonucu alıp router.refresh() ile listeyi tazeler.
+ */
+export async function setListingPublishStatus(
+  id: string,
+  status: "DRAFT" | "PUBLISHED" | "HIDDEN" | "PENDING_APPROVAL" | "REJECTED",
+): Promise<{ ok: true; status: string } | { ok: false; error: string }> {
+  const user = await requirePanelUser();
+  const allowed = ["DRAFT", "PUBLISHED", "HIDDEN", "PENDING_APPROVAL", "REJECTED"];
+  if (!allowed.includes(status)) return { ok: false, error: "invalid" };
+
+  const rowId = await resolveListingRowId(String(id ?? "").trim());
+  if (!rowId) return { ok: false, error: "notfound" };
+
+  const { data: row } = await supabaseAdmin
+    .from("listings")
+    .select("created_by_agent_id, listing_id")
+    .eq("id", rowId)
+    .maybeSingle();
+  if (!row) return { ok: false, error: "notfound" };
+
+  let nextStatus = status;
+  if (user.role !== "ADMIN") {
+    const ownerId = row.created_by_agent_id != null ? String(row.created_by_agent_id) : null;
+    if (!user.agentId || ownerId !== user.agentId) return { ok: false, error: "forbidden" };
+    // Danışmanlar doğrudan yayınlayamaz → onaya gönderilir.
+    if (nextStatus === "PUBLISHED") nextStatus = "PENDING_APPROVAL";
+  }
+
+  const now = new Date().toISOString();
+  const meta: Record<string, unknown> = { publish_status: nextStatus, updated_at: now };
+  if (nextStatus === "PUBLISHED") {
+    meta.approved_at = now;
+    meta.approved_by_name = user.name ?? null;
+  }
+
+  const { error } = await updateListingWithCompat(rowId, meta);
+  if (error) {
+    const e2 = (await supabaseAdmin.from("listings").update({ publish_status: nextStatus }).eq("id", rowId)).error;
+    if (e2) return { ok: false, error: e2.message };
+  }
+
+  const pub = row.listing_id != null ? String(row.listing_id) : "";
+  revalidatePath("/");
+  revalidatePath("/karealfaadmin/ilanlar");
+  revalidatePath("/karealfaadmin/dashboard");
+  revalidatePath("/karealfaadmin/onay-bekleyen");
+  if (pub) {
+    for (const loc of routing.locales) {
+      revalidatePath(`/${loc}/ilan/${pub}`);
+      revalidatePath(`/${loc}/ilanlar`);
+    }
+  }
+
+  return { ok: true, status: nextStatus };
+}
+
 export async function deleteListing(id: string) {
   const user = await requirePanelUser();
   const rowId = await resolveListingRowId(String(id ?? "").trim());

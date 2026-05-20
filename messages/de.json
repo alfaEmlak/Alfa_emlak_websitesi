@@ -165,7 +165,25 @@
     "priceAsc": "Preis (aufsteigend)",
     "priceDesc": "Preis (absteigend)",
     "newest": "Neueste",
-    "oldest": "Älteste"
+    "oldest": "Älteste",
+    "filters": {
+      "title": "Filtern",
+      "city": "Stadt",
+      "cityAll": "Alle Städte",
+      "propertyType": "Immobilientyp",
+      "propertyTypeAll": "Alle Typen",
+      "konut": "Wohnen",
+      "ticari": "Gewerbe",
+      "arsa": "Grundstück",
+      "rooms": "Zimmer",
+      "roomsAll": "Zimmer (alle)",
+      "minPrice": "Min. Preis",
+      "maxPrice": "Max. Preis",
+      "furnished": "Möbliert",
+      "apply": "Anwenden",
+      "clearAll": "Alle löschen",
+      "remove": "Entfernen"
+    }
   },
   "BlogPage": {
     "title": "Blog & Neuigkeiten",
@@ -683,7 +701,9 @@
       "deleteConfirm": "Dieses Inserat dauerhaft löschen? Dies kann nicht rückgängig gemacht werden.",
       "deleteForbidden": "Sie dürfen dieses Inserat nicht löschen.",
       "deleteNotFound": "Inserat nicht gefunden oder bereits gelöscht.",
-      "deleteError": "Inserat konnte nicht gelöscht werden. Bitte erneut versuchen."
+      "deleteError": "Inserat konnte nicht gelöscht werden. Bitte erneut versuchen.",
+      "actionPublish": "Veröffentlichen",
+      "actionUnpublish": "Zurückziehen"
     },
     "approval": {
       "titleAdmin": "Ausstehende Freigaben",

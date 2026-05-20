@@ -165,7 +165,25 @@
     "priceAsc": "Price (Low to High)",
     "priceDesc": "Price (High to Low)",
     "newest": "Newest",
-    "oldest": "Oldest"
+    "oldest": "Oldest",
+    "filters": {
+      "title": "Filter",
+      "city": "City",
+      "cityAll": "All cities",
+      "propertyType": "Property type",
+      "propertyTypeAll": "All types",
+      "konut": "Residential",
+      "ticari": "Commercial",
+      "arsa": "Land",
+      "rooms": "Rooms",
+      "roomsAll": "Rooms (all)",
+      "minPrice": "Min price",
+      "maxPrice": "Max price",
+      "furnished": "Furnished",
+      "apply": "Apply",
+      "clearAll": "Clear all",
+      "remove": "Remove"
+    }
   },
   "BlogPage": {
     "title": "Blog & News",
@@ -683,7 +701,9 @@
       "deleteConfirm": "Permanently delete this listing? This cannot be undone.",
       "deleteForbidden": "You do not have permission to delete this listing.",
       "deleteNotFound": "Listing was not found or was already deleted.",
-      "deleteError": "Could not delete the listing. Please try again."
+      "deleteError": "Could not delete the listing. Please try again.",
+      "actionPublish": "Publish",
+      "actionUnpublish": "Unpublish"
     },
     "approval": {
       "titleAdmin": "Pending approvals",

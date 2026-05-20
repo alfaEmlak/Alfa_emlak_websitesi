@@ -9,7 +9,7 @@ import { getPanelLocale } from "@/lib/panel-locale";
 import { getPanelTranslations } from "@/lib/panel-translations";
 import { requirePanelUser } from "@/lib/panel-auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { DeleteListingButton } from "@/components/admin/DeleteListingButton";
+import { ListingActionsMenu } from "@/components/admin/ListingActionsMenu";
 
 async function fetchDistinctListingCities(consultantAgentId?: string | null): Promise<string[]> {
   const seen = new Set<string>();
@@ -121,6 +121,15 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
 
   const listings = (result.data ?? []) as ListingRow[];
 
+  const actionLabels = {
+    publish: t("listings.actionPublish"),
+    unpublish: t("listings.actionUnpublish"),
+    edit: t("common.edit"),
+    delete: t("listings.btnDelete"),
+    confirmDelete: t("listings.deleteConfirm"),
+    loading: t("common.loading"),
+  };
+
   function publishLabel(code: string) {
     switch (code) {
       case "DRAFT":
@@ -224,21 +233,16 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
                     <p className="mt-1 tabular-nums text-sm font-medium text-zinc-800">
                       {formatMoney(Number(listing.price ?? 0), listing.currency, locale)}
                     </p>
-                    <span className="mt-2 inline-flex rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700">
-                      {publishLabel(listing.publish_status)}
-                    </span>
+                    <div className="mt-2">
+                      <ListingActionsMenu
+                        listingId={listing.id}
+                        status={listing.publish_status}
+                        statusLabel={publishLabel(listing.publish_status)}
+                        editHref={`/karealfaadmin/ilanlar/${listing.id}/duzenle`}
+                        labels={actionLabels}
+                      />
+                    </div>
                   </div>
-                </div>
-                <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-zinc-100 pt-3">
-                  <Link href={`/karealfaadmin/ilanlar/${listing.id}/duzenle`} className="text-sm font-semibold text-emerald-600 hover:underline">
-                    {t("common.edit")}
-                  </Link>
-                  <DeleteListingButton
-                    listingId={listing.id}
-                    label={t("listings.btnDelete")}
-                    confirmMessage={t("listings.deleteConfirm")}
-                    pendingLabel={t("common.loading")}
-                  />
                 </div>
               </div>
             );
@@ -257,13 +261,12 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
               {user.role === "ADMIN" ? <th className="px-3 py-3">{t("listings.tableSender")}</th> : null}
               <th className="px-3 py-3">{t("dashboard.colPrice")}</th>
               <th className="px-3 py-3">{t("dashboard.colStatus")}</th>
-              <th className="px-3 py-3" />
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
             {listings.length === 0 ? (
               <tr>
-                <td colSpan={user.role === "ADMIN" ? 8 : 7} className="px-3 py-8 text-center text-sm text-zinc-400">
+                <td colSpan={user.role === "ADMIN" ? 7 : 6} className="px-3 py-8 text-center text-sm text-zinc-400">
                   {t("listings.empty")}
                 </td>
               </tr>
@@ -288,22 +291,13 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
                     ) : null}
                     <td className="px-3 py-2 tabular-nums">{formatMoney(Number(listing.price ?? 0), listing.currency, locale)}</td>
                     <td className="px-3 py-2">
-                      <span className="inline-flex rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700">
-                        {publishLabel(listing.publish_status)}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1">
-                        <Link href={`/karealfaadmin/ilanlar/${listing.id}/duzenle`} className="font-semibold text-emerald-600 hover:underline">
-                          {t("common.edit")}
-                        </Link>
-                        <DeleteListingButton
-                          listingId={listing.id}
-                          label={t("listings.btnDelete")}
-                          confirmMessage={t("listings.deleteConfirm")}
-                          pendingLabel={t("common.loading")}
-                        />
-                      </div>
+                      <ListingActionsMenu
+                        listingId={listing.id}
+                        status={listing.publish_status}
+                        statusLabel={publishLabel(listing.publish_status)}
+                        editHref={`/karealfaadmin/ilanlar/${listing.id}/duzenle`}
+                        labels={actionLabels}
+                      />
                     </td>
                   </tr>
                 );

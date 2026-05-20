@@ -165,7 +165,25 @@
     "priceAsc": "Fiyat (Düşükten Yükseğe)",
     "priceDesc": "Fiyat (Yüksekten Düşüğe)",
     "newest": "En Yeni",
-    "oldest": "En Eski"
+    "oldest": "En Eski",
+    "filters": {
+      "title": "Filtrele",
+      "city": "Şehir",
+      "cityAll": "Tüm şehirler",
+      "propertyType": "Emlak tipi",
+      "propertyTypeAll": "Tüm tipler",
+      "konut": "Konut",
+      "ticari": "Ticari",
+      "arsa": "Arsa",
+      "rooms": "Oda",
+      "roomsAll": "Oda (tümü)",
+      "minPrice": "Min fiyat",
+      "maxPrice": "Maks fiyat",
+      "furnished": "Eşyalı",
+      "apply": "Uygula",
+      "clearAll": "Tümünü temizle",
+      "remove": "Kaldır"
+    }
   },
   "BlogPage": {
     "title": "Blog & Haberler",
@@ -693,7 +711,9 @@
       "deleteConfirm": "Bu ilanı kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
       "deleteForbidden": "Bu ilanı silme yetkiniz yok.",
       "deleteNotFound": "İlan bulunamadı veya zaten silinmiş.",
-      "deleteError": "İlan silinirken bir hata oluştu. Lütfen tekrar deneyin."
+      "deleteError": "İlan silinirken bir hata oluştu. Lütfen tekrar deneyin.",
+      "actionPublish": "Yayına Al",
+      "actionUnpublish": "Yayından Kaldır"
     },
     "approval": {
       "titleAdmin": "Onay bekleyenler",

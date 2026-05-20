@@ -165,7 +165,25 @@
     "priceAsc": "قیمت (از کم به زیاد)",
     "priceDesc": "قیمت (از زیاد به کم)",
     "newest": "جدیدترین",
-    "oldest": "قدیمی‌ترین"
+    "oldest": "قدیمی‌ترین",
+    "filters": {
+      "title": "فیلتر",
+      "city": "شهر",
+      "cityAll": "همه شهرها",
+      "propertyType": "نوع ملک",
+      "propertyTypeAll": "همه انواع",
+      "konut": "مسکونی",
+      "ticari": "تجاری",
+      "arsa": "زمین",
+      "rooms": "اتاق",
+      "roomsAll": "اتاق (همه)",
+      "minPrice": "حداقل قیمت",
+      "maxPrice": "حداکثر قیمت",
+      "furnished": "مبله",
+      "apply": "اعمال",
+      "clearAll": "پاک کردن همه",
+      "remove": "حذف"
+    }
   },
   "BlogPage": {
     "title": "وبلاگ و اخبار",
@@ -683,7 +701,9 @@
       "deleteConfirm": "این آگهی برای همیشه حذف شود؟ این کار برگشت‌ناپذیر است.",
       "deleteForbidden": "مجوز حذف این آگهی را ندارید.",
       "deleteNotFound": "آگهی پیدا نشد یا قبلاً حذف شده است.",
-      "deleteError": "حذف آگهی انجام نشد. دوباره تلاش کنید."
+      "deleteError": "حذف آگهی انجام نشد. دوباره تلاش کنید.",
+      "actionPublish": "انتشار",
+      "actionUnpublish": "لغو انتشار"
     },
     "approval": {
       "titleAdmin": "در انتظار تأیید",
