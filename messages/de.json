@@ -110,6 +110,7 @@
     "whyUsConclusion": "Today's buyers are not only searching listings—they want trustworthy guidance.\n\nWith sound analysis, strong marketing, professional process management, and a trust-led approach, Alfa Emlak aims to deliver not just property but the right investment experience."
   },
   "ListingDetail": {
+    "priceNotePerDonum": "Preis pro Dönüm",
     "info": "Immobilieninfo",
     "summary": "Zusammenfassung",
     "views": "Aufrufe",
@@ -176,7 +177,15 @@
       "ticari": "Gewerbe",
       "arsa": "Grundstück",
       "rooms": "Zimmer",
+      "minArea": "Min m²",
+      "maxArea": "Max m²",
+      "category": "Kategorie",
+      "mainFilters": "Filter",
+      "categoryFilters": "Kategoriespezifisch",
       "roomsAll": "Zimmer (alle)",
+      "studio": "Studio",
+      "roomCustom": "Andere (selbst eingeben)",
+      "roomCustomPlaceholder": "z. B. 3+1",
       "minPrice": "Min. Preis",
       "maxPrice": "Max. Preis",
       "furnished": "Möbliert",
@@ -503,6 +512,7 @@
       "yarimInsaat": "Rohbau",
       "konutImarli": "Wohnbauland",
       "ticariImarli": "Gewerbebauland",
+      "konutTicariImarli": "Wohn- + Gewerbegebiet",
       "tarla": "Ackerland",
       "bagBahce": "Weinberg & Garten",
       "sanayiArsasi": "Industriegrund",
@@ -703,7 +713,10 @@
       "deleteNotFound": "Inserat nicht gefunden oder bereits gelöscht.",
       "deleteError": "Inserat konnte nicht gelöscht werden. Bitte erneut versuchen.",
       "actionPublish": "Veröffentlichen",
-      "actionUnpublish": "Zurückziehen"
+      "actionUnpublish": "Zurückziehen",
+      "filterAgentAll": "Berater (alle)",
+      "countTotal": "Insgesamt {total} Anzeigen",
+      "countFiltered": "Insgesamt {total} Anzeigen · {filtered} gefiltert"
     },
     "approval": {
       "titleAdmin": "Ausstehende Freigaben",

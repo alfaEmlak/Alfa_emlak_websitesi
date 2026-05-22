@@ -93,6 +93,7 @@ export function AdminSidebar({
   pendingCount,
   unreadInboxCount = 0,
   newUserFormsCount = 0,
+  pendingAgentsCount = 0,
   userName,
 }: {
   role: PanelRole;
@@ -100,6 +101,8 @@ export function AdminSidebar({
   unreadInboxCount?: number;
   /** Son ziyaretten sonra gelen AI lead formları (yalnızca admin) */
   newUserFormsCount?: number;
+  /** Onay bekleyen danışman üyelikleri (yalnızca admin) */
+  pendingAgentsCount?: number;
   userName?: string;
 }) {
   const pathname = usePathname();
@@ -165,6 +168,7 @@ export function AdminSidebar({
                 const showApprovalBadge = item.href === "/karealfaadmin/onay-bekleyen" && pendingCount > 0;
                 const showInboxBadge = item.href === "/karealfaadmin/mesajlar" && unreadInboxCount > 0;
                 const showUserFormsBadge = item.href === "/karealfaadmin/kullanici-formlari" && newUserFormsCount > 0;
+                const showAgentsBadge = item.href === "/karealfaadmin/danismanlar" && pendingAgentsCount > 0;
 
                 return (
                   <Link
@@ -192,6 +196,11 @@ export function AdminSidebar({
                     {showUserFormsBadge ? (
                       <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
                         {newUserFormsCount > 99 ? "99+" : newUserFormsCount}
+                      </span>
+                    ) : null}
+                    {showAgentsBadge ? (
+                      <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-slate-900">
+                        {pendingAgentsCount > 99 ? "99+" : pendingAgentsCount}
                       </span>
                     ) : null}
                   </Link>

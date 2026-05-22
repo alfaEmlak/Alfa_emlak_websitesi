@@ -20,6 +20,7 @@ export const LAND_DETAIL_KEY_IMAR_ORAN = "landToplamImarOrani";
 export const LAND_DETAIL_KEY_TABAN = "landTabanOrani";
 export const LAND_DETAIL_KEY_MAX_KAT = "landMaxKat";
 export const LAND_DETAIL_KEY_KONUM = "landKonumOzellikleri";
+export const LAND_DETAIL_KEY_PRICE_PER_DONUM = "landPricePerDonum";
 
 const LAND_KEYS = [
   LAND_DETAIL_KEY_IMAR,
@@ -27,6 +28,7 @@ const LAND_KEYS = [
   LAND_DETAIL_KEY_TABAN,
   LAND_DETAIL_KEY_MAX_KAT,
   LAND_DETAIL_KEY_KONUM,
+  LAND_DETAIL_KEY_PRICE_PER_DONUM,
 ] as const;
 
 export const LAND_LOCATION_TAG_DEFS = [
@@ -80,6 +82,7 @@ export function parseLandFieldsFromDetailFields(detailFields: unknown): {
   toplamImarOrani: string;
   tabanOrani: string;
   maxKat: string;
+  pricePerDonum: boolean;
   tags: Record<LandLocationTagId, boolean>;
 } {
   let map: LandDetailFieldsMap = {};
@@ -94,8 +97,20 @@ export function parseLandFieldsFromDetailFields(detailFields: unknown): {
     toplamImarOrani: readEntry(map, LAND_DETAIL_KEY_IMAR_ORAN),
     tabanOrani: readEntry(map, LAND_DETAIL_KEY_TABAN),
     maxKat: readEntry(map, LAND_DETAIL_KEY_MAX_KAT),
+    pricePerDonum: readEntry(map, LAND_DETAIL_KEY_PRICE_PER_DONUM) === "1",
     tags: parseTagIdsFromKonumValue(tagStr),
   };
+}
+
+/** İlan detayında fiyatın altına "dönüm fiyatı" notu gösterilsin mi? */
+export function landPriceIsPerDonumFromDetailFields(detailFieldsRaw: unknown): boolean {
+  let map: LandDetailFieldsMap = {};
+  if (typeof detailFieldsRaw === "string" && detailFieldsRaw.trim()) {
+    map = parseDetailFieldsJson(detailFieldsRaw);
+  } else if (detailFieldsRaw && typeof detailFieldsRaw === "object" && !Array.isArray(detailFieldsRaw)) {
+    map = detailFieldsRaw as LandDetailFieldsMap;
+  }
+  return readEntry(map, LAND_DETAIL_KEY_PRICE_PER_DONUM) === "1";
 }
 
 export function mergeLandParcelDetailFields(
@@ -106,6 +121,7 @@ export function mergeLandParcelDetailFields(
     toplamImarOrani: string;
     tabanOrani: string;
     maxKat: string;
+    pricePerDonum: boolean;
     tags: Record<LandLocationTagId, boolean>;
   },
 ): string {
@@ -142,6 +158,9 @@ export function mergeLandParcelDetailFields(
   setIf(LAND_DETAIL_KEY_MAX_KAT, land.maxKat);
   if (selectedLabels.length > 0) {
     obj[LAND_DETAIL_KEY_KONUM] = asEntry(konumValue);
+  }
+  if (land.pricePerDonum) {
+    obj[LAND_DETAIL_KEY_PRICE_PER_DONUM] = asEntry("1", false);
   }
 
   return JSON.stringify(obj);

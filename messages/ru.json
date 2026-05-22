@@ -110,6 +110,7 @@
     "whyUsConclusion": "Today's buyers are not only searching listings—they want trustworthy guidance.\n\nWith sound analysis, strong marketing, professional process management, and a trust-led approach, Alfa Emlak aims to deliver not just property but the right investment experience."
   },
   "ListingDetail": {
+    "priceNotePerDonum": "цена за дёнюм",
     "info": "Информация об объекте",
     "summary": "Резюме",
     "views": "просмотров",
@@ -176,7 +177,15 @@
       "ticari": "Коммерческая",
       "arsa": "Участок",
       "rooms": "Комнаты",
+      "minArea": "Площадь от (м²)",
+      "maxArea": "Площадь до (м²)",
+      "category": "Категория",
+      "mainFilters": "Фильтры",
+      "categoryFilters": "По категории",
       "roomsAll": "Комнаты (все)",
+      "studio": "Студия",
+      "roomCustom": "Другое (ввести вручную)",
+      "roomCustomPlaceholder": "напр. 3+1",
       "minPrice": "Цена от",
       "maxPrice": "Цена до",
       "furnished": "С мебелью",
@@ -503,6 +512,7 @@
       "yarimInsaat": "Незавершённое строительство",
       "konutImarli": "Жилая застройка",
       "ticariImarli": "Коммерческая застройка",
+      "konutTicariImarli": "Жилая + коммерческая застройка",
       "tarla": "Поле",
       "bagBahce": "Виноградник и сад",
       "sanayiArsasi": "Промышленный участок",
@@ -703,7 +713,10 @@
       "deleteNotFound": "Объявление не найдено или уже удалено.",
       "deleteError": "Не удалось удалить объявление. Попробуйте снова.",
       "actionPublish": "Опубликовать",
-      "actionUnpublish": "Снять с публикации"
+      "actionUnpublish": "Снять с публикации",
+      "filterAgentAll": "Консультант (все)",
+      "countTotal": "Всего {total} объектов",
+      "countFiltered": "Всего {total} объектов · отфильтровано {filtered}"
     },
     "approval": {
       "titleAdmin": "На модерации",

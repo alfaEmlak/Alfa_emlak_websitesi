@@ -600,6 +600,7 @@ export function ListingEditor({
     landToplamImarOrani: initialLand.toplamImarOrani,
     landTabanOrani: initialLand.tabanOrani,
     landMaxKat: initialLand.maxKat,
+    landPricePerDonum: initialLand.pricePerDonum,
     landTags: { ...emptyLandTags(), ...initialLand.tags },
     ticariTags: { ...emptyTicariTags(), ...initialTicariTags },
     ownedFloorsScope: initialOwnedFloors.ownedFloorsScope,
@@ -1067,7 +1068,7 @@ export function ListingEditor({
     const isTicariStep = preparedForm.propertyCategory === "ticari";
     const numericLimits: { key: keyof typeof preparedForm; min: number; max: number; label: string }[] = isArsaStep
       ? [
-          { key: "landToplamImarOrani", min: 0, max: 100, label: tp("listingEditor.landImarOrani") },
+          { key: "landToplamImarOrani", min: 0, max: Number.MAX_SAFE_INTEGER, label: tp("listingEditor.landImarOrani") },
           { key: "landTabanOrani", min: 0, max: 100, label: tp("listingEditor.landTabanOrani") },
           { key: "landMaxKat", min: 0, max: 50, label: tp("listingEditor.landMaxKat") },
           { key: "areaM2", min: 0, max: 100000, label: tp("listingEditor.landToplamAlan") },
@@ -1196,6 +1197,7 @@ export function ListingEditor({
       toplamImarOrani: f.landToplamImarOrani,
       tabanOrani: f.landTabanOrani,
       maxKat: f.landMaxKat,
+      pricePerDonum: f.landPricePerDonum,
       tags: f.landTags,
     });
     const isTicariSave = f.propertyCategory === "ticari";
@@ -1554,10 +1556,23 @@ export function ListingEditor({
                 ))}
               </select>
             </label>
-            <label className="block text-sm font-medium text-zinc-700">
-              Fiyat
-              <input className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" inputMode="decimal" value={form.price} onChange={(e) => set("price", e.target.value)} />
-            </label>
+            <div className="block">
+              <label className="block text-sm font-medium text-zinc-700">
+                Fiyat
+                <input className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" inputMode="decimal" value={form.price} onChange={(e) => set("price", e.target.value)} />
+              </label>
+              {isArsa ? (
+                <label className="mt-2 flex items-center gap-2 text-sm font-medium text-zinc-700">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500/30"
+                    checked={form.landPricePerDonum}
+                    onChange={(e) => set("landPricePerDonum", e.target.checked)}
+                  />
+                  Dönüm fiyatı (girilen fiyat dönüm başınadır)
+                </label>
+              ) : null}
+            </div>
             <label className="block text-sm font-medium text-zinc-700">
               Para Birimi
               <select className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" value={form.currency} onChange={(e) => set("currency", e.target.value)}>
@@ -1826,13 +1841,12 @@ export function ListingEditor({
                 <label className="block text-sm font-medium text-zinc-700">
                   <span className="flex items-center justify-between">
                     <span>Toplam imar oranı</span>
-                    <span className="text-[11px] font-normal text-zinc-400">% (0–100)</span>
+                    <span className="text-[11px] font-normal text-zinc-400">%</span>
                   </span>
                   <input
                     type="number"
                     inputMode="decimal"
                     min={0}
-                    max={100}
                     step={0.01}
                     className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                     value={form.landToplamImarOrani}

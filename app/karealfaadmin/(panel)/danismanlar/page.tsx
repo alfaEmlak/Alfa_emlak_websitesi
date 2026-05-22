@@ -51,7 +51,7 @@ export default async function AgentsPage() {
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {agentsList.map((a) => (
             <div key={a.id} className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-              <div className="flex items-start gap-4">
+              <Link href={`/karealfaadmin/danismanlar/${a.id}/ilanlar`} className="group flex items-start gap-4">
                 <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-zinc-200 bg-zinc-100">
                   {a.photo ? (
                     <Image src={a.photo} alt={a.name} fill className="object-cover" sizes="64px" unoptimized />
@@ -62,12 +62,12 @@ export default async function AgentsPage() {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-zinc-800 truncate">{a.name}</h3>
+                  <h3 className="font-bold text-zinc-800 truncate transition group-hover:text-emerald-700">{a.name}</h3>
                   <p className="text-xs text-zinc-500">{a.title || "Emlak Danışmanı"}</p>
                   <p className="text-xs text-zinc-400 mt-1">{a.email}</p>
                   {a.phone && <p className="text-xs text-zinc-400">{a.phone}</p>}
                 </div>
-              </div>
+              </Link>
               <div className="mt-4 flex gap-2">
                 <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
                   a.role === "ADMIN" ? "bg-purple-50 text-purple-700" : "bg-blue-50 text-blue-700"
@@ -81,12 +81,20 @@ export default async function AgentsPage() {
                 </span>
               </div>
               {a.is_active ? (
-                <Link
-                  href={`/karealfaadmin/danismanlar/${a.id}/duzenle`}
-                  className="mt-4 block text-center text-sm font-semibold text-emerald-600 hover:underline"
-                >
-                  Düzenle
-                </Link>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <Link
+                    href={`/karealfaadmin/danismanlar/${a.id}/ilanlar`}
+                    className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-center text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
+                  >
+                    İlanları gör
+                  </Link>
+                  <Link
+                    href={`/karealfaadmin/danismanlar/${a.id}/duzenle`}
+                    className="rounded-lg bg-emerald-600 px-3 py-2 text-center text-sm font-semibold text-white transition hover:bg-emerald-700"
+                  >
+                    Düzenle
+                  </Link>
+                </div>
               ) : (
                 <div className="mt-4 grid grid-cols-2 gap-2">
                   <form action={approveAgent.bind(null, a.id)}>

@@ -25,7 +25,7 @@ export const LISTING_SUBTYPE_MAP: Record<ListingCategoryKey, readonly string[]> 
     "metrukBina",
     "yarimInsaat",
   ],
-  arsa: ["konutImarli", "ticariImarli", "tarla", "sanayiArsasi", "bagBahce"],
+  arsa: ["konutImarli", "ticariImarli", "konutTicariImarli", "tarla", "sanayiArsasi", "bagBahce"],
   ticari: ["ofis", "dukkan", "magaza", "otel", "restoran", "depo", "fabrika"],
   proje: ["devamEden", "tamamlanmis"],
 };
@@ -45,6 +45,7 @@ export const LISTING_SUBTYPE_LABEL_TR: Record<string, string> = {
   yarimInsaat: "Yarım İnşaat",
   konutImarli: "Konut İmarlı",
   ticariImarli: "Ticari İmarlı",
+  konutTicariImarli: "Konut + Ticari İmarlı",
   tarla: "Tarla",
   bagBahce: "Bağ & Bahçe",
   sanayiArsasi: "Sanayi Arsası",
@@ -61,7 +62,7 @@ export const LISTING_SUBTYPE_LABEL_TR: Record<string, string> = {
 
 export const LISTING_CATEGORY_LABEL_TR: Record<ListingCategoryKey, string> = {
   konut: "Konut",
-  arsa: "Arsa",
+  arsa: "Arsa/Arazi",
   ticari: "Ticari",
   proje: "Proje",
 };

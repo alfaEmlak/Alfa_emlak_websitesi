@@ -74,13 +74,24 @@ export function buildListingFilters(sp: Record<string, string | string[] | undef
     where.featuresArr.push(...ozellikler.split(',').map(s => s.trim()).filter(Boolean));
   }
 
+  // Oda: "0" = stüdyo, "3" / "3+1" = 3 yatak odası. Baştaki sayı yatak odası sayısıdır.
   const oda = get("oda");
-  if (oda) where.bedrooms = parseInt(oda, 10);
+  if (oda != null && oda !== "") {
+    const n = parseInt(oda, 10);
+    if (Number.isFinite(n)) where.bedrooms = n;
+  }
 
   const emlak = get("emlak");
   if (emlak === "arsa") where.propertyType = "arsa";
   else if (emlak === "ticari") where.propertyType = "ticari";
   else if (emlak === "konut") where.propertyType = "konut";
+
+  const danisman = get("danisman");
+  if (danisman) where.createdByAgentId = danisman;
+
+  // Feed (101evler) ilanları danışmana isimle bağlı olduğundan ada göre de eşleştirilebilir.
+  const danismanAdi = get("danismanAdi");
+  if (danismanAdi) where.createdByAgentName = danismanAdi;
 
   return { where, q };
 }
@@ -93,7 +104,7 @@ function getRegionLabel(cityV: string, bolgeV: string) {
 function applyListingFilters(query: any, where: Record<string, any>) {
   if (where.kind) query = query.eq("kind", where.kind);
   if (where.propertyType) query = query.ilike("property_type", `%${where.propertyType}%`);
-  if (where.bedrooms) query = query.gte("bedrooms", where.bedrooms);
+  if (where.bedrooms !== undefined) query = query.eq("bedrooms", where.bedrooms);
   
   if (where.city) {
     query = query.in("city", expandListingCityFilterValues(where.city));
@@ -119,6 +130,15 @@ function applyListingFilters(query: any, where: Record<string, any>) {
     query = query.eq("furnished", where.furnished);
   }
 
+  if (where.createdByAgentId && where.createdByAgentName) {
+    const nameEsc = String(where.createdByAgentName).replace(/"/g, '\\"');
+    query = query.or(`created_by_agent_id.eq.${where.createdByAgentId},created_by_name.eq."${nameEsc}"`);
+  } else if (where.createdByAgentId) {
+    query = query.eq("created_by_agent_id", where.createdByAgentId);
+  } else if (where.createdByAgentName) {
+    query = query.eq("created_by_name", where.createdByAgentName);
+  }
+
   if (where.featuresArr && where.featuresArr.length > 0) {
     where.featuresArr.forEach((feat: string) => {
       query = query.ilike("features", `%${feat}%`);
@@ -128,16 +148,32 @@ function applyListingFilters(query: any, where: Record<string, any>) {
   return query;
 }
 
+function orderColumnForSort(sort?: string): { column: string; ascending: boolean } {
+  switch (sort) {
+    case "ucuz":
+      return { column: "price", ascending: true };
+    case "pahali":
+      return { column: "price", ascending: false };
+    case "eski":
+      return { column: "created_at", ascending: true };
+    case "yeni":
+    default:
+      return { column: "created_at", ascending: false };
+  }
+}
+
 export async function findPublishedListings(
   where: Record<string, any>,
   take = 12,
   skip = 0,
+  sort?: string,
 ) {
+  const ord = orderColumnForSort(sort);
   let query = supabaseAdmin
     .from("listings")
     .select("*, listing_images(*)")
     .eq("publish_status", "PUBLISHED")
-    .order("created_at", { ascending: false })
+    .order(ord.column, { ascending: ord.ascending })
     .range(skip, skip + take - 1);
 
   query = applyListingFilters(query, where);
@@ -197,9 +233,10 @@ export async function findPublishedListingsSafe(
   where: Record<string, any>,
   take = 12,
   skip = 0,
+  sort?: string,
 ): Promise<ListingPublic[]> {
   try {
-    return await findPublishedListings(where, take, skip);
+    return await findPublishedListings(where, take, skip, sort);
   } catch (e) {
     console.error("[findPublishedListingsSafe]", e);
     return [];

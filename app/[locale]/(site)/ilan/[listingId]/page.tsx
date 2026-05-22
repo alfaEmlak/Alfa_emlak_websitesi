@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { getTranslatedListing, getTranslatedSiteSettings } from "@/lib/i18n-utils";
 import { listingPropertyTypeDisplayLabel } from "@/lib/listing-property-taxonomy";
+import { landPriceIsPerDonumFromDetailFields } from "@/lib/land-parcel-detail";
 import { stripOwnerContactPrivateFromDetailFields } from "@/lib/owner-contact-private";
 import { getListingDetailForLocale } from "@/lib/listing-detail-data";
 import { getAdminSession } from "@/lib/admin-auth";
@@ -137,6 +138,11 @@ export default async function ListingDetailPage({ params }: Props) {
                 price={Number(listing.price ?? 0)}
                 currency={listing.currency ?? "EUR"}
                 variant="detail"
+                note={
+                  landPriceIsPerDonumFromDetailFields(listing.detailFields)
+                    ? t("priceNotePerDonum")
+                    : undefined
+                }
               />
               <div className="flex gap-2">
                 <ListingShareButton title={listing.title} label={t("share")} copiedMessage={t("shareCopied")} />

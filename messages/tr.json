@@ -110,6 +110,7 @@
     "blogViewAll": "Tüm yazılar"
   },
   "ListingDetail": {
+    "priceNotePerDonum": "dönüm fiyatı",
     "info": "İlan bilgileri",
     "summary": "İlan özeti",
     "views": "görüntülenme",
@@ -174,12 +175,20 @@
       "propertyTypeAll": "Tüm tipler",
       "konut": "Konut",
       "ticari": "Ticari",
-      "arsa": "Arsa",
+      "arsa": "Arsa/Arazi",
       "rooms": "Oda",
       "roomsAll": "Oda (tümü)",
+      "studio": "Stüdyo",
+      "roomCustom": "Diğer (kendin gir)",
+      "roomCustomPlaceholder": "örn. 3+1",
       "minPrice": "Min fiyat",
       "maxPrice": "Maks fiyat",
+      "minArea": "Min m²",
+      "maxArea": "Maks m²",
       "furnished": "Eşyalı",
+      "category": "Kategori",
+      "mainFilters": "Filtreler",
+      "categoryFilters": "Kategoriye özel",
       "apply": "Uygula",
       "clearAll": "Tümünü temizle",
       "remove": "Kaldır"
@@ -493,7 +502,7 @@
     "region": "Bölge",
     "selectCategory": "Kategori Seçin",
     "catKonut": "Konut",
-    "catArsa": "Arsa",
+    "catArsa": "Arsa/Arazi",
     "catTicari": "Ticari",
     "catProje": "Proje",
     "allSubTypes": "Tüm Tipler",
@@ -512,6 +521,7 @@
       "yarimInsaat": "Yarım İnşaat",
       "konutImarli": "Konut İmarlı",
       "ticariImarli": "Ticari İmarlı",
+      "konutTicariImarli": "Konut + Ticari İmarlı",
       "tarla": "Tarla",
       "bagBahce": "Bağ & Bahçe",
       "sanayiArsasi": "Sanayi Arsası",
@@ -713,7 +723,10 @@
       "deleteNotFound": "İlan bulunamadı veya zaten silinmiş.",
       "deleteError": "İlan silinirken bir hata oluştu. Lütfen tekrar deneyin.",
       "actionPublish": "Yayına Al",
-      "actionUnpublish": "Yayından Kaldır"
+      "actionUnpublish": "Yayından Kaldır",
+      "filterAgentAll": "Danışman (tümü)",
+      "countTotal": "Toplam {total} ilan",
+      "countFiltered": "Toplam {total} ilan · {filtered} tanesi filtrelendi"
     },
     "approval": {
       "titleAdmin": "Onay bekleyenler",

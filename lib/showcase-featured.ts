@@ -1,7 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
-/** Ana sayfa vitrininde gösterilecek yayında “öne çıkan” ilan üst sınırı. */
-export const SHOWCASE_MAX_PUBLISHED_FEATURED = 9;
+export { SHOWCASE_MAX_PUBLISHED_FEATURED } from "@/lib/showcase-constants";
 
 /**
  * Yayında ve badges.featured olan ilan sayısı (isteğe bağlı olarak bir kayıt hariç).

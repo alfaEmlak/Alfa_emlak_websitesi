@@ -16,9 +16,11 @@ type Props = {
   currency: string;
   /** Büyük ilan detay başlığı */
   variant?: "detail" | "card" | "hero";
+  /** Fiyatın altında gösterilecek küçük not (ör. "dönüm fiyatı") */
+  note?: string;
 };
 
-export function ListingPriceWithFx({ price, currency, variant = "card" }: Props) {
+export function ListingPriceWithFx({ price, currency, variant = "card", note }: Props) {
   const t = useTranslations("Common");
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<DovizApiWire | null>(null);
@@ -89,6 +91,11 @@ export function ListingPriceWithFx({ price, currency, variant = "card" }: Props)
           {t("fxConvert")}
         </button>
       </div>
+      {note ? (
+        <span className={`text-xs font-medium ${variant === "hero" ? "text-sky-100/70" : "text-on-surface/55"}`}>
+          {note}
+        </span>
+      ) : null}
       {open ? (
         <div className={variant === "detail" ? "mt-1 w-full max-w-[18rem] sm:ml-auto" : "mt-1 w-full max-w-[17rem]"}>
           {!supported ? (

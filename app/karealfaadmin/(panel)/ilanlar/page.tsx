@@ -10,6 +10,7 @@ import { getPanelTranslations } from "@/lib/panel-translations";
 import { requirePanelUser } from "@/lib/panel-auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { ListingActionsMenu } from "@/components/admin/ListingActionsMenu";
+import { ListingPreviewModal } from "@/components/admin/ListingPreviewModal";
 
 async function fetchDistinctListingCities(consultantAgentId?: string | null): Promise<string[]> {
   const seen = new Set<string>();
@@ -86,12 +87,27 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
   const city = first(sp.city)?.trim();
   const kind = first(sp.kind)?.trim();
   const status = first(sp.status)?.trim();
+  const agentFilter = first(sp.agent)?.trim();
   const deleteFlash = first(sp.delete)?.trim();
 
   const consultantAgentId = user.role === "CONSULTANT" && user.agentId ? user.agentId : null;
   const cityOptions = (await fetchDistinctListingCities(consultantAgentId)).filter(
     (c) => !excludeFromAdminListingCityFilter(c),
   );
+
+  const agentOptions =
+    user.role === "ADMIN"
+      ? (
+          (await supabaseAdmin.from("agents").select("id,name").order("name", { ascending: true })).data ?? []
+        ).filter((a): a is { id: string; name: string } => !!a?.id)
+      : [];
+  const selectedAgent = agentFilter ? agentOptions.find((a) => a.id === agentFilter) : undefined;
+  const agentFilterValid = !!selectedAgent;
+  // Feed (101evler) ilanları danışmana created_by_agent_id ile değil, created_by_name ile bağlı.
+  // Bu yüzden hem agent_id hem isim ile eşleştiriyoruz.
+  const agentOrFilter = selectedAgent
+    ? `created_by_agent_id.eq.${selectedAgent.id},created_by_name.eq."${selectedAgent.name.replace(/"/g, '\\"')}"`
+    : "";
 
   let query = supabaseAdmin.from("listings").select("*, listing_images(*)");
 
@@ -104,6 +120,7 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
   if (city && cityOptions.includes(city)) query = query.eq("city", city);
   if (kind && ["SATILIK", "KIRALIK", "GUNLUK_KIRALIK", "PROJE"].includes(kind)) query = query.eq("kind", kind);
   if (status && ["DRAFT", "PENDING_APPROVAL", "PUBLISHED", "HIDDEN", "REJECTED"].includes(status)) query = query.eq("publish_status", status);
+  if (agentOrFilter) query = query.or(agentOrFilter);
 
   let result = await query.order("updated_at", { ascending: false }).limit(80);
   if (result.error?.message.includes("Could not find the")) {
@@ -116,10 +133,32 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
     if (city && cityOptions.includes(city)) fallbackQuery = fallbackQuery.eq("city", city);
     if (kind && ["SATILIK", "KIRALIK", "GUNLUK_KIRALIK", "PROJE"].includes(kind)) fallbackQuery = fallbackQuery.eq("kind", kind);
     if (status && ["DRAFT", "PENDING_APPROVAL", "PUBLISHED", "HIDDEN", "REJECTED"].includes(status)) fallbackQuery = fallbackQuery.eq("publish_status", status);
+    if (agentOrFilter) fallbackQuery = fallbackQuery.or(agentOrFilter);
     result = await fallbackQuery.order("updated_at", { ascending: false }).limit(80);
   }
 
   const listings = (result.data ?? []) as ListingRow[];
+
+  // Sayımlar: kapsamdaki toplam ve uygulanan filtreye göre filtrelenen ilan sayısı.
+  const scopeAgentId = user.role !== "ADMIN" && user.agentId ? user.agentId : null;
+
+  let totalCountQuery = supabaseAdmin.from("listings").select("*", { count: "exact", head: true });
+  if (scopeAgentId) totalCountQuery = totalCountQuery.eq("created_by_agent_id", scopeAgentId);
+  const { count: totalCountRaw } = await totalCountQuery;
+  const totalCount = totalCountRaw ?? 0;
+
+  let filteredCountQuery = supabaseAdmin.from("listings").select("*", { count: "exact", head: true });
+  if (scopeAgentId) filteredCountQuery = filteredCountQuery.eq("created_by_agent_id", scopeAgentId);
+  if (qId) filteredCountQuery = filteredCountQuery.ilike("listing_id", `%${qId}%`);
+  if (qTitle) filteredCountQuery = filteredCountQuery.ilike("title", `%${qTitle}%`);
+  if (city && cityOptions.includes(city)) filteredCountQuery = filteredCountQuery.eq("city", city);
+  if (kind && ["SATILIK", "KIRALIK", "GUNLUK_KIRALIK", "PROJE"].includes(kind)) filteredCountQuery = filteredCountQuery.eq("kind", kind);
+  if (status && ["DRAFT", "PENDING_APPROVAL", "PUBLISHED", "HIDDEN", "REJECTED"].includes(status)) filteredCountQuery = filteredCountQuery.eq("publish_status", status);
+  if (agentOrFilter) filteredCountQuery = filteredCountQuery.or(agentOrFilter);
+  const { count: filteredCountRaw } = await filteredCountQuery;
+  const filteredCount = filteredCountRaw ?? 0;
+
+  const hasActiveFilter = !!(qId || qTitle || city || kind || status || agentFilterValid);
 
   const actionLabels = {
     publish: t("listings.actionPublish"),
@@ -166,7 +205,7 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
         </div>
       </div>
 
-      <form className="mt-6 grid grid-cols-1 gap-3 rounded-2xl border border-zinc-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-6">
+      <form className={`mt-6 grid grid-cols-1 gap-3 rounded-2xl border border-zinc-200 bg-white p-4 sm:grid-cols-2 ${user.role === "ADMIN" ? "lg:grid-cols-7" : "lg:grid-cols-6"}`}>
         <input name="listingId" placeholder={t("listings.phListingId")} defaultValue={qId ?? ""} className="min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25" />
         <input name="title" placeholder={t("listings.phTitle")} defaultValue={qTitle ?? ""} className="min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25" />
         <select
@@ -196,10 +235,26 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
           <option value="HIDDEN">{t("publishStatus.HIDDEN")}</option>
           <option value="REJECTED">{t("publishStatus.REJECTED")}</option>
         </select>
+        {user.role === "ADMIN" ? (
+          <select name="agent" defaultValue={agentFilterValid ? agentFilter : ""} className="min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25">
+            <option value="">{t("listings.filterAgentAll")}</option>
+            {agentOptions.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+        ) : null}
         <button type="submit" className="min-h-[44px] rounded-xl bg-zinc-800 py-2 text-sm font-bold text-white transition hover:bg-zinc-900">
           {t("common.filter")}
         </button>
       </form>
+
+      <p className="mt-3 text-sm text-zinc-500">
+        {hasActiveFilter
+          ? t("listings.countFiltered", { total: totalCount, filtered: filteredCount })
+          : t("listings.countTotal", { total: totalCount })}
+      </p>
 
       {deleteFlash === "forbidden" ? (
         <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{t("listings.deleteForbidden")}</p>
@@ -218,15 +273,20 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
           listings.map((listing) => {
             const img = getCoverImage(listing);
             const isRemote = img.startsWith("http");
+            const previewHref = `/${locale}/ilan/${listing.listing_id}`;
             return (
               <div key={listing.id} className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
                 <div className="flex gap-3">
-                  <div className="relative h-16 w-20 shrink-0 overflow-hidden rounded-lg bg-zinc-100 ring-1 ring-zinc-200">
-                    <Image src={img} alt="" fill className="object-cover" sizes="80px" unoptimized={isRemote} />
-                  </div>
+                  <ListingPreviewModal href={previewHref} title={listing.title} className="block shrink-0 cursor-pointer">
+                    <div className="relative h-16 w-20 overflow-hidden rounded-lg bg-zinc-100 ring-1 ring-zinc-200">
+                      <Image src={img} alt="" fill className="object-cover" sizes="80px" unoptimized={isRemote} />
+                    </div>
+                  </ListingPreviewModal>
                   <div className="min-w-0 flex-1">
                     <p className="font-mono text-xs text-zinc-500">{listing.listing_id}</p>
-                    <p className="mt-0.5 font-semibold text-zinc-900">{listing.title}</p>
+                    <ListingPreviewModal href={previewHref} title={listing.title} className="mt-0.5 text-left font-semibold text-zinc-900 transition hover:text-emerald-700">
+                      {listing.title}
+                    </ListingPreviewModal>
                     <p className="mt-1 text-xs text-zinc-500">
                       {displayListingCity(listing.city)} / {listing.region}
                     </p>
@@ -274,15 +334,22 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
               listings.map((listing) => {
                 const img = getCoverImage(listing);
                 const isRemote = img.startsWith("http");
+                const previewHref = `/${locale}/ilan/${listing.listing_id}`;
                 return (
                   <tr key={listing.id} className="transition hover:bg-zinc-50">
                     <td className="px-3 py-2">
-                      <div className="relative h-12 w-16 overflow-hidden rounded-lg bg-zinc-100 ring-1 ring-zinc-200">
-                        <Image src={img} alt="" fill className="object-cover" sizes="64px" unoptimized={isRemote} />
-                      </div>
+                      <ListingPreviewModal href={previewHref} title={listing.title} className="block cursor-pointer">
+                        <div className="relative h-12 w-16 overflow-hidden rounded-lg bg-zinc-100 ring-1 ring-zinc-200">
+                          <Image src={img} alt="" fill className="object-cover" sizes="64px" unoptimized={isRemote} />
+                        </div>
+                      </ListingPreviewModal>
                     </td>
                     <td className="px-3 py-2 font-mono text-xs text-zinc-500">{listing.listing_id}</td>
-                    <td className="px-3 py-2 font-medium text-zinc-800">{listing.title}</td>
+                    <td className="px-3 py-2 font-medium text-zinc-800">
+                      <ListingPreviewModal href={previewHref} title={listing.title} className="text-left font-medium text-zinc-800 transition hover:text-emerald-700 hover:underline">
+                        {listing.title}
+                      </ListingPreviewModal>
+                    </td>
                     <td className="px-3 py-2 text-xs text-zinc-500">
                       {displayListingCity(listing.city)} / {listing.region}
                     </td>

@@ -40,6 +40,15 @@ export default async function AdminPanelLayout({ children }: { children: React.R
     newUserFormsCount = await countAiFormsNewerThanCheckpoint(checkpoint);
   }
 
+  let pendingAgentsCount = 0;
+  if (user.role === "ADMIN") {
+    const { count } = await supabaseAdmin
+      .from("agents")
+      .select("*", { count: "exact", head: true })
+      .or("is_active.is.null,is_active.eq.false");
+    pendingAgentsCount = count ?? 0;
+  }
+
   return (
     <div className="flex min-h-screen">
       {user.role === "ADMIN" ? <AiFormsCheckpointSync /> : null}
@@ -48,6 +57,7 @@ export default async function AdminPanelLayout({ children }: { children: React.R
         pendingCount={pendingCount}
         unreadInboxCount={unreadInboxCount}
         newUserFormsCount={newUserFormsCount}
+        pendingAgentsCount={pendingAgentsCount}
         userName={user.name ?? undefined}
       />
       <div className="admin-scroll admin-shell flex-1 overflow-x-hidden text-[var(--on-surface)]">{children}</div>

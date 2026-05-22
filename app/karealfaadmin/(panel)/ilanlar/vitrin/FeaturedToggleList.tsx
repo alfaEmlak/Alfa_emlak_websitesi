@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { toggleFeatured } from "@/app/karealfaadmin/actions";
 import { AdminIcon } from "@/components/admin/AdminIcon";
-import { SHOWCASE_MAX_PUBLISHED_FEATURED } from "@/lib/showcase-featured";
+import { SHOWCASE_MAX_PUBLISHED_FEATURED } from "@/lib/showcase-constants";
 
 type Item = {
   id: string;

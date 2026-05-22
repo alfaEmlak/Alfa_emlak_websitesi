@@ -61,19 +61,27 @@ export default async function DanismanlarPage() {
               key={a.id}
               className="flex flex-col items-center rounded-2xl border border-primary/10 bg-white p-6 text-center shadow-[var(--shadow-ambient)] transition hover:shadow-[var(--shadow-float)]"
             >
-              <div className="relative h-28 w-28 overflow-hidden rounded-full border-4 border-secondary/15 bg-slate-100">
-                {a.photo ? (
-                  <Image src={a.photo} alt={a.name || "Danışman"} fill className="object-cover" sizes="112px" unoptimized />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-4xl text-primary/30">
-                    {(a.name || "?").charAt(0).toUpperCase()}
-                  </div>
-                )}
-              </div>
-              <h3 className="mt-5 font-headline text-lg font-extrabold text-primary">{a.name || "—"}</h3>
-              <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-secondary">
-                {a.title || "Emlak Danışmanı"}
-              </p>
+              <Link href={`/danismanlar/${a.id}`} className="group flex flex-col items-center">
+                <div className="relative h-28 w-28 overflow-hidden rounded-full border-4 border-secondary/15 bg-slate-100">
+                  {a.photo ? (
+                    <Image src={a.photo} alt={a.name || "Danışman"} fill className="object-cover" sizes="112px" unoptimized />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-4xl text-primary/30">
+                      {(a.name || "?").charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <h3 className="mt-5 font-headline text-lg font-extrabold text-primary transition group-hover:text-secondary">{a.name || "—"}</h3>
+                <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-secondary">
+                  {a.title || "Emlak Danışmanı"}
+                </p>
+              </Link>
+              <Link
+                href={`/danismanlar/${a.id}`}
+                className="mt-4 text-xs font-semibold text-secondary underline-offset-4 hover:underline"
+              >
+                İlanlarını gör →
+              </Link>
 
               <div className="mt-6 flex w-full flex-col gap-2 text-sm">
                 {a.phone ? (

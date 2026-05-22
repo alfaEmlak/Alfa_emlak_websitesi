@@ -110,6 +110,7 @@
     "whyUsConclusion": "Today's buyers are not only searching listings—they want trustworthy guidance.\n\nWith sound analysis, strong marketing, professional process management, and a trust-led approach, Alfa Emlak aims to deliver not just property but the right investment experience."
   },
   "ListingDetail": {
+    "priceNotePerDonum": "price per dönüm",
     "info": "Listing info",
     "summary": "Listing summary",
     "views": "views",
@@ -174,12 +175,20 @@
       "propertyTypeAll": "All types",
       "konut": "Residential",
       "ticari": "Commercial",
-      "arsa": "Land",
+      "arsa": "Land/Plot",
       "rooms": "Rooms",
       "roomsAll": "Rooms (all)",
+      "studio": "Studio",
+      "roomCustom": "Other (enter your own)",
+      "roomCustomPlaceholder": "e.g. 3+1",
       "minPrice": "Min price",
       "maxPrice": "Max price",
+      "minArea": "Min m²",
+      "maxArea": "Max m²",
       "furnished": "Furnished",
+      "category": "Category",
+      "mainFilters": "Filters",
+      "categoryFilters": "Category-specific",
       "apply": "Apply",
       "clearAll": "Clear all",
       "remove": "Remove"
@@ -503,6 +512,7 @@
       "yarimInsaat": "Unfinished Construction",
       "konutImarli": "Residential Zoned",
       "ticariImarli": "Commercial Zoned",
+      "konutTicariImarli": "Residential + Commercial Zoned",
       "tarla": "Field",
       "bagBahce": "Vineyard & Garden",
       "sanayiArsasi": "Industrial Land",
@@ -703,7 +713,10 @@
       "deleteNotFound": "Listing was not found or was already deleted.",
       "deleteError": "Could not delete the listing. Please try again.",
       "actionPublish": "Publish",
-      "actionUnpublish": "Unpublish"
+      "actionUnpublish": "Unpublish",
+      "filterAgentAll": "Consultant (all)",
+      "countTotal": "{total} listings in total",
+      "countFiltered": "{total} listings in total · {filtered} filtered"
     },
     "approval": {
       "titleAdmin": "Pending approvals",

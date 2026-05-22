@@ -110,6 +110,7 @@
     "whyUsConclusion": "Today's buyers are not only searching listings—they want trustworthy guidance.\n\nWith sound analysis, strong marketing, professional process management, and a trust-led approach, Alfa Emlak aims to deliver not just property but the right investment experience."
   },
   "ListingDetail": {
+    "priceNotePerDonum": "قیمت هر دونوم",
     "info": "اطلاعات ملک",
     "summary": "خلاصه وضعیت",
     "views": "بازدید",
@@ -176,7 +177,15 @@
       "ticari": "تجاری",
       "arsa": "زمین",
       "rooms": "اتاق",
+      "minArea": "حداقل متر مربع",
+      "maxArea": "حداکثر متر مربع",
+      "category": "دسته‌بندی",
+      "mainFilters": "فیلترها",
+      "categoryFilters": "ویژه دسته",
       "roomsAll": "اتاق (همه)",
+      "studio": "استودیو",
+      "roomCustom": "سایر (دستی وارد کنید)",
+      "roomCustomPlaceholder": "مثلاً ۳+۱",
       "minPrice": "حداقل قیمت",
       "maxPrice": "حداکثر قیمت",
       "furnished": "مبله",
@@ -503,6 +512,7 @@
       "yarimInsaat": "نیمه‌ساخت",
       "konutImarli": "زمین مسکونی",
       "ticariImarli": "زمین تجاری",
+      "konutTicariImarli": "کاربری مسکونی + تجاری",
       "tarla": "مزرعه",
       "bagBahce": "باغ و تاکستان",
       "sanayiArsasi": "زمین صنعتی",
@@ -703,7 +713,10 @@
       "deleteNotFound": "آگهی پیدا نشد یا قبلاً حذف شده است.",
       "deleteError": "حذف آگهی انجام نشد. دوباره تلاش کنید.",
       "actionPublish": "انتشار",
-      "actionUnpublish": "لغو انتشار"
+      "actionUnpublish": "لغو انتشار",
+      "filterAgentAll": "مشاور (همه)",
+      "countTotal": "مجموعاً {total} آگهی",
+      "countFiltered": "مجموعاً {total} آگهی · {filtered} فیلتر شد"
     },
     "approval": {
       "titleAdmin": "در انتظار تأیید",

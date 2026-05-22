@@ -22,6 +22,11 @@ const nextConfig: NextConfig = {
         hostname: "edioisowmuhhipefyoqq.supabase.co",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "**.101evler.com",
+        pathname: "/**",
+      },
     ],
   },
 };
