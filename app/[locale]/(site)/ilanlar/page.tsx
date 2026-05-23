@@ -7,10 +7,11 @@ import {
 } from "@/lib/listings-query";
 import { getTranslations } from "next-intl/server";
 import { getTranslatedListing } from "@/lib/i18n-utils";
-import { kktcCities } from "@/lib/kktc-regions";
+import { kktcCities, kktcRegions } from "@/lib/kktc-regions";
 import { FilterChip } from "@/components/site/FilterChip";
 import { ListingFilters } from "@/components/site/ListingFilters";
 import { ListingSort } from "@/components/site/ListingSort";
+import { LISTING_SUBTYPE_LABEL_TR } from "@/lib/listing-property-taxonomy";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -77,8 +78,18 @@ export default async function ListingsPage({ params, searchParams }: Props) {
   const activeFilters: { key: string; label: string; value: string }[] = [];
   const fCity = first(sp.sehir);
   if (fCity) activeFilters.push({ key: "sehir", label: t("filters.city"), value: kktcCities.find((c) => c.v === fCity)?.l ?? fCity });
+  const fBolge = first(sp.bolge);
+  if (fBolge && fCity) {
+    const regLabel = kktcRegions[fCity]?.find((r) => r.v === fBolge)?.l ?? fBolge;
+    activeFilters.push({ key: "bolge", label: t("filters.region") || "Bölge", value: regLabel });
+  }
   const fEmlak = first(sp.emlak);
   if (fEmlak) activeFilters.push({ key: "emlak", label: t("filters.propertyType"), value: emlakLabel(fEmlak) });
+  const fAltTip = first(sp.altTip);
+  if (fAltTip && fEmlak === "arsa") {
+    const subLabel = LISTING_SUBTYPE_LABEL_TR[fAltTip] || fAltTip;
+    activeFilters.push({ key: "altTip", label: t("filters.arsaType") || "Arsa Tipi", value: subLabel });
+  }
   const fOda = first(sp.oda);
   if (fOda) {
     const odaN = parseInt(fOda, 10);
@@ -100,7 +111,7 @@ export default async function ListingsPage({ params, searchParams }: Props) {
   })();
 
   // Form'da görünmeyen ama korunması gereken parametreler (gizli input olarak taşınır)
-  const visibleFilterKeys = new Set(["q", "sehir", "emlak", "oda", "minFiyat", "maxFiyat", "minM2", "maxM2", "esyali", "page"]);
+  const visibleFilterKeys = new Set(["q", "sehir", "bolge", "emlak", "altTip", "oda", "minFiyat", "maxFiyat", "minM2", "maxM2", "esyali", "page"]);
   const hiddenParams: Record<string, string> = {};
   for (const [k, v] of Object.entries(sp)) {
     if (v == null || visibleFilterKeys.has(k)) continue;
@@ -109,7 +120,9 @@ export default async function ListingsPage({ params, searchParams }: Props) {
   }
   const filterInitial = {
     sehir: first(sp.sehir) ?? "",
+    bolge: first(sp.bolge) ?? "",
     emlak: first(sp.emlak) ?? "",
+    altTip: first(sp.altTip) ?? "",
     oda: first(sp.oda) ?? "",
     minFiyat: first(sp.minFiyat) ?? "",
     maxFiyat: first(sp.maxFiyat) ?? "",

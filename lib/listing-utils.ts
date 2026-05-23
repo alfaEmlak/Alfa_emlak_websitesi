@@ -19,6 +19,7 @@ export const DETAIL_FIELD_LABELS: Record<string, string> = {
   listingNo: "İlan Numarası",
   statusText: "Durumu",
   housingType: "Konut Tipi",
+  roomType: "Oda Tipi",
   agencyRef: "Acente Referansı",
   pricePerM2: "Fiyat / Metrekare",
   totalPlot: "Toplam Arsa / Arazi Alanı",
@@ -134,6 +135,20 @@ export function visibleDetailRows(raw: string | null | undefined) {
           String(entry.value ?? ""),
           String(fields.ownedFloorsFloorCount?.value ?? ""),
         );
+      } else if (key === "buildingAge") {
+        const valStr = String(entry.value ?? "").trim().toLowerCase();
+        if (
+          valStr === "0 yaşında" ||
+          valStr === "sıfır yaşında" ||
+          valStr === "sifir yasinda" ||
+          valStr === "0 yaş" ||
+          valStr === "0 yas" ||
+          valStr === "sıfır" ||
+          valStr === "sifir" ||
+          valStr === "0"
+        ) {
+          displayValue = "Sıfır";
+        }
       }
       return {
         key,

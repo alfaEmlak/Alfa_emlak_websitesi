@@ -1,5 +1,6 @@
 import { expandListingCityFilterValues, normalizeListingCitySlug } from "@/lib/listing-city";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { LISTING_SUBTYPE_LABEL_TR } from "@/lib/listing-property-taxonomy";
 import type { ListingKind } from "@/lib/listing-kinds";
 import { normalizeListings } from "@/lib/listing-normalize";
 import { kktcRegions } from "@/lib/kktc-regions";
@@ -74,17 +75,31 @@ export function buildListingFilters(sp: Record<string, string | string[] | undef
     where.featuresArr.push(...ozellikler.split(',').map(s => s.trim()).filter(Boolean));
   }
 
-  // Oda: "0" = stüdyo, "3" / "3+1" = 3 yatak odası. Baştaki sayı yatak odası sayısıdır.
+  // Oda: "1+0", "2+1", "3+1" vb. tam oda tipi stringi. Baştaki sayı yatak odası, arkası oturma odası.
   const oda = get("oda");
   if (oda != null && oda !== "") {
-    const n = parseInt(oda, 10);
-    if (Number.isFinite(n)) where.bedrooms = n;
+    if (oda.includes("+")) {
+      const parts = oda.split("+");
+      const beds = parseInt(parts[0], 10);
+      const living = parseInt(parts[1], 10);
+      if (Number.isFinite(beds)) where.bedrooms = beds;
+      if (Number.isFinite(living)) where.livingRooms = living;
+    } else {
+      // Geriye dönük uyumluluk: sadece sayı verilirse sadece bedrooms filtresi
+      const n = parseInt(oda, 10);
+      if (Number.isFinite(n)) where.bedrooms = n;
+    }
   }
 
   const emlak = get("emlak");
   if (emlak === "arsa") where.propertyType = "arsa";
   else if (emlak === "ticari") where.propertyType = "ticari";
   else if (emlak === "konut") where.propertyType = "konut";
+
+  const altTip = get("altTip");
+  if (altTip) {
+    where.propertySubtype = altTip;
+  }
 
   const danisman = get("danisman");
   if (danisman) where.createdByAgentId = danisman;
@@ -104,6 +119,10 @@ function getRegionLabel(cityV: string, bolgeV: string) {
 function applyListingFilters(query: any, where: Record<string, any>) {
   if (where.kind) query = query.eq("kind", where.kind);
   if (where.propertyType) query = query.ilike("property_type", `%${where.propertyType}%`);
+  if (where.propertySubtype) {
+    const subtypeLabel = LISTING_SUBTYPE_LABEL_TR[where.propertySubtype] || where.propertySubtype;
+    query = query.ilike("property_type", `%${subtypeLabel}%`);
+  }
   if (where.bedrooms !== undefined) query = query.eq("bedrooms", where.bedrooms);
   
   if (where.city) {
@@ -314,34 +333,122 @@ export async function getSimilarListings(
   excludeId: string,
   city: string,
   kind: string,
+  propertyType?: string,
+  region?: string,
   limit = 4,
 ) {
-  let query = supabaseAdmin
-    .from("listings")
-    .select("*, listing_images(*)")
-    .eq("publish_status", "PUBLISHED")
-    .neq("id", excludeId)
-    .eq("kind", kind);
-
-  if (city) {
-    query = query.in("city", expandListingCityFilterValues(city));
+  let category = "";
+  if (propertyType && typeof propertyType === "string") {
+    const s = propertyType.trim();
+    if (s.includes(" \u00b7 ")) {
+      category = s.split(" \u00b7 ")[0].trim().toLowerCase();
+    } else {
+      category = s.toLowerCase();
+    }
   }
 
-  const { data } = await query
-    .order("created_at", { ascending: false })
-    .limit(limit);
-  
-  return normalizeListings(data || []);
+  const results: any[] = [];
+  const seenIds = new Set<string>([excludeId]);
+
+  // Phase 1: Same kind AND same property_type category AND same region AND same city
+  if (category && region && typeof region === "string" && city && typeof city === "string") {
+    const { data } = await supabaseAdmin
+      .from("listings")
+      .select("*, listing_images(*)")
+      .eq("publish_status", "PUBLISHED")
+      .neq("id", excludeId)
+      .eq("kind", kind)
+      .eq("region", region)
+      .in("city", expandListingCityFilterValues(city))
+      .ilike("property_type", `${category}%`)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (data) {
+      for (const row of data) {
+        if (!seenIds.has(row.id)) {
+          results.push(row);
+          seenIds.add(row.id);
+        }
+      }
+    }
+  }
+
+  // Phase 2: Same kind AND same property_type category AND same city
+  if (results.length < limit && category && city && typeof city === "string") {
+    const { data } = await supabaseAdmin
+      .from("listings")
+      .select("*, listing_images(*)")
+      .eq("publish_status", "PUBLISHED")
+      .neq("id", excludeId)
+      .eq("kind", kind)
+      .in("city", expandListingCityFilterValues(city))
+      .ilike("property_type", `${category}%`)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (data) {
+      for (const row of data) {
+        if (!seenIds.has(row.id)) {
+          results.push(row);
+          seenIds.add(row.id);
+        }
+      }
+    }
+  }
+
+  // Phase 3: Same kind AND same city (original fallback)
+  if (results.length < limit && city && typeof city === "string") {
+    const { data } = await supabaseAdmin
+      .from("listings")
+      .select("*, listing_images(*)")
+      .eq("publish_status", "PUBLISHED")
+      .neq("id", excludeId)
+      .eq("kind", kind)
+      .in("city", expandListingCityFilterValues(city))
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (data) {
+      for (const row of data) {
+        if (!seenIds.has(row.id)) {
+          results.push(row);
+          seenIds.add(row.id);
+        }
+      }
+    }
+  }
+
+  // Phase 4: Just same kind
+  if (results.length < limit) {
+    const { data } = await supabaseAdmin
+      .from("listings")
+      .select("*, listing_images(*)")
+      .eq("publish_status", "PUBLISHED")
+      .neq("id", excludeId)
+      .eq("kind", kind)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (data) {
+      for (const row of data) {
+        if (!seenIds.has(row.id)) {
+          results.push(row);
+          seenIds.add(row.id);
+        }
+      }
+    }
+  }
+
+  return normalizeListings(results.slice(0, limit));
 }
 
 export async function getSimilarListingsSafe(
   excludeId: string,
   city: string,
   kind: string,
+  propertyType?: string,
+  region?: string,
   limit = 4,
 ): Promise<ListingPublic[]> {
   try {
-    return await getSimilarListings(excludeId, city, kind, limit);
+    return await getSimilarListings(excludeId, city, kind, propertyType, region, limit);
   } catch (e) {
     console.error("[getSimilarListingsSafe]", e);
     return [];

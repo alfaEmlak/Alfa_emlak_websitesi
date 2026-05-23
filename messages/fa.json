@@ -189,6 +189,8 @@
       "minPrice": "حداقل قیمت",
       "maxPrice": "حداکثر قیمت",
       "furnished": "مبله",
+      "arsaType": "نوع زمین",
+      "region": "منطقه",
       "apply": "اعمال",
       "clearAll": "پاک کردن همه",
       "remove": "حذف"

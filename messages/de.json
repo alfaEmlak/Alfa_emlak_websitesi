@@ -189,6 +189,8 @@
       "minPrice": "Min. Preis",
       "maxPrice": "Max. Preis",
       "furnished": "Möbliert",
+      "arsaType": "Landtyp",
+      "region": "Region",
       "apply": "Anwenden",
       "clearAll": "Alle löschen",
       "remove": "Entfernen"

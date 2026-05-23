@@ -1,4 +1,4 @@
-import { kktcCities } from "@/lib/kktc-regions";
+import { kktcCities, kktcRegions } from "@/lib/kktc-regions";
 
 export const LEFKOSA_SLUG = "lefkosa";
 
@@ -95,4 +95,25 @@ export function displayListingCity(raw: string | null | undefined): string {
   const slug = normalizeListingCitySlug(trimmed);
   const label = kktcCities.find((c) => c.v === slug)?.l;
   return label ?? trimmed;
+}
+
+export function displayListingRegionOrNeighborhood(raw: string | null | undefined): string {
+  const trimmed = (raw ?? "").trim();
+  if (!trimmed) return "";
+  
+  const slug = trimmed.toLowerCase().replace(/_/g, "-");
+  
+  for (const regionList of Object.values(kktcRegions)) {
+    const match = regionList.find((r) => r.v === slug);
+    if (match) return match.l;
+  }
+  
+  return trimmed
+    .replace(/[-_]+/g, " ")
+    .split(/\s+/)
+    .map((word) => {
+      if (!word) return "";
+      return word.charAt(0).toLocaleUpperCase("tr-TR") + word.slice(1).toLocaleLowerCase("tr-TR");
+    })
+    .join(" ");
 }

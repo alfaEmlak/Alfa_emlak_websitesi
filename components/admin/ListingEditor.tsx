@@ -100,8 +100,26 @@ function wizardPricePositive(raw: string): boolean {
   return false;
 }
 
-function wizardBasicsStepComplete(f: { propertySubtypeKey: string; price: string }): boolean {
-  return f.propertySubtypeKey.trim().length > 0 && wizardPricePositive(f.price);
+function wizardBasicsStepComplete(f: {
+  listingId: string;
+  title: string;
+  kind: string;
+  propertyCategory: string;
+  propertySubtypeKey: string;
+  price: string;
+  currency: string;
+  shortDescription: string;
+}): boolean {
+  return (
+    f.listingId.trim().length > 0 &&
+    f.title.trim().length > 0 &&
+    f.kind.trim().length > 0 &&
+    f.propertyCategory.trim().length > 0 &&
+    f.propertySubtypeKey.trim().length > 0 &&
+    wizardPricePositive(f.price) &&
+    f.currency.trim().length > 0 &&
+    f.shortDescription.trim().length > 0
+  );
 }
 
 /** Sihirbazda adım sırası: 4 = mal sahibi (`stepOwner`), sonrası danışman / yayın seçenekleri */
@@ -549,6 +567,23 @@ export function ListingEditor({
   const initialLand = parseLandFieldsFromDetailFields(listing?.detailFields);
   const initialTicariTags = parseTicariTagsFromDetailFields(listing?.detailFields);
   const initialOwnedFloors = parseOwnedFloorsFromDetailFields(listing?.detailFields);
+
+  // roomType: detailFields'dan oku, yoksa bedrooms+livingRooms'tan infer et
+  const initialRoomType = (() => {
+    try {
+      const raw = listing?.detailFields;
+      let o: Record<string, unknown> = {};
+      if (typeof raw === "string" && raw.trim()) o = JSON.parse(raw) as Record<string, unknown>;
+      else if (raw && typeof raw === "object" && !Array.isArray(raw)) o = raw as Record<string, unknown>;
+      const rt = (o as { roomType?: { value?: string } }).roomType;
+      if (rt && typeof rt === "object" && typeof rt.value === "string" && rt.value.trim()) return rt.value.trim();
+    } catch { /* ignore */ }
+    // Fallback: bedrooms + livingRooms'tan oluştur
+    const b = listing?.bedrooms;
+    const l = listing?.livingRooms;
+    if (b != null && l != null) return `${b}+${l}`;
+    return "";
+  })();
   const initialTaxonomy = parseListingPropertyType(listing?.propertyType ?? null);
   const initialPropertyType =
     listing?.propertyType?.trim() ||
@@ -565,7 +600,7 @@ export function ListingEditor({
     propertySubtypeKey: initialTaxonomy.subtypeKey,
     propertyType: initialPropertyType,
     price: listing != null ? String(listing.price) : "",
-    currency: listing?.currency ?? "EUR",
+    currency: listing?.currency ?? "GBP",
     shortDescription: listing?.shortDescription ?? "",
     city: initialCity,
     region: initialRegion,
@@ -581,6 +616,7 @@ export function ListingEditor({
     buildingAgePreset: initialBuildingAgePreset,
     buildingAge: initialBuildingAgeStr,
     livingRooms: listing?.livingRooms != null ? String(listing.livingRooms) : "",
+    roomType: initialRoomType,
     hasPool: listing?.hasPool ?? false,
     hasGarden: listing?.hasGarden ?? false,
     hasFireplace: listing?.hasFireplace ?? false,
@@ -668,7 +704,19 @@ export function ListingEditor({
   const consultantFieldsReadOnly = consultantLocked || (viewerRole === "ADMIN" && !!form.selectedAgentId);
 
   useEffect(() => {
-    if (wizardNavBlock === "basics" && wizardBasicsStepComplete({ propertySubtypeKey: form.propertySubtypeKey, price: form.price })) {
+    if (
+      wizardNavBlock === "basics" &&
+      wizardBasicsStepComplete({
+        listingId: form.listingId,
+        title: form.title,
+        kind: form.kind,
+        propertyCategory: form.propertyCategory,
+        propertySubtypeKey: form.propertySubtypeKey,
+        price: form.price,
+        currency: form.currency,
+        shortDescription: form.shortDescription,
+      })
+    ) {
       setWizardNavBlock(null);
       setMessage(null);
       setMessageType(null);
@@ -780,6 +828,24 @@ export function ListingEditor({
           next.buildingAge = "";
         }
       }
+
+      // roomType değişince bedrooms + livingRooms'u senkronize et
+      if (k === "roomType") {
+        const rt = String(v).trim();
+        if (rt && rt.includes("+")) {
+          const parts = rt.split("+");
+          const beds = parseInt(parts[0], 10);
+          const living = parseInt(parts[1], 10);
+          if (Number.isFinite(beds)) next.bedrooms = String(beds);
+          if (Number.isFinite(living)) next.livingRooms = String(living);
+          else next.livingRooms = "";
+        } else if (rt === "") {
+          // Temizle
+          next.bedrooms = "";
+          next.livingRooms = "";
+        }
+      }
+
 
       const ageStr = effectiveBuildingAgeString(next);
 
@@ -1214,6 +1280,18 @@ export function ListingEditor({
       f.ownedFloorsFloorCount,
     );
 
+    // roomType'ı detailFields'a ekle / temizle
+    const detailFieldsFinal = (() => {
+      let obj: Record<string, unknown> = {};
+      try { if (detailFieldsForSave.trim()) obj = JSON.parse(detailFieldsForSave) as Record<string, unknown>; } catch { /* ignore */ }
+      if (!isArsaSave && f.roomType.trim()) {
+        obj.roomType = { value: f.roomType.trim(), visible: true };
+      } else {
+        delete obj.roomType;
+      }
+      return JSON.stringify(obj);
+    })();
+
     const payload: ListingSavePayload = {
       id: listing?.id,
       originalListingId: listing?.listingId,
@@ -1256,7 +1334,7 @@ export function ListingEditor({
       hasAirConditioning: isArsaSave || isTicariSave ? false : f.hasAirConditioning,
       hasGatedCommunity: isArsaSave || isTicariSave ? false : f.hasGatedCommunity,
       titleDeedOwnership: f.titleDeedOwnership,
-      detailFields: detailFieldsForSave,
+      detailFields: detailFieldsFinal,
       features: JSON.stringify(featuresLines),
       nearbyPlaces: f.nearbyText || "[]",
       nearbyEnabled: f.nearbyEnabled,
@@ -1297,7 +1375,10 @@ export function ListingEditor({
         room_count_id: f.ext101_room_count_id ? Number(f.ext101_room_count_id) : null,
         build_age_id: f.ext101_build_age_id ? Number(f.ext101_build_age_id) : null,
         furnishing_id: f.ext101_furnishing_id ? Number(f.ext101_furnishing_id) : null,
-        billing_cycle_id: f.ext101_billing_cycle_id ? Number(f.ext101_billing_cycle_id) : null,
+        // billing_cycle_id sadece kiralık ilanlarda geçerlidir; satılık/proje için null gönder
+        billing_cycle_id: (f.kind === "KIRALIK" || f.kind === "GUNLUK_KIRALIK") && f.ext101_billing_cycle_id
+          ? Number(f.ext101_billing_cycle_id)
+          : null,
         price_for: (f.ext101_price_for === "U" ? "U" : "T") as "T" | "U",
         reference_no: f.ext101_reference_no?.trim() || null,
       },
@@ -1358,7 +1439,16 @@ export function ListingEditor({
     const leavingIncompleteBasics =
       wizardStep === 0 &&
       target > 0 &&
-      !wizardBasicsStepComplete({ propertySubtypeKey: form.propertySubtypeKey, price: form.price });
+      !wizardBasicsStepComplete({
+        listingId: form.listingId,
+        title: form.title,
+        kind: form.kind,
+        propertyCategory: form.propertyCategory,
+        propertySubtypeKey: form.propertySubtypeKey,
+        price: form.price,
+        currency: form.currency,
+        shortDescription: form.shortDescription,
+      });
     if (leavingIncompleteBasics) {
       setWizardNavBlock("basics");
       setMessage(tp("listingEditor.basicsStepIncomplete"));
@@ -1504,16 +1594,16 @@ export function ListingEditor({
           <p className="mt-1 text-sm text-zinc-500">İlanın temel bilgilerini girin</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <label className="block text-sm font-medium text-zinc-700">
-              İlan No
+              İlan No <span className="text-red-500">*</span>
               <input className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" value={form.listingId} onChange={(e) => set("listingId", e.target.value)} />
               <span className="mt-1 block text-xs text-zinc-400">Otomatik oluşturulur, değiştirebilirsiniz</span>
             </label>
             <label className="block text-sm font-medium text-zinc-700">
-              Başlık
+              Başlık <span className="text-red-500">*</span>
               <input className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" value={form.title} onChange={(e) => set("title", e.target.value)} />
             </label>
             <label className="block text-sm font-medium text-zinc-700">
-              İlan Türü
+              İlan Türü <span className="text-red-500">*</span>
               <select className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" value={form.kind} onChange={(e) => set("kind", e.target.value)}>
                 <option value="SATILIK">Satılık</option>
                 <option value="KIRALIK">Kiralık</option>
@@ -1522,7 +1612,7 @@ export function ListingEditor({
               </select>
             </label>
             <label className="block text-sm font-medium text-zinc-700">
-              {th("category")}
+              {th("category")} <span className="text-red-500">*</span>
               <select
                 className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                 value={form.propertyCategory}
@@ -1542,7 +1632,7 @@ export function ListingEditor({
               </select>
             </label>
             <label className="block text-sm font-medium text-zinc-700">
-              {th("propertyType")}
+              {th("propertyType")} <span className="text-red-500">*</span>
               <select
                 className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                 value={form.propertySubtypeKey}
@@ -1558,7 +1648,7 @@ export function ListingEditor({
             </label>
             <div className="block">
               <label className="block text-sm font-medium text-zinc-700">
-                Fiyat
+                Fiyat <span className="text-red-500">*</span>
                 <input className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" inputMode="decimal" value={form.price} onChange={(e) => set("price", e.target.value)} />
               </label>
               {isArsa ? (
@@ -1574,18 +1664,45 @@ export function ListingEditor({
               ) : null}
             </div>
             <label className="block text-sm font-medium text-zinc-700">
-              Para Birimi
+              Para Birimi <span className="text-red-500">*</span>
               <select className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" value={form.currency} onChange={(e) => set("currency", e.target.value)}>
+                <option value="GBP">GBP (£)</option>
                 <option value="EUR">EUR (€)</option>
                 <option value="TRY">TRY (₺)</option>
-                <option value="GBP">GBP (£)</option>
               </select>
             </label>
+            <label className="block text-sm font-medium text-zinc-700">
+              Oda Tipi
+              <select
+                className={`mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 transition-colors ${
+                  isArsa
+                    ? "border-zinc-100 bg-zinc-100 text-zinc-400 cursor-not-allowed"
+                    : "border-zinc-200 bg-zinc-50 text-zinc-800 focus:border-emerald-500 focus:ring-emerald-500/20"
+                }`}
+                value={isArsa ? "" : form.roomType}
+                disabled={isArsa}
+                onChange={(e) => set("roomType", e.target.value)}
+              >
+                <option value="">— Seçiniz —</option>
+                {[
+                  "1+0","1+1","2+1","2+2","3+1","3+2",
+                  "4+1","4+2","5","5+1","5+2","5+3","5+4",
+                  "6+1","6+2","6+3","6+4",
+                  "7+1","7+2","7+3","8+",
+                ].map((rt) => (
+                  <option key={rt} value={rt}>{rt}</option>
+                ))}
+              </select>
+              {isArsa && (
+                <span className="mt-1 block text-xs text-zinc-400">Arsa/arazi ilanlarında oda tipi girilmez</span>
+              )}
+            </label>
             <label className="block text-sm font-medium text-zinc-700 sm:col-span-2">
-              Kısa Açıklama
+              Kısa Açıklama <span className="text-red-500">*</span>
               <input className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" value={form.shortDescription} onChange={(e) => set("shortDescription", e.target.value)} />
               <span className="mt-1 block text-xs text-zinc-400">Listeleme sayfalarında görünen kısa açıklama</span>
             </label>
+
           </div>
         </section>
       )}
@@ -1779,7 +1896,7 @@ export function ListingEditor({
                   onChange={() => set("buildingAgePreset", "zero")}
                   className="h-4 w-4 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
                 />
-                Sıfır yaşında
+                Sıfır
               </label>
               <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
                 <input
@@ -1819,7 +1936,7 @@ export function ListingEditor({
             ) : (
               <p className="mt-3 text-xs text-zinc-500">
                 Yaş rakamı girilemez; kayıtta{" "}
-                {form.buildingAgePreset === "zero" ? "sıfır yaşında" : "proje"} olarak işlenir.
+                {form.buildingAgePreset === "zero" ? "sıfır" : "proje"} olarak işlenir.
               </p>
             )}
           </fieldset>
@@ -1828,63 +1945,7 @@ export function ListingEditor({
           {isArsa ? (
             <>
               <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <label className="block text-sm font-medium text-zinc-700 sm:col-span-2 lg:col-span-3">
-                  İmar durumu
-                  <textarea
-                    className="mt-1 min-h-[72px] w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                    placeholder="Örn. Konut imarlı, ticari imarlı, tarla…"
-                    value={form.landImarDurumu}
-                    onChange={(e) => set("landImarDurumu", e.target.value)}
-                    rows={2}
-                  />
-                </label>
-                <label className="block text-sm font-medium text-zinc-700">
-                  <span className="flex items-center justify-between">
-                    <span>Toplam imar oranı</span>
-                    <span className="text-[11px] font-normal text-zinc-400">%</span>
-                  </span>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min={0}
-                    step={0.01}
-                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                    value={form.landToplamImarOrani}
-                    onChange={(e) => set("landToplamImarOrani", e.target.value)}
-                  />
-                </label>
-                <label className="block text-sm font-medium text-zinc-700">
-                  <span className="flex items-center justify-between">
-                    <span>Toplam imar alanı</span>
-                    <span className="text-[11px] font-normal text-zinc-400">m²</span>
-                  </span>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    max={100000}
-                    step={1}
-                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                    value={form.areaM2}
-                    onChange={(e) => set("areaM2", e.target.value)}
-                  />
-                </label>
-                <label className="block text-sm font-medium text-zinc-700">
-                  <span className="flex items-center justify-between">
-                    <span>Taban oranı</span>
-                    <span className="text-[11px] font-normal text-zinc-400">% (0–100)</span>
-                  </span>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min={0}
-                    max={100}
-                    step={0.01}
-                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                    value={form.landTabanOrani}
-                    onChange={(e) => set("landTabanOrani", e.target.value)}
-                  />
-                </label>
+                {/* 1. Parsel / arazi alanı */}
                 <label className="block text-sm font-medium text-zinc-700">
                   <span className="flex items-center justify-between">
                     <span>Parsel / arazi alanı</span>
@@ -1901,6 +1962,61 @@ export function ListingEditor({
                     onChange={(e) => set("plotAreaM2", e.target.value)}
                   />
                 </label>
+
+                {/* 2. Toplam imar oranı */}
+                <label className="block text-sm font-medium text-zinc-700">
+                  <span className="flex items-center justify-between">
+                    <span>Toplam imar oranı</span>
+                    <span className="text-[11px] font-normal text-zinc-400">%</span>
+                  </span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    step={0.01}
+                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                    value={form.landToplamImarOrani}
+                    onChange={(e) => set("landToplamImarOrani", e.target.value)}
+                  />
+                </label>
+
+                {/* 3. Taban oranı */}
+                <label className="block text-sm font-medium text-zinc-700">
+                  <span className="flex items-center justify-between">
+                    <span>Taban oranı</span>
+                    <span className="text-[11px] font-normal text-zinc-400">% (0–100)</span>
+                  </span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    max={100}
+                    step={0.01}
+                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                    value={form.landTabanOrani}
+                    onChange={(e) => set("landTabanOrani", e.target.value)}
+                  />
+                </label>
+
+                {/* 4. Toplam imar alanı */}
+                <label className="block text-sm font-medium text-zinc-700">
+                  <span className="flex items-center justify-between">
+                    <span>Toplam imar alanı</span>
+                    <span className="text-[11px] font-normal text-zinc-400">m²</span>
+                  </span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={100000}
+                    step={1}
+                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                    value={form.areaM2}
+                    onChange={(e) => set("areaM2", e.target.value)}
+                  />
+                </label>
+
+                {/* 5. Mülkiyet kaç kat çıkabilir */}
                 <label className="block text-sm font-medium text-zinc-700">
                   <span className="flex items-center justify-between">
                     <span>Mülkiyet kaç kat çıkabilir</span>

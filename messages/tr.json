@@ -1,6 +1,7 @@
 {
   "Common": {
     "home": "Ana Sayfa",
+    "adminUser": "Yönetici",
     "listings": "İlanlar",
     "contact": "İletişim",
     "about": "Hakkımızda",
@@ -189,6 +190,8 @@
       "category": "Kategori",
       "mainFilters": "Filtreler",
       "categoryFilters": "Kategoriye özel",
+      "arsaType": "Arsa tipi",
+      "region": "Bölge",
       "apply": "Uygula",
       "clearAll": "Tümünü temizle",
       "remove": "Kaldır"
@@ -712,6 +715,7 @@
       "phTitle": "Başlık",
       "filterCityAll": "Şehir (tümü)",
       "filterKindAll": "Tür (tümü)",
+      "filterPropertyTypeAll": "Emlak tipi (tümü)",
       "filterStatusAll": "Durum (tümü)",
       "tableCover": "Kapak",
       "tableCityRegion": "Şehir / Bölge",
@@ -886,7 +890,7 @@
       "consultantCardSub": "Danışman bilgileri otomatik doldurulur.",
       "selectRegisteredConsultant": "Kayıtlı danışman seç",
       "selectConsultantOption": "— Danışman seçin —",
-      "basicsStepIncomplete": "Sonraki adıma geçmek için bir emlak tipi seçmeli ve sıfırdan büyük geçerli bir fiyat girmelisiniz.",
+      "basicsStepIncomplete": "Burada temel bilgilerin hepsini doldurmak zorunludur.",
       "ownerStepIncomplete": "Mal sahibi adımından sonra devam etmek için ad, soyad ve telefon numarasını doldurmalısınız.",
       "navPrev": "Önceki",
       "navNext": "Sonraki"

@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { getTranslatedListing, getTranslatedSiteSettings } from "@/lib/i18n-utils";
 import { listingPropertyTypeDisplayLabel } from "@/lib/listing-property-taxonomy";
+import { displayListingCity, displayListingRegionOrNeighborhood } from "@/lib/listing-city";
 import { landPriceIsPerDonumFromDetailFields } from "@/lib/land-parcel-detail";
 import { stripOwnerContactPrivateFromDetailFields } from "@/lib/owner-contact-private";
 import { getListingDetailForLocale } from "@/lib/listing-detail-data";
@@ -76,10 +77,22 @@ export default async function ListingDetailPage({ params }: Props) {
   const showNearbySection =
     listing.nearbyEnabled && (nearbyAuto.length > 0 || nearbyManual.length > 0);
 
-  const similarRaw = await getSimilarListingsSafe(listing.id, listing.city, listing.kind, 4);
+  const similarRaw = await getSimilarListingsSafe(
+    listing.id,
+    listing.city,
+    listing.kind,
+    listing.propertyType ?? (listing as any).property_type,
+    listing.region,
+    4,
+  );
   const similar = similarRaw.map(l => getTranslatedListing(l, locale));
 
-  const locLine = [listing.neighborhood, listing.region, listing.city, tc("cyprus")].filter(Boolean).join(", ");
+  const locLine = [
+    displayListingRegionOrNeighborhood(listing.neighborhood),
+    displayListingRegionOrNeighborhood(listing.region),
+    displayListingCity(listing.city),
+    tc("cyprus")
+  ].filter(Boolean).join(", ");
 
   const kindLabel = tc(`listingKinds.${listing.kind}`);
 
@@ -131,7 +144,7 @@ export default async function ListingDetailPage({ params }: Props) {
           <div className="flex flex-col gap-4 pb-8 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h1 className="font-headline text-2xl font-extrabold tracking-tight text-primary sm:text-3xl md:text-4xl">{listing.title}</h1>
-              <p className="mt-2 text-on-surface/50">{locLine}</p>
+              <p className="mt-2 text-sm font-semibold text-primary">{locLine}</p>
             </div>
             <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
               <ListingPriceWithFx
@@ -150,7 +163,7 @@ export default async function ListingDetailPage({ params }: Props) {
             </div>
           </div>
 
-          <div className="mt-8 flex flex-wrap gap-6 text-sm text-on-surface/60">
+          <div className="mt-8 flex flex-wrap gap-6 text-sm font-semibold text-primary">
             {listing.bedrooms != null ? (
               <div className="flex items-center gap-2">
                 <span className="text-lg">🛏</span>
@@ -172,7 +185,7 @@ export default async function ListingDetailPage({ params }: Props) {
             {listing.areaM2 != null ? (
               <div className="flex items-center gap-2">
                 <span className="text-lg">⬛</span>
-                <span>{listing.areaM2} {tc("squareMeters")}</span>
+                <span>{listing.areaM2} m²</span>
               </div>
             ) : null}
           </div>
@@ -191,33 +204,38 @@ export default async function ListingDetailPage({ params }: Props) {
             </div>
           ) : null}
 
-          <div className="mt-8 rounded-2xl bg-surface-lowest p-6 shadow-[var(--shadow-ambient)] ring-1 ring-primary/[0.1]">
-            <h2 className="font-headline text-lg font-bold text-primary">{t("summary")}</h2>
-            <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-              {listing.statsShowViews ? (
+          {access.mode !== "none" ? (
+            <div className="mt-8 rounded-2xl bg-surface-lowest p-6 shadow-[var(--shadow-ambient)] ring-1 ring-primary/[0.1]">
+              <div className="mb-2 flex items-center justify-between">
+                <h2 className="font-headline text-lg font-bold text-primary">{t("summary")}</h2>
+                <span className="rounded-md bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-900">
+                  {tc("adminUser") || "Yönetici"}
+                </span>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
                 <div>
                   <p className="font-headline text-2xl font-bold text-primary">
                     {(Number(listing.views ?? 0) || 0).toLocaleString(locale === "tr" ? "tr-TR" : "en-US")}
                   </p>
                   <p className="text-xs text-on-surface/50">{t("views")}</p>
                 </div>
-              ) : null}
-              {listing.statsShowRating && listing.rating != null ? (
+                {listing.rating != null ? (
+                  <div>
+                    <p className="font-headline text-2xl font-bold text-primary">{listing.rating}</p>
+                    <p className="text-xs text-on-surface/50">{t("points")}</p>
+                  </div>
+                ) : null}
                 <div>
-                  <p className="font-headline text-2xl font-bold text-primary">{listing.rating}</p>
-                  <p className="text-xs text-on-surface/50">{t("points")}</p>
+                  <p className="font-headline text-2xl font-bold text-primary">{daysAgo(listing.created_at ?? listing.createdAt)}</p>
+                  <p className="text-xs text-on-surface/50">{t("addedDaysAgo")}</p>
                 </div>
-              ) : null}
-              <div>
-                <p className="font-headline text-2xl font-bold text-primary">{daysAgo(listing.created_at ?? listing.createdAt)}</p>
-                <p className="text-xs text-on-surface/50">{t("addedDaysAgo")}</p>
-              </div>
-              <div>
-                <p className="font-headline text-2xl font-bold text-primary">{daysAgo(listing.updated_at ?? listing.updatedAt)}</p>
-                <p className="text-xs text-on-surface/50">{t("updatedDaysAgo")}</p>
+                <div>
+                  <p className="font-headline text-2xl font-bold text-primary">{daysAgo(listing.updated_at ?? listing.updatedAt)}</p>
+                  <p className="text-xs text-on-surface/50">{t("updatedDaysAgo")}</p>
+                </div>
               </div>
             </div>
-          </div>
+          ) : null}
 
           {listing.longDescription ? (
             <div className="mt-10">
@@ -225,7 +243,7 @@ export default async function ListingDetailPage({ params }: Props) {
                 {listingPropertyTypeDisplayLabel(String(listing.propertyType ?? ""))} {t("description")}
               </h2>
               <div
-                className="mt-4 max-w-none text-sm leading-relaxed text-on-surface/60 [&_p]:mt-3"
+                className="mt-4 max-w-none text-base leading-relaxed text-primary [&_p]:mt-3"
                 dangerouslySetInnerHTML={{ __html: listing.longDescription }}
               />
             </div>
@@ -236,7 +254,7 @@ export default async function ListingDetailPage({ params }: Props) {
               <h2 className="font-headline text-lg font-bold text-primary">{t("highlights")}</h2>
               <ul className="mt-4 grid gap-2 sm:grid-cols-2">
                 {features.map((f) => (
-                  <li key={f} className="flex gap-2 text-sm text-on-surface/60">
+                  <li key={f} className="flex gap-2 text-sm font-semibold text-primary">
                     <span className="text-secondary">•</span>
                     {f}
                   </li>

@@ -117,7 +117,7 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
               alt={siteName || "Alfa Emlak"}
               width={240}
               height={64}
-              className="h-11 w-auto max-w-[240px] object-contain md:h-12"
+              className="h-14 w-auto max-w-[280px] object-contain md:h-16"
               priority
             />
           </Link>
@@ -361,7 +361,7 @@ function SiteHeaderFallback({ menu, siteName }: { menu: MenuTopItem[]; siteName:
               alt={siteName || "Alfa Emlak"}
               width={240}
               height={64}
-              className="h-11 w-auto max-w-[240px] object-contain md:h-12"
+              className="h-14 w-auto max-w-[280px] object-contain md:h-16"
               priority
             />
           </Link>

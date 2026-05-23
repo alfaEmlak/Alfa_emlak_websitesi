@@ -2,13 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { kktcCities } from "@/lib/kktc-regions";
+import { kktcCities, kktcRegions } from "@/lib/kktc-regions";
 
 type Props = {
   locale: string;
   initial: {
     sehir: string;
+    bolge: string;
     emlak: string;
+    altTip: string;
     oda: string;
     minFiyat: string;
     maxFiyat: string;
@@ -24,27 +26,41 @@ const fieldCls =
   "w-full rounded-lg bg-surface-high px-3 py-2.5 text-sm text-primary outline-none ring-1 ring-primary/[0.1] focus:ring-2 focus:ring-primary/30";
 const labelCls = "mb-1 block text-xs font-semibold text-on-surface/55";
 
+const ROOM_TYPE_OPTIONS = [
+  "1+0","1+1","2+1","2+2","3+1","3+2",
+  "4+1","4+2","5","5+1","5+2","5+3","5+4",
+  "6+1","6+2","6+3","6+4",
+  "7+1","7+2","7+3","8+",
+];
+
 export function ListingFilters({ locale, initial, hidden }: Props) {
   const t = useTranslations("ListingsPage");
   const tc = useTranslations("Common");
+  const [sehir, setSehir] = useState(initial.sehir);
+  const [bolge, setBolge] = useState(initial.bolge);
   const [emlak, setEmlak] = useState(initial.emlak);
+  const [altTip, setAltTip] = useState(initial.altTip);
+  const [selectedOda, setSelectedOda] = useState(initial.oda);
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setSehir(initial.sehir);
+    setBolge(initial.bolge);
+    setEmlak(initial.emlak);
+    setAltTip(initial.altTip);
+    setSelectedOda(initial.oda);
+  }, [initial.sehir, initial.bolge, initial.emlak, initial.altTip, initial.oda]);
 
   const isKonut = emlak === "konut";
   const isArsa = emlak === "arsa";
   const isTicari = emlak === "ticari";
 
-  // Oda seçimi: "" (tümü) | "0" (stüdyo) | "1".."5" | "custom"
-  const ROOM_PRESETS = ["0", "1", "2", "3", "4", "5"];
-  const initialOdaMode =
-    initial.oda === "" ? "" : ROOM_PRESETS.includes(initial.oda) ? initial.oda : "custom";
-  const [odaMode, setOdaMode] = useState(initialOdaMode);
-  const [odaCustom, setOdaCustom] = useState(initialOdaMode === "custom" ? initial.oda : "");
-
   const activeCount =
     (initial.sehir ? 1 : 0) +
+    (initial.bolge ? 1 : 0) +
     (initial.emlak ? 1 : 0) +
+    (initial.altTip ? 1 : 0) +
     (initial.oda ? 1 : 0) +
     (initial.minFiyat ? 1 : 0) +
     (initial.maxFiyat ? 1 : 0) +
@@ -120,7 +136,16 @@ export function ListingFilters({ locale, initial, hidden }: Props) {
 
         <div>
           <label className={labelCls}>{t("filters.city")}</label>
-          <select name="sehir" defaultValue={initial.sehir} className={fieldCls}>
+          <select
+            name="sehir"
+            value={sehir}
+            onChange={(e) => {
+              const val = e.target.value;
+              setSehir(val);
+              setBolge("");
+            }}
+            className={fieldCls}
+          >
             <option value="">{t("filters.cityAll")}</option>
             {kktcCities.filter((c) => c.v).map((c) => (
               <option key={c.v} value={c.v}>
@@ -129,6 +154,25 @@ export function ListingFilters({ locale, initial, hidden }: Props) {
             ))}
           </select>
         </div>
+
+        {sehir && kktcRegions[sehir]?.length > 0 ? (
+          <div>
+            <label className={labelCls}>{t("filters.region") || "Bölge"}</label>
+            <select
+              name="bolge"
+              value={bolge}
+              onChange={(e) => setBolge(e.target.value)}
+              className={fieldCls}
+            >
+              <option value="">Tüm Bölgeler</option>
+              {kktcRegions[sehir].map((r) => (
+                <option key={r.v} value={r.v}>
+                  {r.l}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
 
         <div className="grid grid-cols-2 gap-2">
           <div>
@@ -167,7 +211,13 @@ export function ListingFilters({ locale, initial, hidden }: Props) {
         <select
           name="emlak"
           value={emlak}
-          onChange={(e) => setEmlak(e.target.value)}
+          onChange={(e) => {
+            const val = e.target.value;
+            setEmlak(val);
+            if (val !== "arsa") {
+              setAltTip("");
+            }
+          }}
           className={fieldCls}
         >
           <option value="">{t("filters.propertyTypeAll")}</option>
@@ -187,32 +237,18 @@ export function ListingFilters({ locale, initial, hidden }: Props) {
           {isKonut ? (
             <>
               <div>
-                <label className={labelCls}>{t("filters.rooms")}</label>
+                <label className={labelCls}>Oda Tipi</label>
                 <select
-                  value={odaMode}
-                  onChange={(e) => setOdaMode(e.target.value)}
+                  name="oda"
+                  value={selectedOda}
+                  onChange={(e) => setSelectedOda(e.target.value)}
                   className={fieldCls}
                 >
-                  <option value="">{t("filters.roomsAll")}</option>
-                  <option value="0">{t("filters.studio")}</option>
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <option key={n} value={n}>
-                      {n}+1
-                    </option>
+                  <option value="">Tümü</option>
+                  {ROOM_TYPE_OPTIONS.map((rt) => (
+                    <option key={rt} value={rt}>{rt}</option>
                   ))}
-                  <option value="custom">{t("filters.roomCustom")}</option>
                 </select>
-                {odaMode === "custom" ? (
-                  <input
-                    name="oda"
-                    value={odaCustom}
-                    onChange={(e) => setOdaCustom(e.target.value)}
-                    placeholder={t("filters.roomCustomPlaceholder")}
-                    className={`${fieldCls} mt-2`}
-                  />
-                ) : odaMode !== "" ? (
-                  <input type="hidden" name="oda" value={odaMode} />
-                ) : null}
               </div>
               <label className="flex items-center gap-2 rounded-lg bg-surface-high px-3 py-2.5 text-sm text-primary ring-1 ring-primary/[0.1]">
                 <input
@@ -225,6 +261,26 @@ export function ListingFilters({ locale, initial, hidden }: Props) {
                 {t("filters.furnished")}
               </label>
             </>
+          ) : null}
+
+          {isArsa ? (
+            <div>
+              <label className={labelCls}>{t("filters.arsaType") || "Arsa Tipi"}</label>
+              <select
+                name="altTip"
+                value={altTip}
+                onChange={(e) => setAltTip(e.target.value)}
+                className={fieldCls}
+              >
+                <option value="">Tüm Tipler</option>
+                <option value="konutImarli">Konut İmarlı</option>
+                <option value="ticariImarli">Ticari İmarlı</option>
+                <option value="konutTicariImarli">Konut + Ticari İmarlı</option>
+                <option value="tarla">Tarla</option>
+                <option value="sanayiArsasi">Sanayi Arsası</option>
+                <option value="bagBahce">Bağ &amp; Bahçe</option>
+              </select>
+            </div>
           ) : null}
 
           {isArsa || isTicari ? (

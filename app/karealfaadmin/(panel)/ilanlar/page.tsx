@@ -11,6 +11,11 @@ import { requirePanelUser } from "@/lib/panel-auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { ListingActionsMenu } from "@/components/admin/ListingActionsMenu";
 import { ListingPreviewModal } from "@/components/admin/ListingPreviewModal";
+import {
+  parseListingPropertyType,
+  LISTING_CATEGORY_LABEL_TR,
+  LISTING_SUBTYPE_LABEL_TR,
+} from "@/lib/listing-property-taxonomy";
 
 async function fetchDistinctListingCities(consultantAgentId?: string | null): Promise<string[]> {
   const seen = new Set<string>();
@@ -34,6 +39,64 @@ async function fetchDistinctListingCities(consultantAgentId?: string | null): Pr
     if (from > 100_000) break;
   }
   return [...seen].sort((a, b) => displayListingCity(a).localeCompare(displayListingCity(b), "tr"));
+}
+
+function displayListingPropertyType(stored: string) {
+  const { category, subtypeKey } = parseListingPropertyType(stored);
+  const catLabel = LISTING_CATEGORY_LABEL_TR[category] || category;
+  const subLabel = LISTING_SUBTYPE_LABEL_TR[subtypeKey];
+  if (subLabel) {
+    return `${catLabel} · ${subLabel}`;
+  }
+  return catLabel;
+}
+
+type PropertyTypeOption = {
+  displayLabel: string;
+  dbValues: string[];
+  rawValueKey: string;
+};
+
+async function fetchDistinctListingPropertyTypes(consultantAgentId?: string | null): Promise<PropertyTypeOption[]> {
+  const seen = new Set<string>();
+  const pageSize = 1000;
+  let from = 0;
+  for (;;) {
+    let q = supabaseAdmin.from("listings").select("property_type").range(from, from + pageSize - 1);
+    if (consultantAgentId) {
+      q = q.eq("created_by_agent_id", consultantAgentId);
+    }
+    const { data, error } = await q;
+    if (error) break;
+    if (!data?.length) break;
+    for (const row of data) {
+      const p = typeof row.property_type === "string" ? row.property_type.trim() : "";
+      if (p) seen.add(p);
+    }
+    if (data.length < pageSize) break;
+    from += pageSize;
+    if (from > 100_000) break;
+  }
+
+  const groups: Record<string, string[]> = {};
+  for (const dbVal of seen) {
+    const label = displayListingPropertyType(dbVal);
+    if (!groups[label]) {
+      groups[label] = [];
+    }
+    groups[label].push(dbVal);
+  }
+
+  const options: PropertyTypeOption[] = Object.entries(groups).map(([displayLabel, dbValues]) => {
+    const sortedDbVals = [...dbValues].sort();
+    return {
+      displayLabel,
+      dbValues: sortedDbVals,
+      rawValueKey: sortedDbVals.join(","),
+    };
+  });
+
+  return options.sort((a, b) => a.displayLabel.localeCompare(b.displayLabel, "tr"));
 }
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -86,6 +149,7 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
   const qTitle = first(sp.title)?.trim();
   const city = first(sp.city)?.trim();
   const kind = first(sp.kind)?.trim();
+  const propertyType = first(sp.propertyType)?.trim();
   const status = first(sp.status)?.trim();
   const agentFilter = first(sp.agent)?.trim();
   const deleteFlash = first(sp.delete)?.trim();
@@ -94,6 +158,10 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
   const cityOptions = (await fetchDistinctListingCities(consultantAgentId)).filter(
     (c) => !excludeFromAdminListingCityFilter(c),
   );
+  const propertyTypeOptions = await fetchDistinctListingPropertyTypes(consultantAgentId);
+  const selectedPropertyTypeOption = propertyType
+    ? propertyTypeOptions.find((o) => o.rawValueKey === propertyType)
+    : undefined;
 
   const agentOptions =
     user.role === "ADMIN"
@@ -119,6 +187,14 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
   if (qTitle) query = query.ilike("title", `%${qTitle}%`);
   if (city && cityOptions.includes(city)) query = query.eq("city", city);
   if (kind && ["SATILIK", "KIRALIK", "GUNLUK_KIRALIK", "PROJE"].includes(kind)) query = query.eq("kind", kind);
+  if (selectedPropertyTypeOption) {
+    const vals = selectedPropertyTypeOption.dbValues;
+    if (vals.length === 1) {
+      query = query.eq("property_type", vals[0]);
+    } else if (vals.length > 1) {
+      query = query.in("property_type", vals);
+    }
+  }
   if (status && ["DRAFT", "PENDING_APPROVAL", "PUBLISHED", "HIDDEN", "REJECTED"].includes(status)) query = query.eq("publish_status", status);
   if (agentOrFilter) query = query.or(agentOrFilter);
 
@@ -132,6 +208,14 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
     if (qTitle) fallbackQuery = fallbackQuery.ilike("title", `%${qTitle}%`);
     if (city && cityOptions.includes(city)) fallbackQuery = fallbackQuery.eq("city", city);
     if (kind && ["SATILIK", "KIRALIK", "GUNLUK_KIRALIK", "PROJE"].includes(kind)) fallbackQuery = fallbackQuery.eq("kind", kind);
+    if (selectedPropertyTypeOption) {
+      const vals = selectedPropertyTypeOption.dbValues;
+      if (vals.length === 1) {
+        fallbackQuery = fallbackQuery.eq("property_type", vals[0]);
+      } else if (vals.length > 1) {
+        fallbackQuery = fallbackQuery.in("property_type", vals);
+      }
+    }
     if (status && ["DRAFT", "PENDING_APPROVAL", "PUBLISHED", "HIDDEN", "REJECTED"].includes(status)) fallbackQuery = fallbackQuery.eq("publish_status", status);
     if (agentOrFilter) fallbackQuery = fallbackQuery.or(agentOrFilter);
     result = await fallbackQuery.order("updated_at", { ascending: false }).limit(80);
@@ -153,12 +237,20 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
   if (qTitle) filteredCountQuery = filteredCountQuery.ilike("title", `%${qTitle}%`);
   if (city && cityOptions.includes(city)) filteredCountQuery = filteredCountQuery.eq("city", city);
   if (kind && ["SATILIK", "KIRALIK", "GUNLUK_KIRALIK", "PROJE"].includes(kind)) filteredCountQuery = filteredCountQuery.eq("kind", kind);
+  if (selectedPropertyTypeOption) {
+    const vals = selectedPropertyTypeOption.dbValues;
+    if (vals.length === 1) {
+      filteredCountQuery = filteredCountQuery.eq("property_type", vals[0]);
+    } else if (vals.length > 1) {
+      filteredCountQuery = filteredCountQuery.in("property_type", vals);
+    }
+  }
   if (status && ["DRAFT", "PENDING_APPROVAL", "PUBLISHED", "HIDDEN", "REJECTED"].includes(status)) filteredCountQuery = filteredCountQuery.eq("publish_status", status);
   if (agentOrFilter) filteredCountQuery = filteredCountQuery.or(agentOrFilter);
   const { count: filteredCountRaw } = await filteredCountQuery;
   const filteredCount = filteredCountRaw ?? 0;
 
-  const hasActiveFilter = !!(qId || qTitle || city || kind || status || agentFilterValid);
+  const hasActiveFilter = !!(qId || qTitle || city || kind || selectedPropertyTypeOption || status || agentFilterValid);
 
   const actionLabels = {
     publish: t("listings.actionPublish"),
@@ -205,7 +297,7 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
         </div>
       </div>
 
-      <form className={`mt-6 grid grid-cols-1 gap-3 rounded-2xl border border-zinc-200 bg-white p-4 sm:grid-cols-2 ${user.role === "ADMIN" ? "lg:grid-cols-7" : "lg:grid-cols-6"}`}>
+      <form className={`mt-6 grid grid-cols-1 gap-3 rounded-2xl border border-zinc-200 bg-white p-4 sm:grid-cols-2 ${user.role === "ADMIN" ? "lg:grid-cols-8" : "lg:grid-cols-7"}`}>
         <input name="listingId" placeholder={t("listings.phListingId")} defaultValue={qId ?? ""} className="min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25" />
         <input name="title" placeholder={t("listings.phTitle")} defaultValue={qTitle ?? ""} className="min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25" />
         <select
@@ -226,6 +318,18 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
           <option value="KIRALIK">{t("kindLabels.KIRALIK")}</option>
           <option value="GUNLUK_KIRALIK">{t("kindLabels.GUNLUK_KIRALIK")}</option>
           <option value="PROJE">{t("kindLabels.PROJE")}</option>
+        </select>
+        <select
+          name="propertyType"
+          defaultValue={selectedPropertyTypeOption ? selectedPropertyTypeOption.rawValueKey : ""}
+          className="min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25"
+        >
+          <option value="">{t("listings.filterPropertyTypeAll") || "Emlak tipi (tümü)"}</option>
+          {propertyTypeOptions.map((opt) => (
+            <option key={opt.rawValueKey} value={opt.rawValueKey}>
+              {opt.displayLabel}
+            </option>
+          ))}
         </select>
         <select name="status" defaultValue={status ?? ""} className="min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25">
           <option value="">{t("listings.filterStatusAll")}</option>

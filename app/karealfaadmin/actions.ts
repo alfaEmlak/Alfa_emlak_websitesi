@@ -685,7 +685,11 @@ export async function saveListing(payload: ListingSavePayload) {
     room_count_id_101: payload.ext101evler?.room_count_id ?? null,
     build_age_id_101: payload.ext101evler?.build_age_id ?? null,
     furnishing_id_101: payload.ext101evler?.furnishing_id ?? null,
-    billing_cycle_id_101: payload.ext101evler?.billing_cycle_id ?? null,
+    // billing_cycle_id sadece kiralık ilanlarda (KIRALIK / GUNLUK_KIRALIK) geçerlidir.
+    // Satılık / Proje için bu alan null olmalı, aksi hâlde FK kısıtı ihlal edilir.
+    billing_cycle_id_101: (payload.kind === "KIRALIK" || payload.kind === "GUNLUK_KIRALIK")
+      ? (payload.ext101evler?.billing_cycle_id ?? null)
+      : null,
     price_for_101: (payload.ext101evler?.price_for as string | null | undefined) ?? null,
     reference_no_101: payload.ext101evler?.reference_no ?? null,
     property_type_id_hg: payload.extHangiev?.property_type_id ?? null,

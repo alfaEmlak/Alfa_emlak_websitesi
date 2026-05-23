@@ -189,6 +189,8 @@
       "minPrice": "Цена от",
       "maxPrice": "Цена до",
       "furnished": "С мебелью",
+      "arsaType": "Тип участка",
+      "region": "Район",
       "apply": "Применить",
       "clearAll": "Очистить всё",
       "remove": "Удалить"

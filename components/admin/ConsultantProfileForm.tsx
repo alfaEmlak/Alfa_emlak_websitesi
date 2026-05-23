@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { useFormStatus } from "react-dom";
 import { saveMyConsultantProfile } from "@/app/karealfaadmin/actions";
+import { AvatarCropper } from "./AvatarCropper";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -30,15 +31,23 @@ export function ConsultantProfileForm({ initialName, initialPhone, initialWhatsa
   const [photoUrl, setPhotoUrl] = useState(initialPhoto);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    const objectUrl = URL.createObjectURL(file);
+    setSelectedImage(objectUrl);
+    setUploadError(null);
+    e.target.value = "";
+  }
+
+  async function handleCropComplete(blob: Blob) {
     setUploading(true);
     setUploadError(null);
     try {
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", blob, "avatar.jpg");
       const res = await fetch("/api/upload", {
         method: "POST",
         body: fd,
@@ -49,11 +58,11 @@ export function ConsultantProfileForm({ initialName, initialPhone, initialWhatsa
         throw new Error(data.error || "Fotoğraf yüklenemedi.");
       }
       setPhotoUrl(data.url);
+      setSelectedImage(null);
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : "Fotoğraf yüklenemedi.");
     } finally {
       setUploading(false);
-      e.target.value = "";
     }
   }
 
@@ -109,10 +118,19 @@ export function ConsultantProfileForm({ initialName, initialPhone, initialWhatsa
         <h2 className="text-lg font-bold text-zinc-800">Profil Fotoğrafı</h2>
         <p className="mt-1 text-sm text-zinc-500">Bilgisayarınızdan görsel seçip yükleyebilirsiniz.</p>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <label className={`inline-flex cursor-pointer items-center justify-center rounded-xl bg-zinc-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-900 ${uploading ? "pointer-events-none opacity-60" : ""}`}>
-            <input type="file" accept="image/*,.heic,.heif,.avif" className="sr-only" onChange={handleUpload} disabled={uploading} />
-            {uploading ? "Yükleniyor..." : "Fotoğraf Seç"}
+          <label className="inline-flex cursor-pointer items-center justify-center rounded-xl bg-zinc-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-900">
+            <input type="file" accept="image/*,.heic,.heif,.avif" className="sr-only" onChange={handleFileSelect} />
+            Fotoğraf Seç
           </label>
+          {photoUrl && (
+            <button
+              type="button"
+              onClick={() => setSelectedImage(photoUrl)}
+              className="inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 transition"
+            >
+              Fotoğrafı Düzenle
+            </button>
+          )}
           <input
             value={photoUrl}
             onChange={(e) => setPhotoUrl(e.target.value)}
@@ -130,6 +148,15 @@ export function ConsultantProfileForm({ initialName, initialPhone, initialWhatsa
       </section>
 
       <SubmitButton />
+
+      {selectedImage && (
+        <AvatarCropper
+          imageSrc={selectedImage}
+          onCrop={handleCropComplete}
+          onCancel={() => setSelectedImage(null)}
+          uploading={uploading}
+        />
+      )}
     </form>
   );
 }

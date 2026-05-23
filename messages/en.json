@@ -1,6 +1,7 @@
 {
   "Common": {
     "home": "Home",
+    "adminUser": "Admin",
     "listings": "Listings",
     "contact": "Contact",
     "about": "About Us",
@@ -189,6 +190,8 @@
       "category": "Category",
       "mainFilters": "Filters",
       "categoryFilters": "Category-specific",
+      "arsaType": "Land type",
+      "region": "Region",
       "apply": "Apply",
       "clearAll": "Clear all",
       "remove": "Remove"
@@ -702,6 +705,7 @@
       "phTitle": "Title",
       "filterCityAll": "City (all)",
       "filterKindAll": "Type (all)",
+      "filterPropertyTypeAll": "Property type (all)",
       "filterStatusAll": "Status (all)",
       "tableCover": "Cover",
       "tableCityRegion": "City / area",
@@ -876,7 +880,7 @@
       "consultantCardSub": "Consultant details are filled in automatically.",
       "selectRegisteredConsultant": "Select a registered consultant",
       "selectConsultantOption": "— Select consultant —",
-      "basicsStepIncomplete": "Choose a property type and enter a valid price greater than zero before continuing.",
+      "basicsStepIncomplete": "It is mandatory to fill in all the basic information here.",
       "ownerStepIncomplete": "Enter the owner’s first name, last name, and phone before continuing to the next steps.",
       "navPrev": "Previous",
       "navNext": "Next"

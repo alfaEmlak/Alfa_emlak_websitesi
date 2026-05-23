@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { saveAgent } from "@/app/karealfaadmin/module-actions";
+import { AvatarCropper } from "./AvatarCropper";
 
 type Props = {
   agent?: {
@@ -25,6 +26,7 @@ export function AgentEditor({ agent }: Props) {
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const defaultRole =
     agent?.role === "CONSULTANT" ? "AGENT" : agent?.role ?? "AGENT";
@@ -46,14 +48,20 @@ export function AgentEditor({ agent }: Props) {
     setForm((current) => ({ ...current, [key]: value }));
   };
 
-  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    const objectUrl = URL.createObjectURL(file);
+    setSelectedImage(objectUrl);
+    setMessage(null);
+    e.target.value = "";
+  }
 
+  async function handleCropComplete(blob: Blob) {
     setUploading(true);
     try {
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", blob, "avatar.jpg");
       const res = await fetch("/api/upload", {
         method: "POST",
         body: fd,
@@ -62,6 +70,7 @@ export function AgentEditor({ agent }: Props) {
 
       if (data.url) {
         set("photo", data.url);
+        setSelectedImage(null);
       } else {
         throw new Error(data.error || "Yukleme basarisiz");
       }
@@ -157,9 +166,18 @@ export function AgentEditor({ agent }: Props) {
               </div>
               <div className="flex flex-1 flex-col gap-2">
                 <label className="cursor-pointer rounded-xl bg-zinc-800 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-zinc-900">
-                  <input type="file" accept="image/*" className="sr-only" onChange={handlePhotoUpload} disabled={uploading} />
-                  {uploading ? "Yukleniyor..." : "Fotograf Yukle"}
+                  <input type="file" accept="image/*" className="sr-only" onChange={handleFileSelect} />
+                  Fotograf Yukle
                 </label>
+                {form.photo && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedImage(form.photo)}
+                    className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-center text-sm font-semibold text-zinc-700 hover:bg-zinc-50 transition"
+                  >
+                    Fotoğrafı Düzenle
+                  </button>
+                )}
                 <input
                   className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500"
                   placeholder="veya URL girin"
@@ -227,6 +245,15 @@ export function AgentEditor({ agent }: Props) {
           </button>
         </div>
       </div>
+
+      {selectedImage && (
+        <AvatarCropper
+          imageSrc={selectedImage}
+          onCrop={handleCropComplete}
+          onCancel={() => setSelectedImage(null)}
+          uploading={uploading}
+        />
+      )}
     </div>
   );
 }
