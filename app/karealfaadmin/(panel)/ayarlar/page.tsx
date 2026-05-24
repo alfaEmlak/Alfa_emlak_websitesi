@@ -1,7 +1,7 @@
 import { saveSiteSettings } from "@/app/karealfaadmin/actions";
 import { requireAdmin } from "@/lib/panel-auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { getDefaultConsultant, getSocialLinks } from "@/lib/site-settings";
+import { getAnalysisSettings, getDefaultConsultant, getSocialLinks } from "@/lib/site-settings";
 import { MultiLangSettingsFields } from "@/components/admin/MultiLangSettingsFields";
 import { OfficeLogoUploadField } from "@/components/admin/OfficeLogoUploadField";
 
@@ -30,6 +30,7 @@ export default async function AdminSettingsPage() {
 
   const social = s ? getSocialLinks(s) : {};
   const dc = s ? getDefaultConsultant(s) : {};
+  const analysis = getAnalysisSettings(s ?? { analysis_json: null });
   const translations = s?.translations ? JSON.parse(s.translations) : null;
 
   const ext101 = (() => {
@@ -135,6 +136,68 @@ export default async function AdminSettingsPage() {
             <input name="dc_photo" defaultValue={dc.photo ?? ""} className="mt-1 w-full rounded-xl border border-(--ghost-outline) bg-(--surface) px-3 py-2 text-sm outline-none focus:border-(--secondary) focus:ring-2 focus:ring-(--secondary)/20" />
           </label>
           <OfficeLogoUploadField initialLogo={dc.logo ?? "/alfa-3d.png"} />
+        </section>
+        <section className="admin-card space-y-3 p-6">
+          <h2 className="label-sm text-(--primary)/55">Analiz paneli (ana sayfa)</h2>
+          <p className="text-xs text-(--on-surface)/55">
+            Ana sayfadaki &quot;Piyasa verileriyle geleceğe yatırım yapın&quot; bölümü. Metin alanları boş bırakılırsa varsayılan çeviri kullanılır.
+          </p>
+          <label className="block text-sm">
+            Üst etiket
+            <input name="analysis_label" defaultValue={analysis.label} placeholder="Analiz" className="mt-1 w-full rounded-xl border border-(--ghost-outline) bg-(--surface) px-3 py-2 text-sm outline-none focus:border-(--secondary) focus:ring-2 focus:ring-(--secondary)/20" />
+          </label>
+          <label className="block text-sm">
+            Başlık
+            <input name="analysis_title" defaultValue={analysis.title} placeholder="Piyasa verileriyle geleceğe yatırım yapın" className="mt-1 w-full rounded-xl border border-(--ghost-outline) bg-(--surface) px-3 py-2 text-sm outline-none focus:border-(--secondary) focus:ring-2 focus:ring-(--secondary)/20" />
+          </label>
+          <label className="block text-sm">
+            Açıklama
+            <textarea name="analysis_description" rows={3} defaultValue={analysis.description} placeholder="Kıbrıs gayrimenkul piyasasında doğru lokasyon ve zamanlama kritik..." className="mt-1 w-full rounded-xl border border-(--ghost-outline) bg-(--surface) px-3 py-2 text-sm outline-none focus:border-(--secondary) focus:ring-2 focus:ring-(--secondary)/20" />
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block text-sm">
+              İstatistik 1 — değer
+              <input name="analysis_stat1Value" defaultValue={analysis.stat1Value} placeholder="+%18" className="mt-1 w-full rounded-xl border border-(--ghost-outline) bg-(--surface) px-3 py-2 text-sm outline-none focus:border-(--secondary) focus:ring-2 focus:ring-(--secondary)/20" />
+            </label>
+            <label className="block text-sm">
+              İstatistik 1 — etiket
+              <input name="analysis_stat1Label" defaultValue={analysis.stat1Label} placeholder="Yıllık trend*" className="mt-1 w-full rounded-xl border border-(--ghost-outline) bg-(--surface) px-3 py-2 text-sm outline-none focus:border-(--secondary) focus:ring-2 focus:ring-(--secondary)/20" />
+            </label>
+            <label className="block text-sm">
+              İstatistik 2 — değer
+              <input name="analysis_stat2Value" defaultValue={analysis.stat2Value} placeholder="12+" className="mt-1 w-full rounded-xl border border-(--ghost-outline) bg-(--surface) px-3 py-2 text-sm outline-none focus:border-(--secondary) focus:ring-2 focus:ring-(--secondary)/20" />
+            </label>
+            <label className="block text-sm">
+              İstatistik 2 — etiket
+              <input name="analysis_stat2Label" defaultValue={analysis.stat2Label} placeholder="Yıl deneyim" className="mt-1 w-full rounded-xl border border-(--ghost-outline) bg-(--surface) px-3 py-2 text-sm outline-none focus:border-(--secondary) focus:ring-2 focus:ring-(--secondary)/20" />
+            </label>
+          </div>
+          <label className="block text-sm">
+            Dipnot
+            <input name="analysis_disclaimer" defaultValue={analysis.disclaimer} placeholder="*Örnek gösterim, yatırım tavsiyesi değildir." className="mt-1 w-full rounded-xl border border-(--ghost-outline) bg-(--surface) px-3 py-2 text-sm outline-none focus:border-(--secondary) focus:ring-2 focus:ring-(--secondary)/20" />
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block text-sm">
+              Grafik başlığı
+              <input name="analysis_chartTitle" defaultValue={analysis.chartTitle} placeholder="Değer artış grafiği" className="mt-1 w-full rounded-xl border border-(--ghost-outline) bg-(--surface) px-3 py-2 text-sm outline-none focus:border-(--secondary) focus:ring-2 focus:ring-(--secondary)/20" />
+            </label>
+            <label className="block text-sm">
+              Grafik rozeti
+              <input name="analysis_exampleBadge" defaultValue={analysis.exampleBadge} placeholder="Örnek" className="mt-1 w-full rounded-xl border border-(--ghost-outline) bg-(--surface) px-3 py-2 text-sm outline-none focus:border-(--secondary) focus:ring-2 focus:ring-(--secondary)/20" />
+            </label>
+            <label className="block text-sm">
+              Başlangıç yılı
+              <input name="analysis_startYear" defaultValue={analysis.startYear} placeholder="2018" className="mt-1 w-full rounded-xl border border-(--ghost-outline) bg-(--surface) px-3 py-2 text-sm outline-none focus:border-(--secondary) focus:ring-2 focus:ring-(--secondary)/20" />
+            </label>
+            <label className="block text-sm">
+              Bitiş yılı
+              <input name="analysis_endYear" defaultValue={analysis.endYear} placeholder="2024" className="mt-1 w-full rounded-xl border border-(--ghost-outline) bg-(--surface) px-3 py-2 text-sm outline-none focus:border-(--secondary) focus:ring-2 focus:ring-(--secondary)/20" />
+            </label>
+          </div>
+          <label className="block text-sm">
+            Bar yükseklikleri (virgülle, 0-100)
+            <input name="analysis_bars" defaultValue={analysis.bars.join(", ")} placeholder="20, 35, 30, 55, 45, 75, 90" className="mt-1 w-full rounded-xl border border-(--ghost-outline) bg-(--surface) px-3 py-2 text-sm outline-none focus:border-(--secondary) focus:ring-2 focus:ring-(--secondary)/20" />
+          </label>
         </section>
         <section className="admin-card space-y-3 p-6">
           <h2 className="label-sm text-(--primary)/55">101evler entegrasyonu</h2>

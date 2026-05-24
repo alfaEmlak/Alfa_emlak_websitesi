@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { getTranslatedListing, getTranslatedSiteSettings } from "@/lib/i18n-utils";
-import { getSiteSettingsOrFallback, getSliderSettings } from "@/lib/site-settings";
+import { getAnalysisSettings, getSiteSettingsOrFallback, getSliderSettings } from "@/lib/site-settings";
 import { getFeaturedListingsSafe } from "@/lib/listings-query";
 import { getSundovizRates } from "@/lib/sundoviz-rates";
 import { HeroSearch } from "@/components/site/HeroSearch";
@@ -36,6 +36,7 @@ export default async function HomePage({ params }: Props) {
 
   const settings = getTranslatedSiteSettings(settingsRaw, locale);
   const sliderSettings = getSliderSettings(settingsRaw);
+  const analysis = getAnalysisSettings(settingsRaw);
   const grid = featuredRaw.slice(0, 9).map(l => getTranslatedListing(l, locale));
 
   return (
@@ -139,45 +140,45 @@ export default async function HomePage({ params }: Props) {
         <div className="mx-auto grid max-w-[1440px] grid-cols-1 items-center gap-14 md:grid-cols-2 md:gap-20">
           <div>
             <span className="label-sm mb-6 block text-secondary" style={{ fontSize: "11px", letterSpacing: "0.12em" }}>
-              {t("analysisLabel")}
+              {analysis.label || t("analysisLabel")}
             </span>
             <h2 className="mb-8 font-headline text-4xl font-extrabold tracking-tight md:text-5xl">
-              {t("analysisTitle")}
+              {analysis.title || t("analysisTitle")}
             </h2>
             <p className="mb-12 text-lg leading-relaxed text-white/60">
-              {t("analysisDesc")}
+              {analysis.description || t("analysisDesc")}
             </p>
             <div className="grid grid-cols-2 gap-8">
               <div>
-                <div className="mb-2 font-headline text-4xl font-extrabold text-secondary">+%18</div>
-                <div className="font-headline text-[10px] font-bold uppercase tracking-widest text-white/40">{t("yearlyTrend")}</div>
+                <div className="mb-2 font-headline text-4xl font-extrabold text-secondary">{analysis.stat1Value || "+%18"}</div>
+                <div className="font-headline text-[10px] font-bold uppercase tracking-widest text-white/40">{analysis.stat1Label || t("yearlyTrend")}</div>
               </div>
               <div>
-                <div className="mb-2 font-headline text-4xl font-extrabold text-white">12+</div>
-                <div className="font-headline text-[10px] font-bold uppercase tracking-widest text-white/40">{t("yearsExperience")}</div>
+                <div className="mb-2 font-headline text-4xl font-extrabold text-white">{analysis.stat2Value || "12+"}</div>
+                <div className="font-headline text-[10px] font-bold uppercase tracking-widest text-white/40">{analysis.stat2Label || t("yearsExperience")}</div>
               </div>
             </div>
-            <p className="mt-4 text-[10px] text-white/30">{t("disclaimer")}</p>
+            <p className="mt-4 text-[10px] text-white/30">{analysis.disclaimer || t("disclaimer")}</p>
           </div>
           <div className="relative">
             <div className="absolute inset-0 rounded-full bg-secondary/20 blur-[100px]" />
             <div className="relative rounded-2xl bg-white/[0.07] p-8 shadow-[var(--shadow-float)] ring-1 ring-white/10 backdrop-blur-md">
               <div className="mb-8 flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-widest opacity-50">{t("chartTitle")}</span>
-                <span className="rounded bg-secondary px-2 py-1 font-headline text-[9px] font-bold text-white">{t("exampleBadge")}</span>
+                <span className="text-xs font-bold uppercase tracking-widest opacity-50">{analysis.chartTitle || t("chartTitle")}</span>
+                <span className="rounded bg-secondary px-2 py-1 font-headline text-[9px] font-bold text-white">{analysis.exampleBadge || t("exampleBadge")}</span>
               </div>
               <div className="flex h-48 items-end gap-2">
-                {[20, 35, 30, 55, 45, 75, 90].map((h, i) => (
+                {analysis.bars.map((h, i) => (
                   <div
                     key={i}
-                    className={`flex-1 cursor-pointer rounded-t-sm transition-all hover:bg-secondary ${i === 6 ? "bg-secondary shadow-[0_0_20px_rgba(253,152,39,0.4)]" : "bg-white/10"}`}
-                    style={{ height: `${h}%` }}
+                    className={`flex-1 cursor-pointer rounded-t-sm transition-all hover:bg-secondary ${i === analysis.bars.length - 1 ? "bg-secondary shadow-[0_0_20px_rgba(253,152,39,0.4)]" : "bg-white/10"}`}
+                    style={{ height: `${Math.min(h, 100)}%` }}
                   />
                 ))}
               </div>
               <div className="mt-4 flex justify-between font-headline text-[10px] font-bold opacity-30">
-                <span>2018</span>
-                <span>2024</span>
+                <span>{analysis.startYear || "2018"}</span>
+                <span>{analysis.endYear || "2024"}</span>
               </div>
             </div>
           </div>

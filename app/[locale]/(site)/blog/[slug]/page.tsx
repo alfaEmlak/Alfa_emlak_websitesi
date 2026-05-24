@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { getPublishedBlogPostBySlug } from "@/lib/blog-public";
+import { BlogContent } from "@/components/site/BlogContent";
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -41,7 +42,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         )}
       </div>
 
-      <article className="prose prose-lg mt-10 max-w-none text-on-surface/80" dangerouslySetInnerHTML={{ __html: post.content }} />
+      <BlogContent content={post.content} />
     </main>
   );
 }

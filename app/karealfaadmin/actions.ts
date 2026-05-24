@@ -15,6 +15,7 @@ import { normalizeListingCitySlug } from "@/lib/listing-city";
 import { countPublishedFeaturedExcluding, SHOWCASE_MAX_PUBLISHED_FEATURED } from "@/lib/showcase-featured";
 import { isUuidString } from "@/lib/listing-identity";
 import { parseTitleDeedOwnership } from "@/lib/title-deed-ownership";
+import { loadFeedLookups } from "@/lib/feeds/lookups";
 import { customAlphabet } from "nanoid";
 
 const CONSULTANT_ROLES = ["CONSULTANT", "AGENT"];
@@ -587,6 +588,35 @@ export async function saveListing(payload: ListingSavePayload) {
     }
   }
 
+  // 101evler/Hangiev FK kolonları (type_id_101, area_id_101, ...) lookup
+  // tablolarına foreign key ile bağlı. İçe aktarılan ilanların ext JSON'unda,
+  // lookup tablolarında karşılığı OLMAYAN ham id'ler bulunabiliyor; bunları
+  // doğrudan FK kolonuna yazmak FK ihlaline (kayıt hatası) yol açar. Bu yüzden
+  // her id'yi lookup setine karşı doğrulayıp, yoksa null yazıyoruz. Ham değer
+  // ext_*evler JSON'unda korunduğu için re-export bilgisi kaybolmaz.
+  const lookups = await loadFeedLookups();
+  const idSet = (opts: { id: number }[]) => new Set(opts.map((o) => o.id));
+  const valid101 = {
+    types: idSet(lookups.ext101.types),
+    areas: idSet(lookups.ext101.areas),
+    titleTypes: idSet(lookups.ext101.titleTypes),
+    roomCounts: idSet(lookups.ext101.roomCounts),
+    buildAges: idSet(lookups.ext101.buildAges),
+    furnishing: idSet(lookups.ext101.furnishing),
+    billingCycles: idSet(lookups.ext101.billingCycles),
+  };
+  const validHg = {
+    propertyTypes: idSet(lookups.hangiev.propertyTypes),
+    areas: idSet(lookups.hangiev.areas),
+    roomCounts: idSet(lookups.hangiev.roomCounts),
+    buildAges: idSet(lookups.hangiev.buildAges),
+    furnishing: idSet(lookups.hangiev.furnishing),
+  };
+  const fkOrNull = (id: unknown, valid: Set<number>): number | null => {
+    const n = typeof id === "number" ? id : Number(id);
+    return Number.isFinite(n) && valid.has(n) ? n : null;
+  };
+
   const data = {
     listing_id: payload.listingId?.trim() || "",
     title: payload.title?.trim() || "",
@@ -679,24 +709,24 @@ export async function saveListing(payload: ListingSavePayload) {
     export_to_hangiev: payload.exportToHangiev ?? false,
     ext_hangiev: payload.extHangiev ?? {},
     // 101evler & Hangiev: yeni FK kolonları (lookup-driven)
-    type_id_101: payload.ext101evler?.type_id ?? null,
-    area_id_101: payload.ext101evler?.area_id ?? null,
-    title_type_id_101: payload.ext101evler?.title_type_id ?? null,
-    room_count_id_101: payload.ext101evler?.room_count_id ?? null,
-    build_age_id_101: payload.ext101evler?.build_age_id ?? null,
-    furnishing_id_101: payload.ext101evler?.furnishing_id ?? null,
+    type_id_101: fkOrNull(payload.ext101evler?.type_id, valid101.types),
+    area_id_101: fkOrNull(payload.ext101evler?.area_id, valid101.areas),
+    title_type_id_101: fkOrNull(payload.ext101evler?.title_type_id, valid101.titleTypes),
+    room_count_id_101: fkOrNull(payload.ext101evler?.room_count_id, valid101.roomCounts),
+    build_age_id_101: fkOrNull(payload.ext101evler?.build_age_id, valid101.buildAges),
+    furnishing_id_101: fkOrNull(payload.ext101evler?.furnishing_id, valid101.furnishing),
     // billing_cycle_id sadece kiralık ilanlarda (KIRALIK / GUNLUK_KIRALIK) geçerlidir.
-    // Satılık / Proje için bu alan null olmalı, aksi hâlde FK kısıtı ihlal edilir.
+    // Satılık / Proje için null olmalı; ayrıca lookup'ta yoksa yine null (FK ihlali olmasın).
     billing_cycle_id_101: (payload.kind === "KIRALIK" || payload.kind === "GUNLUK_KIRALIK")
-      ? (payload.ext101evler?.billing_cycle_id ?? null)
+      ? fkOrNull(payload.ext101evler?.billing_cycle_id, valid101.billingCycles)
       : null,
     price_for_101: (payload.ext101evler?.price_for as string | null | undefined) ?? null,
     reference_no_101: payload.ext101evler?.reference_no ?? null,
-    property_type_id_hg: payload.extHangiev?.property_type_id ?? null,
-    area_id_hg: payload.extHangiev?.area_id ?? null,
-    room_count_id_hg: payload.extHangiev?.room_count_id ?? null,
-    build_age_id_hg: payload.extHangiev?.build_age_id ?? null,
-    furnishing_id_hg: payload.extHangiev?.furnishing_id ?? null,
+    property_type_id_hg: fkOrNull(payload.extHangiev?.property_type_id, validHg.propertyTypes),
+    area_id_hg: fkOrNull(payload.extHangiev?.area_id, validHg.areas),
+    room_count_id_hg: fkOrNull(payload.extHangiev?.room_count_id, validHg.roomCounts),
+    build_age_id_hg: fkOrNull(payload.extHangiev?.build_age_id, validHg.buildAges),
+    furnishing_id_hg: fkOrNull(payload.extHangiev?.furnishing_id, validHg.furnishing),
     price_for_hg: (payload.extHangiev?.price_for as string | null | undefined) ?? null,
     reference_no_hg: payload.extHangiev?.reference_no ?? null,
     updated_at: now,
@@ -1129,6 +1159,26 @@ export async function saveSiteSettings(formData: FormData) {
     office_id: extHangievOfficeRaw || null,
   };
 
+  const analysisBars = String(formData.get("analysis_bars") ?? "")
+    .split(/[,\s]+/)
+    .map((v) => Number(v.trim()))
+    .filter((n) => Number.isFinite(n) && n >= 0);
+  const analysis = {
+    label: String(formData.get("analysis_label") ?? "").trim(),
+    title: String(formData.get("analysis_title") ?? "").trim(),
+    description: String(formData.get("analysis_description") ?? "").trim(),
+    stat1Value: String(formData.get("analysis_stat1Value") ?? "").trim(),
+    stat1Label: String(formData.get("analysis_stat1Label") ?? "").trim(),
+    stat2Value: String(formData.get("analysis_stat2Value") ?? "").trim(),
+    stat2Label: String(formData.get("analysis_stat2Label") ?? "").trim(),
+    disclaimer: String(formData.get("analysis_disclaimer") ?? "").trim(),
+    chartTitle: String(formData.get("analysis_chartTitle") ?? "").trim(),
+    exampleBadge: String(formData.get("analysis_exampleBadge") ?? "").trim(),
+    startYear: String(formData.get("analysis_startYear") ?? "").trim(),
+    endYear: String(formData.get("analysis_endYear") ?? "").trim(),
+    bars: analysisBars,
+  };
+
   const settingsData = {
     site_name: String(formData.get("siteName") ?? "ALFA EMLAK"),
     logo_url: String(formData.get("logoUrl") ?? "").trim() || null,
@@ -1146,6 +1196,7 @@ export async function saveSiteSettings(formData: FormData) {
     translations: Object.keys(translations).length > 0 ? JSON.stringify(translations) : null,
     ext_101evler: ext101,
     ext_hangiev: extHangiev,
+    analysis_json: JSON.stringify(analysis),
     updated_at: new Date().toISOString(),
   };
 

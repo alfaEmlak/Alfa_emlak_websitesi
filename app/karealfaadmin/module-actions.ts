@@ -256,3 +256,21 @@ export async function rejectAgent(id: string) {
 
   revalidatePath("/karealfaadmin/danismanlar");
 }
+
+/** Danışman listeleme sırasını günceller (verilen id sırasına göre 0,1,2…). */
+export async function reorderAgents(orderedIds: string[]) {
+  await requireAdmin();
+
+  const now = new Date().toISOString();
+  for (let i = 0; i < orderedIds.length; i++) {
+    const { error } = await supabaseAdmin
+      .from("agents")
+      .update({ sort_order: i, updated_at: now })
+      .eq("id", orderedIds[i]);
+    if (error) throw new Error(`Danışman sırası güncellenemedi: ${error.message}`);
+  }
+
+  revalidatePath("/karealfaadmin/danismanlar");
+  revalidatePath("/danismanlar");
+  revalidatePath("/", "layout");
+}

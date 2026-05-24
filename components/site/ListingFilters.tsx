@@ -135,6 +135,27 @@ export function ListingFilters({ locale, initial, hidden }: Props) {
         </h3>
 
         <div>
+          <label className={labelCls}>{t("filters.category")}</label>
+          <select
+            name="emlak"
+            value={emlak}
+            onChange={(e) => {
+              const val = e.target.value;
+              setEmlak(val);
+              if (val !== "arsa") {
+                setAltTip("");
+              }
+            }}
+            className={fieldCls}
+          >
+            <option value="">{t("filters.propertyTypeAll")}</option>
+            <option value="konut">{t("filters.konut")}</option>
+            <option value="arsa">{t("filters.arsa")}</option>
+            <option value="ticari">{t("filters.ticari")}</option>
+          </select>
+        </div>
+
+        <div>
           <label className={labelCls}>{t("filters.city")}</label>
           <select
             name="sehir"
@@ -203,28 +224,6 @@ export function ListingFilters({ locale, initial, hidden }: Props) {
           <label className={labelCls}>{tc("search")}</label>
           <input name="q" defaultValue={initial.q} placeholder={tc("search")} className={fieldCls} />
         </div>
-      </div>
-
-      {/* Kategori */}
-      <div>
-        <label className={labelCls}>{t("filters.category")}</label>
-        <select
-          name="emlak"
-          value={emlak}
-          onChange={(e) => {
-            const val = e.target.value;
-            setEmlak(val);
-            if (val !== "arsa") {
-              setAltTip("");
-            }
-          }}
-          className={fieldCls}
-        >
-          <option value="">{t("filters.propertyTypeAll")}</option>
-          <option value="konut">{t("filters.konut")}</option>
-          <option value="arsa">{t("filters.arsa")}</option>
-          <option value="ticari">{t("filters.ticari")}</option>
-        </select>
       </div>
 
       {/* Kategoriye özel filtreler */}

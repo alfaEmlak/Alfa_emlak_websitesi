@@ -14,6 +14,8 @@ type AgentRow = {
   whatsapp: string | null;
   photo: string | null;
   is_active: boolean | null;
+  sort_order: number | null;
+  created_at: string | null;
 };
 
 export default async function DanismanlarPage() {
@@ -21,11 +23,16 @@ export default async function DanismanlarPage() {
 
   const { data } = await supabaseAdmin
     .from("agents")
-    .select("id,name,title,email,phone,whatsapp,photo,is_active")
-    .eq("is_active", true)
-    .order("created_at", { ascending: false });
+    .select("*")
+    .eq("is_active", true);
 
-  const agents = (data || []) as AgentRow[];
+  // sort_order küçükten büyüğe; eşitse yeni eklenen önce. (kolon yoksa created_at).
+  const agents = ((data || []) as AgentRow[]).sort((a, b) => {
+    const sa = typeof a.sort_order === "number" ? a.sort_order : 1000;
+    const sb = typeof b.sort_order === "number" ? b.sort_order : 1000;
+    if (sa !== sb) return sa - sb;
+    return (b.created_at || "").localeCompare(a.created_at || "");
+  });
 
   return (
     <main className="mx-auto max-w-[1440px] flex-1 bg-surface px-6 py-16 md:px-8 md:py-24">

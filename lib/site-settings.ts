@@ -19,6 +19,7 @@ function offlineSiteSettings(): any {
     default_consultant_json: null,
     menu_json: JSON.stringify(defaultMegaMenu),
     slider_json: null,
+    analysis_json: null,
     translations: null,
     updated_at: now.toISOString(),
   };
@@ -122,4 +123,62 @@ export type SliderSettings = {
 
 export function getSliderSettings(row: { slider_json: string | null }): SliderSettings {
   return parseJson<SliderSettings>(row.slider_json, { images: [], interval: 5000 });
+}
+
+/** Ana sayfadaki "Analiz" panelinin admin'den düzenlenebilir değerleri. */
+export type AnalysisSettings = {
+  label: string;
+  title: string;
+  description: string;
+  stat1Value: string;
+  stat1Label: string;
+  stat2Value: string;
+  stat2Label: string;
+  disclaimer: string;
+  chartTitle: string;
+  exampleBadge: string;
+  startYear: string;
+  endYear: string;
+  bars: number[];
+};
+
+export const ANALYSIS_DEFAULT_BARS = [20, 35, 30, 55, 45, 75, 90];
+
+/**
+ * analysis_json kolonunu okur. Metin alanları boş bırakılabilir (o durumda
+ * çağıran taraf i18n çevirisine düşer); yapısal alanlar (yıllar, barlar)
+ * için makul varsayılanlar döner.
+ */
+export function getAnalysisSettings(
+  row: { analysis_json: string | Record<string, unknown> | null },
+): AnalysisSettings {
+  const raw = row.analysis_json;
+  const parsed: Partial<AnalysisSettings> =
+    raw == null
+      ? {}
+      : typeof raw === "object" && !Array.isArray(raw)
+        ? (raw as Partial<AnalysisSettings>)
+        : typeof raw === "string"
+          ? parseJson<Partial<AnalysisSettings>>(raw, {})
+          : {};
+
+  const bars = Array.isArray(parsed.bars)
+    ? parsed.bars.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n >= 0)
+    : [];
+
+  return {
+    label: typeof parsed.label === "string" ? parsed.label : "",
+    title: typeof parsed.title === "string" ? parsed.title : "",
+    description: typeof parsed.description === "string" ? parsed.description : "",
+    stat1Value: typeof parsed.stat1Value === "string" ? parsed.stat1Value : "",
+    stat1Label: typeof parsed.stat1Label === "string" ? parsed.stat1Label : "",
+    stat2Value: typeof parsed.stat2Value === "string" ? parsed.stat2Value : "",
+    stat2Label: typeof parsed.stat2Label === "string" ? parsed.stat2Label : "",
+    disclaimer: typeof parsed.disclaimer === "string" ? parsed.disclaimer : "",
+    chartTitle: typeof parsed.chartTitle === "string" ? parsed.chartTitle : "",
+    exampleBadge: typeof parsed.exampleBadge === "string" ? parsed.exampleBadge : "",
+    startYear: typeof parsed.startYear === "string" ? parsed.startYear : "",
+    endYear: typeof parsed.endYear === "string" ? parsed.endYear : "",
+    bars: bars.length > 0 ? bars : ANALYSIS_DEFAULT_BARS,
+  };
 }

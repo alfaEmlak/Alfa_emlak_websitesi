@@ -4,6 +4,11 @@ import { AdminIcon } from "@/components/admin/AdminIcon";
 import { requireAdmin } from "@/lib/panel-auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { approveAgent, rejectAgent } from "@/app/karealfaadmin/module-actions";
+import { AgentReorder } from "@/components/admin/AgentReorder";
+
+function agentSortKey(a: { sort_order?: number | null }): number {
+  return typeof a.sort_order === "number" ? a.sort_order : 1000;
+}
 
 export default async function AgentsPage() {
   await requireAdmin();
@@ -12,8 +17,10 @@ export default async function AgentsPage() {
     .select("*")
     .order("created_at", { ascending: false });
 
-  const agentsList = agents || [];
+  // sort_order'a göre sırala (kolon yoksa created_at sırası korunur).
+  const agentsList = [...(agents || [])].sort((a, b) => agentSortKey(a) - agentSortKey(b));
   const pendingAgents = agentsList.filter((agent) => !agent.is_active);
+  const activeAgents = agentsList.filter((agent) => agent.is_active);
 
   return (
     <div className="p-6 lg:p-10">
@@ -35,6 +42,14 @@ export default async function AgentsPage() {
           Yeni Danışman
         </Link>
       </div>
+
+      {activeAgents.length > 1 ? (
+        <div className="mt-8">
+          <AgentReorder
+            initial={activeAgents.map((a) => ({ id: a.id, name: a.name, title: a.title, photo: a.photo }))}
+          />
+        </div>
+      ) : null}
 
       {agentsList.length === 0 ? (
         <div className="mt-8 flex flex-col items-center justify-center rounded-2xl border border-zinc-200 bg-white p-16 text-center">
