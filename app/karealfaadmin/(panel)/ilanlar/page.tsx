@@ -177,53 +177,7 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
     ? `created_by_agent_id.eq.${selectedAgent.id},created_by_name.eq."${selectedAgent.name.replace(/"/g, '\\"')}"`
     : "";
 
-  let query = supabaseAdmin.from("listings").select("*, listing_images(*)");
-
-  if (user.role !== "ADMIN" && user.agentId) {
-    query = query.eq("created_by_agent_id", user.agentId);
-  }
-
-  if (qId) query = query.ilike("listing_id", `%${qId}%`);
-  if (qTitle) query = query.ilike("title", `%${qTitle}%`);
-  if (city && cityOptions.includes(city)) query = query.eq("city", city);
-  if (kind && ["SATILIK", "KIRALIK", "GUNLUK_KIRALIK", "PROJE"].includes(kind)) query = query.eq("kind", kind);
-  if (selectedPropertyTypeOption) {
-    const vals = selectedPropertyTypeOption.dbValues;
-    if (vals.length === 1) {
-      query = query.eq("property_type", vals[0]);
-    } else if (vals.length > 1) {
-      query = query.in("property_type", vals);
-    }
-  }
-  if (status && ["DRAFT", "PENDING_APPROVAL", "PUBLISHED", "HIDDEN", "REJECTED"].includes(status)) query = query.eq("publish_status", status);
-  if (agentOrFilter) query = query.or(agentOrFilter);
-
-  let result = await query.order("updated_at", { ascending: false }).limit(80);
-  if (result.error?.message.includes("Could not find the")) {
-    let fallbackQuery = supabaseAdmin.from("listings").select("*, listing_images(*)");
-    if (user.role !== "ADMIN" && user.agentId) {
-      fallbackQuery = fallbackQuery.eq("created_by_agent_id", user.agentId);
-    }
-    if (qId) fallbackQuery = fallbackQuery.ilike("listing_id", `%${qId}%`);
-    if (qTitle) fallbackQuery = fallbackQuery.ilike("title", `%${qTitle}%`);
-    if (city && cityOptions.includes(city)) fallbackQuery = fallbackQuery.eq("city", city);
-    if (kind && ["SATILIK", "KIRALIK", "GUNLUK_KIRALIK", "PROJE"].includes(kind)) fallbackQuery = fallbackQuery.eq("kind", kind);
-    if (selectedPropertyTypeOption) {
-      const vals = selectedPropertyTypeOption.dbValues;
-      if (vals.length === 1) {
-        fallbackQuery = fallbackQuery.eq("property_type", vals[0]);
-      } else if (vals.length > 1) {
-        fallbackQuery = fallbackQuery.in("property_type", vals);
-      }
-    }
-    if (status && ["DRAFT", "PENDING_APPROVAL", "PUBLISHED", "HIDDEN", "REJECTED"].includes(status)) fallbackQuery = fallbackQuery.eq("publish_status", status);
-    if (agentOrFilter) fallbackQuery = fallbackQuery.or(agentOrFilter);
-    result = await fallbackQuery.order("updated_at", { ascending: false }).limit(80);
-  }
-
-  const listings = (result.data ?? []) as ListingRow[];
-
-  // Sayımlar: kapsamdaki toplam ve uygulanan filtreye göre filtrelenen ilan sayısı.
+  // Sayımlar (sayfalamadan önce): kapsamdaki toplam ve uygulanan filtreye göre filtrelenen ilan sayısı.
   const scopeAgentId = user.role !== "ADMIN" && user.agentId ? user.agentId : null;
 
   let totalCountQuery = supabaseAdmin.from("listings").select("*", { count: "exact", head: true });
@@ -249,6 +203,74 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
   if (agentOrFilter) filteredCountQuery = filteredCountQuery.or(agentOrFilter);
   const { count: filteredCountRaw } = await filteredCountQuery;
   const filteredCount = filteredCountRaw ?? 0;
+
+  // Sayfalama: sayfa başına 50 ilan.
+  const PAGE_SIZE = 50;
+  const totalPages = Math.max(1, Math.ceil(filteredCount / PAGE_SIZE));
+  const pageRaw = Number(first(sp.page) ?? "1");
+  const page = Math.min(Math.max(Number.isFinite(pageRaw) ? Math.floor(pageRaw) : 1, 1), totalPages);
+  const rangeFrom = (page - 1) * PAGE_SIZE;
+  const rangeTo = rangeFrom + PAGE_SIZE - 1;
+
+  let query = supabaseAdmin.from("listings").select("*, listing_images(*)");
+
+  if (user.role !== "ADMIN" && user.agentId) {
+    query = query.eq("created_by_agent_id", user.agentId);
+  }
+
+  if (qId) query = query.ilike("listing_id", `%${qId}%`);
+  if (qTitle) query = query.ilike("title", `%${qTitle}%`);
+  if (city && cityOptions.includes(city)) query = query.eq("city", city);
+  if (kind && ["SATILIK", "KIRALIK", "GUNLUK_KIRALIK", "PROJE"].includes(kind)) query = query.eq("kind", kind);
+  if (selectedPropertyTypeOption) {
+    const vals = selectedPropertyTypeOption.dbValues;
+    if (vals.length === 1) {
+      query = query.eq("property_type", vals[0]);
+    } else if (vals.length > 1) {
+      query = query.in("property_type", vals);
+    }
+  }
+  if (status && ["DRAFT", "PENDING_APPROVAL", "PUBLISHED", "HIDDEN", "REJECTED"].includes(status)) query = query.eq("publish_status", status);
+  if (agentOrFilter) query = query.or(agentOrFilter);
+
+  let result = await query.order("updated_at", { ascending: false }).range(rangeFrom, rangeTo);
+  if (result.error?.message.includes("Could not find the")) {
+    let fallbackQuery = supabaseAdmin.from("listings").select("*, listing_images(*)");
+    if (user.role !== "ADMIN" && user.agentId) {
+      fallbackQuery = fallbackQuery.eq("created_by_agent_id", user.agentId);
+    }
+    if (qId) fallbackQuery = fallbackQuery.ilike("listing_id", `%${qId}%`);
+    if (qTitle) fallbackQuery = fallbackQuery.ilike("title", `%${qTitle}%`);
+    if (city && cityOptions.includes(city)) fallbackQuery = fallbackQuery.eq("city", city);
+    if (kind && ["SATILIK", "KIRALIK", "GUNLUK_KIRALIK", "PROJE"].includes(kind)) fallbackQuery = fallbackQuery.eq("kind", kind);
+    if (selectedPropertyTypeOption) {
+      const vals = selectedPropertyTypeOption.dbValues;
+      if (vals.length === 1) {
+        fallbackQuery = fallbackQuery.eq("property_type", vals[0]);
+      } else if (vals.length > 1) {
+        fallbackQuery = fallbackQuery.in("property_type", vals);
+      }
+    }
+    if (status && ["DRAFT", "PENDING_APPROVAL", "PUBLISHED", "HIDDEN", "REJECTED"].includes(status)) fallbackQuery = fallbackQuery.eq("publish_status", status);
+    if (agentOrFilter) fallbackQuery = fallbackQuery.or(agentOrFilter);
+    result = await fallbackQuery.order("updated_at", { ascending: false }).range(rangeFrom, rangeTo);
+  }
+
+  const listings = (result.data ?? []) as ListingRow[];
+
+  // Mevcut filtreleri koruyan sayfa bağlantısı üretir.
+  const pageHref = (target: number) => {
+    const params = new URLSearchParams();
+    if (qId) params.set("listingId", qId);
+    if (qTitle) params.set("title", qTitle);
+    if (city && cityOptions.includes(city)) params.set("city", city);
+    if (kind) params.set("kind", kind);
+    if (selectedPropertyTypeOption) params.set("propertyType", selectedPropertyTypeOption.rawValueKey);
+    if (status) params.set("status", status);
+    if (agentFilterValid && agentFilter) params.set("agent", agentFilter);
+    params.set("page", String(target));
+    return `?${params.toString()}`;
+  };
 
   const hasActiveFilter = !!(qId || qTitle || city || kind || selectedPropertyTypeOption || status || agentFilterValid);
 
@@ -374,13 +396,14 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
         {listings.length === 0 ? (
           <p className="rounded-2xl border border-zinc-200 bg-white px-4 py-8 text-center text-sm text-zinc-400">{t("listings.empty")}</p>
         ) : (
-          listings.map((listing) => {
+          listings.map((listing, idx) => {
             const img = getCoverImage(listing);
             const isRemote = img.startsWith("http");
             const previewHref = `/${locale}/ilan/${listing.listing_id}`;
             return (
               <div key={listing.id} className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
                 <div className="flex gap-3">
+                  <span className="mt-1 shrink-0 text-xs font-semibold tabular-nums text-zinc-400">{rangeFrom + idx + 1}</span>
                   <ListingPreviewModal href={previewHref} title={listing.title} className="block shrink-0 cursor-pointer">
                     <div className="relative h-16 w-20 overflow-hidden rounded-lg bg-zinc-100 ring-1 ring-zinc-200">
                       <Image src={img} alt="" fill className="object-cover" sizes="80px" unoptimized={isRemote} />
@@ -418,6 +441,7 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
         <table className="w-full text-left text-sm">
           <thead className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase tracking-wide text-zinc-500">
             <tr>
+              <th className="w-10 px-3 py-3 text-right">#</th>
               <th className="px-3 py-3">{t("listings.tableCover")}</th>
               <th className="px-3 py-3">{t("dashboard.colListingId")}</th>
               <th className="px-3 py-3">{t("dashboard.colTitle")}</th>
@@ -430,17 +454,18 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
           <tbody className="divide-y divide-zinc-100">
             {listings.length === 0 ? (
               <tr>
-                <td colSpan={user.role === "ADMIN" ? 7 : 6} className="px-3 py-8 text-center text-sm text-zinc-400">
+                <td colSpan={user.role === "ADMIN" ? 8 : 7} className="px-3 py-8 text-center text-sm text-zinc-400">
                   {t("listings.empty")}
                 </td>
               </tr>
             ) : (
-              listings.map((listing) => {
+              listings.map((listing, idx) => {
                 const img = getCoverImage(listing);
                 const isRemote = img.startsWith("http");
                 const previewHref = `/${locale}/ilan/${listing.listing_id}`;
                 return (
                   <tr key={listing.id} className="transition hover:bg-zinc-50">
+                    <td className="px-3 py-2 text-right text-xs tabular-nums text-zinc-400">{rangeFrom + idx + 1}</td>
                     <td className="px-3 py-2">
                       <ListingPreviewModal href={previewHref} title={listing.title} className="block cursor-pointer">
                         <div className="relative h-12 w-16 overflow-hidden rounded-lg bg-zinc-100 ring-1 ring-zinc-200">
@@ -477,6 +502,38 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 ? (
+        <nav className="mt-5 flex flex-wrap items-center justify-center gap-1.5 text-sm">
+          {page > 1 ? (
+            <Link href={pageHref(page - 1)} className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg border border-zinc-200 bg-white px-3 font-medium text-zinc-700 transition hover:bg-zinc-50">‹</Link>
+          ) : (
+            <span className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg border border-zinc-100 bg-zinc-50 px-3 font-medium text-zinc-300">‹</span>
+          )}
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
+            .reduce<(number | "gap")[]>((acc, p) => {
+              const prev = acc[acc.length - 1];
+              if (typeof prev === "number" && p - prev > 1) acc.push("gap");
+              acc.push(p);
+              return acc;
+            }, [])
+            .map((p, i) =>
+              p === "gap" ? (
+                <span key={`gap-${i}`} className="px-1.5 text-zinc-400">…</span>
+              ) : p === page ? (
+                <span key={p} className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg bg-emerald-600 px-3 font-bold text-white">{p}</span>
+              ) : (
+                <Link key={p} href={pageHref(p)} className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg border border-zinc-200 bg-white px-3 font-medium text-zinc-700 transition hover:bg-zinc-50">{p}</Link>
+              ),
+            )}
+          {page < totalPages ? (
+            <Link href={pageHref(page + 1)} className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg border border-zinc-200 bg-white px-3 font-medium text-zinc-700 transition hover:bg-zinc-50">›</Link>
+          ) : (
+            <span className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg border border-zinc-100 bg-zinc-50 px-3 font-medium text-zinc-300">›</span>
+          )}
+        </nav>
+      ) : null}
     </div>
   );
 }

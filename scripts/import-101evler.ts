@@ -23,6 +23,7 @@
 import { readFile } from "node:fs/promises";
 import { createClient } from "@supabase/supabase-js";
 import { buildImportPlan, type MappedListing } from "../lib/feeds/101evler-import";
+import { buildRealtorResolver } from "../lib/feeds/agent-aliases";
 
 const args = process.argv.slice(2);
 const source = args.find((a) => !a.startsWith("--"))?.trim();
@@ -97,12 +98,27 @@ async function main() {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
+  // Danışman çözümleyici: feed'deki realtor adını (takma ad dahil) panel danışmanına bağlar.
+  const { data: agentsRows } = await supabase.from("agents").select("id,name");
+  const resolveAgentId = buildRealtorResolver((agentsRows ?? []) as { id: string; name: string }[]);
+  let linked = 0;
+  let unlinked = 0;
+  const unlinkedNames = new Set<string>();
+
   let ok = 0;
   let fail = 0;
   const now = new Date().toISOString();
 
   for (const it of plan.items) {
-    const row = { ...it.row, updated_at: now };
+    const feedRealtor = typeof it.row.created_by_name === "string" ? it.row.created_by_name : null;
+    const agentId = resolveAgentId(feedRealtor);
+    if (agentId) {
+      linked++;
+    } else if (feedRealtor) {
+      unlinked++;
+      unlinkedNames.add(feedRealtor);
+    }
+    const row = { ...it.row, created_by_agent_id: agentId, updated_at: now };
 
     // 1) listings upsert (listing_id benzersiz)
     const { data: up, error: upErr } = await supabase
@@ -138,6 +154,12 @@ async function main() {
 
   console.log("─".repeat(60));
   console.log(`Tamamlandı. Başarılı: ${ok}, Hatalı: ${fail}`);
+  console.log(`Danışmana bağlanan: ${linked}, bağlanamayan: ${unlinked}`);
+  if (unlinkedNames.size) {
+    console.log(
+      `! Eşleşmeyen realtor adları (lib/feeds/agent-aliases.ts içine ekleyin): ${[...unlinkedNames].join(", ")}`,
+    );
+  }
   console.log("İlanlar DRAFT olarak yazıldı. Panelden gözden geçirip yayınlayın.");
 }
 

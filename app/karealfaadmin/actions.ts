@@ -89,6 +89,41 @@ async function getRequestMeta() {
   return { ip, userAgent };
 }
 
+/** 2FA olmadan oturumu doğrudan açar, giriş olayını kaydeder ve panele yönlendirir. */
+async function completePanelLogin(input: {
+  role: PanelRole;
+  email: string;
+  name: string;
+  agentId?: string;
+  mustChangePassword?: boolean;
+}) {
+  const session = await getPanelSession();
+  session.role = input.role;
+  session.isAdmin = input.role === "ADMIN";
+  session.agentId = input.agentId;
+  session.name = input.name;
+  // DB hesabı (agentId var) ise geçici şifre değişim zorunluluğu geçerli; env super-admin için değil.
+  session.mustChangePassword = input.agentId ? input.mustChangePassword ?? false : false;
+  session.pending = undefined;
+  await syncPanelLocaleCookieToSession(session);
+  await session.save();
+
+  const meta = await getRequestMeta();
+  await recordLoginEvent({
+    agentId: input.agentId ?? null,
+    actorName: input.name,
+    role: input.role,
+    email: input.email,
+    ip: meta.ip,
+    userAgent: meta.userAgent,
+  });
+
+  if (session.mustChangePassword) {
+    redirect("/karealfaadmin/sifre-degistir");
+  }
+  redirect("/karealfaadmin/dashboard");
+}
+
 /** Kimlik doğrulaması başarılı → 2FA kodu üretir, mail atar, yarı-oturum (pending) kurar. */
 async function startTwoFactor(input: {
   role: PanelRole;
@@ -129,7 +164,8 @@ export async function loginAdmin(formData: FormData) {
   const expectedAdminPassword = process.env.ADMIN_PASSWORD ?? "";
 
   if (expectedAdminEmail && expectedAdminPassword && email === expectedAdminEmail && password === expectedAdminPassword) {
-    await startTwoFactor({ role: "ADMIN", email: expectedAdminEmail, name: "Admin" });
+    // Env süper-admin: 2FA olmadan doğrudan giriş (danışman/DB hesapları 2FA'ya devam eder).
+    await completePanelLogin({ role: "ADMIN", email: expectedAdminEmail, name: "Admin" });
   }
 
   const consultant = email ? await findConsultantByEmail(email) : null;
