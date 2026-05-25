@@ -1,10 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { getPanelSession, requireAdmin, requirePanelUser, requireRole } from "@/lib/panel-auth";
+import { getPanelSession, getPanelUser, requireAdmin, requirePanelUser, requireRole } from "@/lib/panel-auth";
+import { issueLoginCode, verifyLoginCodeValue, recordLoginEvent } from "@/lib/login-code";
+import { issuePasswordResetToken, consumePasswordResetToken } from "@/lib/password-reset";
+import { sendLoginCodeEmail, sendPasswordResetEmail } from "@/lib/email";
+import type { PanelRole } from "@/lib/session";
 import { PANEL_LOCALE_COOKIE } from "@/lib/panel-locale";
 import { getPanelTranslations } from "@/lib/panel-translations";
 import { routing } from "@/i18n/routing";
@@ -18,7 +22,8 @@ import { parseTitleDeedOwnership } from "@/lib/title-deed-ownership";
 import { loadFeedLookups } from "@/lib/feeds/lookups";
 import { customAlphabet } from "nanoid";
 
-const CONSULTANT_ROLES = ["CONSULTANT", "AGENT"];
+// Giriş yapabilen tüm DB hesap rolleri (yönetici yetkili danışman dahil).
+const LOGIN_ROLES = ["CONSULTANT", "AGENT", "ADMIN"];
 const LISTING_STATUSES = ["DRAFT", "PENDING_APPROVAL", "PUBLISHED", "HIDDEN", "REJECTED"] as const;
 type ListingStatus = (typeof LISTING_STATUSES)[number];
 type ExistingListingForSave = {
@@ -36,14 +41,15 @@ type ActiveConsultantAccount = {
   role: string;
   password_hash: string;
   is_active: boolean;
+  must_change_password?: boolean;
 };
 
 async function findConsultantByEmail(email: string) {
   const { data, error } = await supabaseAdmin
     .from("agents")
-    .select("id, name, role, password_hash, is_active")
+    .select("id, name, role, password_hash, is_active, must_change_password")
     .eq("email", email)
-    .in("role", CONSULTANT_ROLES)
+    .in("role", LOGIN_ROLES)
     .maybeSingle();
 
   if (error) {
@@ -73,21 +79,57 @@ function listingPayloadHasVisual(
   return Boolean(String(coverImage ?? "").trim());
 }
 
+async function getRequestMeta() {
+  const h = await headers();
+  const ip =
+    h.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    h.get("x-real-ip") ||
+    null;
+  const userAgent = h.get("user-agent") || null;
+  return { ip, userAgent };
+}
+
+/** Kimlik doğrulaması başarılı → 2FA kodu üretir, mail atar, yarı-oturum (pending) kurar. */
+async function startTwoFactor(input: {
+  role: PanelRole;
+  email: string;
+  name: string;
+  agentId?: string;
+  mustChangePassword?: boolean;
+}) {
+  const session = await getPanelSession();
+  const code = await issueLoginCode({ email: input.email, role: input.role, agentId: input.agentId ?? null });
+
+  const mail = await sendLoginCodeEmail(input.email, input.name, code);
+  if (!mail.ok) {
+    console.error("[loginAdmin] kod e-postası gönderilemedi:", mail.error);
+    redirect("/karealfaadmin?e=mail");
+  }
+
+  session.role = undefined;
+  session.isAdmin = undefined;
+  session.agentId = undefined;
+  session.mustChangePassword = undefined;
+  session.pending = {
+    role: input.role,
+    agentId: input.agentId,
+    name: input.name,
+    email: input.email,
+    mustChangePassword: input.mustChangePassword,
+    expiresAt: Date.now() + 10 * 60 * 1000,
+  };
+  await session.save();
+  redirect("/karealfaadmin/dogrulama");
+}
+
 export async function loginAdmin(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "").trim();
-  const session = await getPanelSession();
   const expectedAdminEmail = (process.env.ADMIN_EMAIL ?? "").trim().toLowerCase();
   const expectedAdminPassword = process.env.ADMIN_PASSWORD ?? "";
 
   if (expectedAdminEmail && expectedAdminPassword && email === expectedAdminEmail && password === expectedAdminPassword) {
-    session.isAdmin = true;
-    session.role = "ADMIN";
-    session.agentId = undefined;
-    session.name = "Admin";
-    await syncPanelLocaleCookieToSession(session);
-    await session.save();
-    redirect("/karealfaadmin/dashboard");
+    await startTwoFactor({ role: "ADMIN", email: expectedAdminEmail, name: "Admin" });
   }
 
   const consultant = email ? await findConsultantByEmail(email) : null;
@@ -104,12 +146,120 @@ export async function loginAdmin(formData: FormData) {
     redirect("/karealfaadmin?e=1");
   }
 
-  session.isAdmin = false;
-  session.role = "CONSULTANT";
-  session.agentId = consultant.id;
-  session.name = consultant.name;
+  // DB rolü ADMIN ise tam yönetici yetkisiyle, değilse danışman olarak gir.
+  const sessionRole: PanelRole = consultant.role === "ADMIN" ? "ADMIN" : "CONSULTANT";
+
+  await startTwoFactor({
+    role: sessionRole,
+    email,
+    name: consultant.name,
+    agentId: consultant.id,
+    mustChangePassword: consultant.must_change_password ?? false,
+  });
+}
+
+/** /karealfaadmin/dogrulama — e-posta kodunu doğrular, oturumu açar, giriş olayını kaydeder. */
+export async function verifyLoginCode(formData: FormData) {
+  const code = String(formData.get("code") ?? "").trim();
+  const session = await getPanelSession();
+  const pending = session.pending;
+
+  if (!pending || pending.expiresAt < Date.now()) {
+    session.pending = undefined;
+    await session.save();
+    redirect("/karealfaadmin?e=expired");
+  }
+
+  if (!/^\d{6}$/.test(code)) {
+    redirect("/karealfaadmin/dogrulama?e=1");
+  }
+
+  const ok = await verifyLoginCodeValue(pending.email, code);
+  if (!ok) {
+    redirect("/karealfaadmin/dogrulama?e=1");
+  }
+
+  session.role = pending.role;
+  session.isAdmin = pending.role === "ADMIN";
+  session.agentId = pending.agentId;
+  session.name = pending.name;
+  // DB hesabı (agentId var) ise geçici şifre değişim zorunluluğu geçerli; env super-admin için değil.
+  session.mustChangePassword = pending.agentId ? pending.mustChangePassword ?? false : false;
+  session.pending = undefined;
   await syncPanelLocaleCookieToSession(session);
   await session.save();
+
+  const meta = await getRequestMeta();
+  await recordLoginEvent({
+    agentId: pending.agentId ?? null,
+    actorName: pending.name,
+    role: pending.role,
+    email: pending.email,
+    ip: meta.ip,
+    userAgent: meta.userAgent,
+  });
+
+  if (session.mustChangePassword) {
+    redirect("/karealfaadmin/sifre-degistir");
+  }
+  redirect("/karealfaadmin/dashboard");
+}
+
+/** Bekleyen giriş için yeni kod gönderir. */
+export async function resendLoginCode() {
+  const session = await getPanelSession();
+  const pending = session.pending;
+  if (!pending) {
+    redirect("/karealfaadmin?e=expired");
+  }
+
+  const code = await issueLoginCode({ email: pending.email, role: pending.role, agentId: pending.agentId ?? null });
+  const mail = await sendLoginCodeEmail(pending.email, pending.name ?? "", code);
+  if (!mail.ok) {
+    redirect("/karealfaadmin/dogrulama?e=mail");
+  }
+
+  pending.expiresAt = Date.now() + 10 * 60 * 1000;
+  session.pending = pending;
+  await session.save();
+  redirect("/karealfaadmin/dogrulama?sent=1");
+}
+
+/** Zorunlu/opsiyonel şifre değişimi (danışman kendi şifresini belirler). */
+export async function changeMyPassword(formData: FormData) {
+  const user = await getPanelUser();
+  if (!user || !user.agentId) {
+    redirect("/karealfaadmin");
+  }
+
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+
+  if (password.length < 6) {
+    redirect("/karealfaadmin/sifre-degistir?e=short");
+  }
+  if (password !== confirm) {
+    redirect("/karealfaadmin/sifre-degistir?e=mismatch");
+  }
+
+  const { error } = await supabaseAdmin
+    .from("agents")
+    .update({
+      password_hash: hashPassword(password),
+      must_change_password: false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", user.agentId);
+
+  if (error) {
+    throw new Error(`Şifre güncellenemedi: ${error.message}`);
+  }
+
+  const session = await getPanelSession();
+  session.mustChangePassword = false;
+  await session.save();
+
+  revalidatePath("/karealfaadmin", "layout");
   redirect("/karealfaadmin/dashboard");
 }
 
@@ -189,6 +339,67 @@ export async function registerConsultant(formData: FormData) {
 
   revalidatePath("/karealfaadmin/danismanlar");
   redirect("/karealfaadmin?registered=1");
+}
+
+/** "Şifremi unuttum" — e-postaya sıfırlama linki gönderir (hesap olsun olmasın aynı mesaj). */
+export async function requestPasswordReset(formData: FormData) {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+
+  if (email) {
+    try {
+      const issued = await issuePasswordResetToken(email);
+      if (issued) {
+        const base = (process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "");
+        const resetUrl = `${base}/karealfaadmin/sifre-belirle?token=${issued.token}`;
+        const mail = await sendPasswordResetEmail(issued.email, issued.name, resetUrl);
+        if (!mail.ok) {
+          console.error("[requestPasswordReset] mail gönderilemedi:", mail.error);
+        }
+      }
+    } catch (e) {
+      console.error("[requestPasswordReset]", e);
+    }
+  }
+
+  // Güvenlik: hesabın var olup olmadığını sızdırmamak için her durumda aynı sonuç.
+  redirect("/karealfaadmin/sifre-sifirla?sent=1");
+}
+
+/** Token ile yeni şifre belirler. */
+export async function resetPasswordWithToken(formData: FormData) {
+  const token = String(formData.get("token") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+
+  if (!token) {
+    redirect("/karealfaadmin/sifre-belirle?e=invalid");
+  }
+  if (password.length < 6) {
+    redirect(`/karealfaadmin/sifre-belirle?token=${encodeURIComponent(token)}&e=short`);
+  }
+  if (password !== confirm) {
+    redirect(`/karealfaadmin/sifre-belirle?token=${encodeURIComponent(token)}&e=mismatch`);
+  }
+
+  const agentId = await consumePasswordResetToken(token);
+  if (!agentId) {
+    redirect("/karealfaadmin/sifre-belirle?e=invalid");
+  }
+
+  const { error } = await supabaseAdmin
+    .from("agents")
+    .update({
+      password_hash: hashPassword(password),
+      must_change_password: false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", agentId);
+
+  if (error) {
+    throw new Error(`Şifre güncellenemedi: ${error.message}`);
+  }
+
+  redirect("/karealfaadmin?reset=1");
 }
 
 export async function logoutAdmin() {

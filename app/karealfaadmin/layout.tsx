@@ -1,7 +1,12 @@
 import "../globals.css";
+import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { getPanelLocale } from "@/lib/panel-locale";
+
+export const metadata: Metadata = {
+  title: "Alfa Emlak | Yönetim Paneli",
+};
 
 export default async function AdminRootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getPanelLocale();

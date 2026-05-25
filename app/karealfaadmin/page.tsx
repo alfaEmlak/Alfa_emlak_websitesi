@@ -7,7 +7,7 @@ import { getPanelUser } from "@/lib/panel-auth";
 export default async function AdminLoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ e?: string; registered?: string }>;
+  searchParams: Promise<{ e?: string; registered?: string; reset?: string }>;
 }) {
   const user = await getPanelUser();
   if (user) redirect("/karealfaadmin/dashboard");
@@ -41,8 +41,17 @@ export default async function AdminLoginPage({
           {sp.e === "register" ? (
             <p className="mt-4 rounded-xl bg-red-50 px-3 py-2.5 text-center text-sm text-red-800 ring-1 ring-red-100">{t("errRegister")}</p>
           ) : null}
+          {sp.e === "mail" ? (
+            <p className="mt-4 rounded-xl bg-red-50 px-3 py-2.5 text-center text-sm text-red-800 ring-1 ring-red-100">{t("errMail")}</p>
+          ) : null}
+          {sp.e === "expired" ? (
+            <p className="mt-4 rounded-xl bg-amber-50 px-3 py-2.5 text-center text-sm text-amber-800 ring-1 ring-amber-100">{t("errExpired")}</p>
+          ) : null}
           {sp.registered === "1" ? (
             <p className="mt-4 rounded-xl bg-emerald-50 px-3 py-2.5 text-center text-sm text-emerald-800 ring-1 ring-emerald-100">{t("successRegistered")}</p>
+          ) : null}
+          {sp.reset === "1" ? (
+            <p className="mt-4 rounded-xl bg-emerald-50 px-3 py-2.5 text-center text-sm text-emerald-800 ring-1 ring-emerald-100">{t("successReset")}</p>
           ) : null}
           <form action={loginAdmin} className="mt-8 space-y-4">
             <div>
@@ -78,7 +87,12 @@ export default async function AdminLoginPage({
               {t("loginSubmit")}
             </button>
           </form>
-          <p className="mt-6 text-center text-xs text-(--on-surface)/40">{t("loginFooterNote")}</p>
+          <p className="mt-4 text-center">
+            <a href="/karealfaadmin/sifre-sifirla" className="text-xs font-semibold text-(--secondary) hover:underline">
+              {t("forgotPassword")}
+            </a>
+          </p>
+          <p className="mt-4 text-center text-xs text-(--on-surface)/40">{t("loginFooterNote")}</p>
         </div>
 
         <div className="admin-card relative p-8 sm:p-10">

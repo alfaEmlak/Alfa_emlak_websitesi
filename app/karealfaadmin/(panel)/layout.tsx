@@ -6,11 +6,18 @@ export const dynamic = "force-dynamic";
 import { AiFormsCheckpointSync } from "@/components/admin/AiFormsCheckpointSync";
 import { countTruePendingApprovalBadge } from "@/lib/panel-pending-approval-count";
 import { AI_FORMS_CHECKPOINT_COOKIE, countAiFormsNewerThanCheckpoint } from "@/lib/ai-forms-checkpoint";
+import { redirect } from "next/navigation";
 import { requirePanelUser } from "@/lib/panel-auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export default async function AdminPanelLayout({ children }: { children: React.ReactNode }) {
   const user = await requirePanelUser();
+
+  // Geçici şifreyle giren hesap (danışman veya yönetici yetkili danışman),
+  // panele girmeden önce şifresini değiştirmeli.
+  if (user.agentId && user.mustChangePassword) {
+    redirect("/karealfaadmin/sifre-degistir");
+  }
 
   const pendingCount =
     user.role === "CONSULTANT" && !user.agentId

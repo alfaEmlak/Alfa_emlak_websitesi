@@ -24,6 +24,7 @@ export const getPanelUser = cache(async () => {
     isAdmin: session.role === "ADMIN",
     agentId: session.agentId ?? null,
     name: session.name ?? null,
+    mustChangePassword: session.mustChangePassword ?? false,
   };
 });
 

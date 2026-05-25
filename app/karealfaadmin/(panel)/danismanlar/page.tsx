@@ -5,6 +5,8 @@ import { requireAdmin } from "@/lib/panel-auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { approveAgent, rejectAgent } from "@/app/karealfaadmin/module-actions";
 import { AgentReorder } from "@/components/admin/AgentReorder";
+import { AgentTempPassword } from "@/components/admin/AgentTempPassword";
+import { AgentDeleteButton } from "@/components/admin/AgentDeleteButton";
 
 function agentSortKey(a: { sort_order?: number | null }): number {
   return typeof a.sort_order === "number" ? a.sort_order : 1000;
@@ -110,7 +112,10 @@ export default async function AgentsPage() {
                     Düzenle
                   </Link>
                 </div>
-              ) : (
+              ) : null}
+              {a.is_active ? <AgentTempPassword agentId={a.id} /> : null}
+              <AgentDeleteButton agentId={a.id} agentName={a.name} />
+              {!a.is_active ? (
                 <div className="mt-4 grid grid-cols-2 gap-2">
                   <form action={approveAgent.bind(null, a.id)}>
                     <button
@@ -129,7 +134,7 @@ export default async function AgentsPage() {
                     </button>
                   </form>
                 </div>
-              )}
+              ) : null}
             </div>
           ))}
         </div>

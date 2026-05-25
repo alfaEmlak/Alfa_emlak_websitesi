@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { customAlphabet } from "nanoid";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { requireAdmin, requirePanelUser } from "@/lib/panel-auth";
 import { hashPassword } from "@/lib/password";
+import { sendTempPasswordEmail } from "@/lib/email";
 
 async function assertContactMessageAccess(messageId: string) {
   const user = await requirePanelUser();
@@ -255,6 +257,66 @@ export async function rejectAgent(id: string) {
   if (error) throw new Error(`Agent reject failed: ${error.message}`);
 
   revalidatePath("/karealfaadmin/danismanlar");
+}
+
+// Karışık olmayan karakterlerden okunabilir geçici şifre (0/O, 1/l/I hariç).
+const tempPasswordAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+const makeTempPassword = customAlphabet(tempPasswordAlphabet, 10);
+
+export type TempPasswordResult =
+  | { ok: true; password: string; emailed: boolean; emailError?: string }
+  | { ok: false; error: string };
+
+/**
+ * Süper admin: bir danışman için geçici şifre üretir, hesabı aktifleştirir,
+ * ilk girişte şifre değişimini zorunlu kılar ve geçici şifreyi mail atar.
+ * Üretilen şifre ekranda da gösterilmek üzere döndürülür.
+ */
+export async function adminGenerateTempPassword(agentId: string): Promise<TempPasswordResult> {
+  await requireAdmin();
+
+  const { data: agent, error: readErr } = await supabaseAdmin
+    .from("agents")
+    .select("id, name, email")
+    .eq("id", agentId)
+    .maybeSingle();
+
+  if (readErr || !agent) {
+    return { ok: false, error: "Danışman bulunamadı." };
+  }
+
+  const tempPassword = makeTempPassword();
+
+  const { error: updErr } = await supabaseAdmin
+    .from("agents")
+    .update({
+      password_hash: hashPassword(tempPassword),
+      must_change_password: true,
+      is_active: true,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", agentId);
+
+  if (updErr) {
+    return { ok: false, error: `Şifre kaydedilemedi: ${updErr.message}` };
+  }
+
+  const loginUrl = `${(process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "")}/karealfaadmin`;
+  const email = typeof agent.email === "string" ? agent.email : "";
+  const name = typeof agent.name === "string" ? agent.name : "";
+
+  let emailed = false;
+  let emailError: string | undefined;
+  if (email) {
+    const mail = await sendTempPasswordEmail(email, name, tempPassword, loginUrl);
+    emailed = mail.ok;
+    if (!mail.ok) emailError = mail.error;
+  } else {
+    emailError = "Danışmanın e-posta adresi yok.";
+  }
+
+  revalidatePath("/karealfaadmin/danismanlar");
+  return { ok: true, password: tempPassword, emailed, emailError };
 }
 
 /** Danışman listeleme sırasını günceller (verilen id sırasına göre 0,1,2…). */
