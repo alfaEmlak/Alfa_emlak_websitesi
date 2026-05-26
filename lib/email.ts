@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 
 const FROM = process.env.EMAIL_FROM || "onboarding@resend.dev";
+const REPLY_TO = process.env.EMAIL_REPLY_TO?.trim() || "";
 
 function getResend(): Resend | null {
   const key = process.env.RESEND_API_KEY;
@@ -15,7 +16,13 @@ async function send(to: string, subject: string, html: string): Promise<SendResu
   if (!resend) {
     return { ok: false, error: "RESEND_API_KEY tanımlı değil." };
   }
-  const { error } = await resend.emails.send({ from: FROM, to, subject, html });
+  const { error } = await resend.emails.send({
+    from: FROM,
+    to,
+    subject,
+    html,
+    ...(REPLY_TO ? { replyTo: REPLY_TO } : {}),
+  });
   if (error) {
     return { ok: false, error: error.message };
   }

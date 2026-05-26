@@ -1076,6 +1076,13 @@ export async function saveListing(payload: ListingSavePayload) {
   revalidatePath("/");
   revalidatePath("/ilanlar");
   revalidatePath(`/ilan/${payload.listingId}`);
+  for (const loc of routing.locales) {
+    revalidatePath(`/${loc}`);
+    revalidatePath(`/${loc}/ilanlar`);
+    if (payload.listingId) {
+      revalidatePath(`/${loc}/ilan/${payload.listingId}`);
+    }
+  }
   revalidatePath("/karealfaadmin/dashboard");
   revalidatePath("/karealfaadmin/ilanlar");
   revalidatePath("/karealfaadmin/onay-bekleyen");
