@@ -454,3 +454,49 @@ export async function getSimilarListingsSafe(
     return [];
   }
 }
+
+/** Aynı danışmanın diğer yayındaki ilanları (önce agentId, sonra danışman adı/telefonu ile eşle). */
+export async function getListingsByConsultantSafe(
+  excludeId: string,
+  opts: { agentId?: string | null; consultantName?: string | null; consultantPhone?: string | null },
+  limit = 4,
+): Promise<ListingPublic[]> {
+  try {
+    const seen = new Set<string>([excludeId]);
+    const out: any[] = [];
+    const pull = (data: any[] | null) => {
+      if (!data) return;
+      for (const row of data) {
+        if (!seen.has(row.id)) {
+          out.push(row);
+          seen.add(row.id);
+        }
+      }
+    };
+    const base = () =>
+      supabaseAdmin
+        .from("listings")
+        .select("*, listing_images(*)")
+        .eq("publish_status", "PUBLISHED")
+        .neq("id", excludeId)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+
+    if (opts.agentId) {
+      const { data } = await base().eq("created_by_agent_id", opts.agentId);
+      pull(data);
+    }
+    if (out.length < limit && opts.consultantName) {
+      const { data } = await base().eq("consultant_name", opts.consultantName);
+      pull(data);
+    }
+    if (out.length < limit && opts.consultantPhone) {
+      const { data } = await base().eq("consultant_phone", opts.consultantPhone);
+      pull(data);
+    }
+    return normalizeListings(out.slice(0, limit));
+  } catch (e) {
+    console.error("[getListingsByConsultantSafe]", e);
+    return [];
+  }
+}

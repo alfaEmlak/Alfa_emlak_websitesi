@@ -9,10 +9,11 @@ import { landPriceIsPerDonumFromDetailFields } from "@/lib/land-parcel-detail";
 import { stripOwnerContactPrivateFromDetailFields } from "@/lib/owner-contact-private";
 import { getListingDetailForLocale } from "@/lib/listing-detail-data";
 import { getAdminSession } from "@/lib/admin-auth";
-import { getSimilarListingsSafe, incrementListingViewsSupabase, unpublishedListingAccessFromSession } from "@/lib/listings-query";
+import { getSimilarListingsSafe, getListingsByConsultantSafe, incrementListingViewsSupabase, unpublishedListingAccessFromSession } from "@/lib/listings-query";
 import { getSiteSettingsOrFallback, getDefaultConsultant } from "@/lib/site-settings";
 import { resolveConsultant } from "@/lib/consultant";
 import { sortImages, visibleDetailRows, parseNearby, primaryImageUrl, daysAgo, mergeListingHighlightLines } from "@/lib/listing-utils";
+import { normalizeFloorFromListing } from "@/lib/floor-field";
 import { getNearbyPoiRowsForListing } from "@/lib/osm-nearby";
 import { toVideoEmbedUrl } from "@/lib/video-embed";
 import { PhotoGallery } from "@/components/site/PhotoGallery";
@@ -50,6 +51,7 @@ export default async function ListingDetailPage({ params }: Props) {
   const { listingId, locale } = await params;
   const t = await getTranslations("ListingDetail");
   const tc = await getTranslations("Common");
+  const tw = await getTranslations("Wizard");
 
   const session = await getAdminSession();
   const access = unpublishedListingAccessFromSession(session);
@@ -71,20 +73,78 @@ export default async function ListingDetailPage({ params }: Props) {
   const consultant = resolveConsultant(listing, getDefaultConsultant(settings));
   const images = sortImages(listing);
   const detailRows = visibleDetailRows(listing.detailFields);
+
+  const buildingAgeDisplay = (() => {
+    let preset: string | null = null;
+    try {
+      const o = typeof listing.detailFields === "string" ? JSON.parse(listing.detailFields) : null;
+      const p = (o as { buildingAgePreset?: unknown } | null)?.buildingAgePreset;
+      if (p === "project" || p === "zero") preset = p as string;
+    } catch { /* ignore */ }
+    if (preset === "project") return "Proje";
+    const ba = (listing as any).buildingAge ?? (listing as any).building_age;
+    if (ba == null || String(ba).trim() === "") return null;
+    const n = Number(ba);
+    if (!Number.isFinite(n)) return null;
+    return n === 0 ? "Sıfır" : String(n);
+  })();
+
+  const structuredRows: { key: string; label: string; value: string }[] = [];
+  const pushRow = (key: string, label: string, value: unknown) => {
+    if (value == null || String(value).trim() === "") return;
+    structuredRows.push({ key, label, value: String(value) });
+  };
+
+  const propertyTypeLabel = listingPropertyTypeDisplayLabel(String(listing.propertyType ?? (listing as any).property_type ?? ""));
+  pushRow("propertyType", tw("labels.propertyType"), propertyTypeLabel);
+  pushRow("kind", tw("labels.listingType"), tc(`listingKinds.${listing.kind}`));
+
+  const bedroomsVal = (listing as any).bedrooms ?? (listing as any).bed_rooms;
+  pushRow("bedrooms", tw("propertyLabels.bedrooms"), bedroomsVal);
+  const livingRoomsVal = (listing as any).livingRooms ?? (listing as any).living_rooms;
+  pushRow("livingRooms", tw("propertyLabels.livingRooms"), livingRoomsVal);
+  pushRow("bathrooms", tw("propertyLabels.bathrooms"), (listing as any).bathrooms);
+  pushRow("toilets", tw("propertyLabels.toilets"), (listing as any).toilets);
+
+  const areaVal = (listing as any).areaM2 ?? (listing as any).area_m2;
+  if (areaVal != null && Number(areaVal) > 0) pushRow("areaM2", tw("propertyLabels.areaM2"), `${Number(areaVal)} m²`);
+  const plotAreaVal = (listing as any).plotAreaM2 ?? (listing as any).plot_area_m2;
+  if (plotAreaVal != null && Number(plotAreaVal) > 0) pushRow("plotAreaM2", tw("propertyLabels.plotAreaM2"), `${Number(plotAreaVal)} m²`);
+
+  const floorDisplay = normalizeFloorFromListing((listing as any).floor);
+  pushRow("floor", tw("propertyLabels.floor"), floorDisplay);
+  pushRow("buildingAge", tw("propertyLabels.buildingAge"), buildingAgeDisplay);
+
+  const allDetailRows = [...structuredRows, ...detailRows];
   const features = mergeListingHighlightLines(listing as Record<string, unknown>);
   const nearbyManual = parseNearby(listing.nearbyPlaces);
   const nearbyAuto = listing.nearbyEnabled ? await getNearbyPoiRowsForListing(listing) : [];
   const showNearbySection =
     listing.nearbyEnabled && (nearbyAuto.length > 0 || nearbyManual.length > 0);
 
-  const similarRaw = await getSimilarListingsSafe(
+  const SIMILAR_LIMIT = 4;
+  const consultantRaw = await getListingsByConsultantSafe(
     listing.id,
-    listing.city,
-    listing.kind,
-    listing.propertyType ?? (listing as any).property_type,
-    listing.region,
-    4,
+    {
+      agentId: (listing as any).createdByAgentId ?? (listing as any).created_by_agent_id,
+      consultantName: listing.consultantName,
+      consultantPhone: listing.consultantPhone,
+    },
+    SIMILAR_LIMIT,
   );
+  let similarRaw = consultantRaw;
+  if (similarRaw.length < SIMILAR_LIMIT) {
+    const fillRaw = await getSimilarListingsSafe(
+      listing.id,
+      listing.city,
+      listing.kind,
+      listing.propertyType ?? (listing as any).property_type,
+      listing.region,
+      SIMILAR_LIMIT,
+    );
+    const seen = new Set(similarRaw.map(l => l.id));
+    similarRaw = [...similarRaw, ...fillRaw.filter(l => !seen.has(l.id))].slice(0, SIMILAR_LIMIT);
+  }
   const similar = similarRaw.map(l => getTranslatedListing(l, locale));
 
   const locLine = [
@@ -190,11 +250,11 @@ export default async function ListingDetailPage({ params }: Props) {
             ) : null}
           </div>
 
-          {detailRows.length ? (
+          {allDetailRows.length ? (
             <div className="mt-10 rounded-2xl bg-surface-lowest p-6 shadow-[var(--shadow-ambient)] ring-1 ring-primary/[0.1]">
               <h2 className="font-headline text-lg font-bold text-primary">{t("info")}</h2>
               <dl className="mt-4 grid gap-x-8 gap-y-1 sm:grid-cols-2">
-                {detailRows.map((r) => (
+                {allDetailRows.map((r) => (
                   <div key={r.key} className="flex justify-between gap-4 rounded-lg py-2.5 text-sm">
                     <dt className="text-on-surface/50">{r.label}</dt>
                     <dd className="font-medium text-primary">{r.value}</dd>
@@ -355,16 +415,6 @@ export default async function ListingDetailPage({ params }: Props) {
             </section>
           ) : null}
 
-          {similar.length ? (
-            <section className="mt-14">
-              <h2 className="font-headline text-xl font-bold text-primary">{t("similarListings")}</h2>
-              <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                {similar.map((l) => (
-                  <PropertyCard key={l.id} listing={l} />
-                ))}
-              </div>
-            </section>
-          ) : null}
         </div>
 
         <aside className="lg:col-span-4">
@@ -415,6 +465,25 @@ export default async function ListingDetailPage({ params }: Props) {
           </div>
         </aside>
       </div>
+
+      {similar.length ? (
+        <section className="mt-14">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="font-headline text-xl font-bold text-primary">{t("similarListings")}</h2>
+            <Link
+              href={`/ilanlar?q=${encodeURIComponent(consultant.name)}`}
+              className="shrink-0 text-sm font-semibold text-secondary hover:underline"
+            >
+              {t("seeMore")} →
+            </Link>
+          </div>
+          <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {similar.map((l) => (
+              <PropertyCard key={l.id} listing={l} />
+            ))}
+          </div>
+        </section>
+      ) : null}
     </main>
   );
 }
