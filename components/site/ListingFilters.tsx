@@ -119,10 +119,19 @@ export function ListingFilters({ locale, initial, hidden }: Props) {
       </button>
 
       {open ? (
+        <button
+          type="button"
+          aria-label="Kapat"
+          onClick={() => setOpen(false)}
+          className="fixed inset-0 z-20 hidden bg-black/40 max-sm:block"
+        />
+      ) : null}
+
+      {open ? (
         <form
           action={`/${locale}/ilanlar`}
           method="get"
-          className="absolute right-0 z-30 mt-2 flex w-[320px] max-w-[calc(100vw-2rem)] flex-col gap-5 rounded-2xl bg-surface-low p-5 shadow-[var(--shadow-ambient)] ring-1 ring-primary/[0.08]"
+          className="absolute right-0 z-30 mt-2 flex w-[320px] max-w-[calc(100vw-2rem)] flex-col gap-5 rounded-2xl bg-surface-low p-5 shadow-[var(--shadow-ambient)] ring-1 ring-primary/[0.08] max-sm:fixed max-sm:inset-x-4 max-sm:top-1/2 max-sm:mt-0 max-sm:w-auto max-sm:max-w-none max-sm:-translate-y-1/2 max-sm:max-h-[80vh] max-sm:overflow-y-auto"
         >
       {Object.entries(hidden).map(([k, v]) => (
         <input type="hidden" name={k} value={v} key={k} />

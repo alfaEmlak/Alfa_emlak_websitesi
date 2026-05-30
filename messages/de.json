@@ -192,6 +192,7 @@
       "furnished": "Möbliert",
       "arsaType": "Landtyp",
       "region": "Region",
+      "consultant": "Berater",
       "apply": "Anwenden",
       "clearAll": "Alle löschen",
       "remove": "Entfernen"
@@ -601,6 +602,7 @@
       "consultantSettings": "Berater-Einstellungen",
       "lookups": "Auswahllisten",
       "siteSettings": "Website-Einstellungen",
+      "aiTraining": "KI-Training",
       "deedsDocuments": "Grundbuch & Dokumente"
     },
     "deedsDocuments": {

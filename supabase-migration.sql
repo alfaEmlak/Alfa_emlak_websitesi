@@ -182,6 +182,12 @@ create index if not exists idx_listings_export_hangiev
 alter table site_settings add column if not exists ext_hangiev jsonb;
 
 -- ============================================================================
+-- Alfi AI asistanı — admin'den düzenlenebilir eğitim/persona promptu ve model
+-- ============================================================================
+alter table site_settings add column if not exists ai_system_prompt text;
+alter table site_settings add column if not exists ai_model text;
+
+-- ============================================================================
 -- Kariyer başvuruları
 -- ============================================================================
 create table if not exists career_applications (

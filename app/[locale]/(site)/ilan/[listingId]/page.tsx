@@ -5,7 +5,8 @@ import { Link } from "@/i18n/routing";
 import { getTranslatedListing, getTranslatedSiteSettings } from "@/lib/i18n-utils";
 import { listingPropertyTypeDisplayLabel } from "@/lib/listing-property-taxonomy";
 import { displayListingCity, displayListingRegionOrNeighborhood } from "@/lib/listing-city";
-import { landPriceIsPerDonumFromDetailFields } from "@/lib/land-parcel-detail";
+import { landPriceIsPerDonumFromDetailFields, listingPropertyTypeIsArsa, parseLandFieldsFromDetailFields } from "@/lib/land-parcel-detail";
+import { listingPropertyTypeIsTicari } from "@/lib/commercial-parcel-detail";
 import { stripOwnerContactPrivateFromDetailFields } from "@/lib/owner-contact-private";
 import { getListingDetailForLocale } from "@/lib/listing-detail-data";
 import { getAdminSession } from "@/lib/admin-auth";
@@ -71,6 +72,12 @@ export default async function ListingDetailPage({ params }: Props) {
   const settingsRaw = await getSiteSettingsOrFallback();
   const settings = getTranslatedSiteSettings(settingsRaw, locale);
   const consultant = resolveConsultant(listing, getDefaultConsultant(settings));
+  const consultantAgentId = (listing as any).createdByAgentId ?? (listing as any).created_by_agent_id ?? null;
+  const consultantListingsHref = consultantAgentId
+    ? `/danismanlar/${consultantAgentId}`
+    : consultant.name
+      ? `/ilanlar?danismanAdi=${encodeURIComponent(consultant.name)}`
+      : "/ilanlar";
   const images = sortImages(listing);
   const detailRows = visibleDetailRows(listing.detailFields);
 
@@ -95,7 +102,9 @@ export default async function ListingDetailPage({ params }: Props) {
     structuredRows.push({ key, label, value: String(value) });
   };
 
-  const propertyTypeLabel = listingPropertyTypeDisplayLabel(String(listing.propertyType ?? (listing as any).property_type ?? ""));
+  const propertyTypeRaw = listing.propertyType ?? (listing as any).property_type;
+  const isKonutListing = !listingPropertyTypeIsArsa(propertyTypeRaw) && !listingPropertyTypeIsTicari(propertyTypeRaw);
+  const propertyTypeLabel = listingPropertyTypeDisplayLabel(String(propertyTypeRaw ?? ""));
   pushRow("propertyType", tw("labels.propertyType"), propertyTypeLabel);
   pushRow("kind", tw("labels.listingType"), tc(`listingKinds.${listing.kind}`));
 
@@ -104,10 +113,16 @@ export default async function ListingDetailPage({ params }: Props) {
   const livingRoomsVal = (listing as any).livingRooms ?? (listing as any).living_rooms;
   pushRow("livingRooms", tw("propertyLabels.livingRooms"), livingRoomsVal);
   pushRow("bathrooms", tw("propertyLabels.bathrooms"), (listing as any).bathrooms);
-  pushRow("toilets", tw("propertyLabels.toilets"), (listing as any).toilets);
+  if (isKonutListing) pushRow("toilets", "WC", (listing as any).toilets ?? 0);
 
+  const isArsaListing = listingPropertyTypeIsArsa(propertyTypeRaw);
+  if (isArsaListing) {
+    // Arsa/arazi: imar oranı + alan birlikte gösterilir.
+    const imarOran = parseLandFieldsFromDetailFields(listing.detailFields).toplamImarOrani;
+    if (imarOran) pushRow("imarOran", "İmar oranı", /%$/.test(imarOran) ? imarOran : `${imarOran}%`);
+  }
   const areaVal = (listing as any).areaM2 ?? (listing as any).area_m2;
-  if (areaVal != null && Number(areaVal) > 0) pushRow("areaM2", tw("propertyLabels.areaM2"), `${Number(areaVal)} m²`);
+  if (areaVal != null && Number(areaVal) > 0) pushRow("areaM2", isArsaListing ? "İmar alanı (m²)" : tw("propertyLabels.areaM2"), `${Number(areaVal)} m²`);
   const plotAreaVal = (listing as any).plotAreaM2 ?? (listing as any).plot_area_m2;
   if (plotAreaVal != null && Number(plotAreaVal) > 0) pushRow("plotAreaM2", tw("propertyLabels.plotAreaM2"), `${Number(plotAreaVal)} m²`);
 
@@ -199,8 +214,8 @@ export default async function ListingDetailPage({ params }: Props) {
         virtualTourEnabled={listing.virtualTourEnabled} 
       />
 
-      <div className="mt-10 grid gap-10 lg:grid-cols-12">
-        <div className="lg:col-span-8">
+      <div className="mt-10 flex flex-col gap-10 lg:grid lg:grid-cols-12">
+        <div className="order-1 lg:order-none lg:col-span-8 lg:col-start-1 lg:row-start-1">
           <div className="flex flex-col gap-4 pb-8 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h1 className="font-headline text-2xl font-extrabold tracking-tight text-primary sm:text-3xl md:text-4xl">{listing.title}</h1>
@@ -236,16 +251,16 @@ export default async function ListingDetailPage({ params }: Props) {
                 <span>{listing.bathrooms} {tc("bathrooms")}</span>
               </div>
             ) : null}
-            {listing.toilets != null ? (
+            {isKonutListing ? (
               <div className="flex items-center gap-2">
                 <span className="text-lg">🚽</span>
-                <span>{listing.toilets} {tc("toilets")}</span>
+                <span>{listing.toilets ?? 0} WC</span>
               </div>
             ) : null}
             {listing.areaM2 != null ? (
               <div className="flex items-center gap-2">
                 <span className="text-lg">⬛</span>
-                <span>{listing.areaM2} m²</span>
+                <span>{isArsaListing ? "İmar alanı " : ""}{listing.areaM2} m²</span>
               </div>
             ) : null}
           </div>
@@ -361,9 +376,11 @@ export default async function ListingDetailPage({ params }: Props) {
               </a>
             </section>
           ) : null}
+        </div>
 
+        <div className="order-3 lg:order-none lg:col-span-8 lg:col-start-1 lg:row-start-2">
           {listing.mapEnabled && listing.lat != null && listing.lng != null ? (
-            <section className="mt-12">
+            <section>
               <h2 className="font-headline text-lg font-bold text-primary">{t("locationMap")}</h2>
               <iframe
                 title={tc("locationTitle")}
@@ -417,7 +434,7 @@ export default async function ListingDetailPage({ params }: Props) {
 
         </div>
 
-        <aside className="lg:col-span-4">
+        <aside className="order-2 lg:order-none lg:col-span-4 lg:col-start-9 lg:row-start-1">
           <div className="sticky top-[calc(var(--header-h)+1rem)] space-y-6">
             <div className="rounded-2xl bg-surface-lowest p-6 shadow-[var(--shadow-ambient)] ring-1 ring-primary/[0.12]">
               <div className="flex items-center gap-3">
@@ -454,7 +471,7 @@ export default async function ListingDetailPage({ params }: Props) {
                 ) : null}
               </div>
               <div className="mt-4 space-y-1 pt-4 text-xs">
-                <Link href={`/ilanlar?q=${encodeURIComponent(consultant.name)}`} className="block text-secondary hover:underline">
+                <Link href={consultantListingsHref} className="block text-secondary hover:underline">
                   {t("otherListings")}
                 </Link>
                 <Link href="/ilanlar" className="block text-secondary hover:underline">
@@ -471,7 +488,7 @@ export default async function ListingDetailPage({ params }: Props) {
           <div className="flex items-center justify-between gap-4">
             <h2 className="font-headline text-xl font-bold text-primary">{t("similarListings")}</h2>
             <Link
-              href={`/ilanlar?q=${encodeURIComponent(consultant.name)}`}
+              href={consultantListingsHref}
               className="shrink-0 text-sm font-semibold text-secondary hover:underline"
             >
               {t("seeMore")} →

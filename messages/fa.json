@@ -192,6 +192,7 @@
       "furnished": "مبله",
       "arsaType": "نوع زمین",
       "region": "منطقه",
+      "consultant": "مشاور",
       "apply": "اعمال",
       "clearAll": "پاک کردن همه",
       "remove": "حذف"
@@ -601,6 +602,7 @@
       "consultantSettings": "تنظیمات مشاور",
       "lookups": "فهرست‌های ثابت",
       "siteSettings": "تنظیمات سایت",
+      "aiTraining": "آموزش هوش مصنوعی",
       "deedsDocuments": "سند تاپو و مدارک"
     },
     "deedsDocuments": {

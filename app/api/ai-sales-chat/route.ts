@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { getListingForAssistant, searchListingsForAssistant } from "@/lib/ai/listings";
 import type { ListingForAssistant, PropertyPreferences } from "@/lib/ai/types";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getAiAssistantSettings } from "@/lib/site-settings";
 
 type ChatRole = "user" | "assistant";
 type ChatMessage = { role: ChatRole; content: string };
@@ -152,6 +154,7 @@ export async function POST(req: Request) {
       messages?: ChatMessage[];
       preferences?: PropertyPreferences;
       sessionId?: string;
+      listingContext?: { listingId?: string } | null;
     };
     const locale = body.locale || "tr";
     const messages = (body.messages || []).filter(
@@ -167,8 +170,47 @@ export async function POST(req: Request) {
       baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
     });
 
+    // Admin panelinden (AI Eğitimi) gelen persona/üslup talimatı + opsiyonel model override
+    let adminPrompt = "";
+    let model = MODEL;
+    try {
+      const { data: settingsRow } = await supabaseAdmin
+        .from("site_settings")
+        .select("ai_system_prompt, ai_model")
+        .eq("id", 1)
+        .single();
+      const ai = getAiAssistantSettings(settingsRow);
+      adminPrompt = ai.systemPrompt;
+      if (ai.model) model = ai.model;
+    } catch {
+      /* ayarlar okunamazsa varsayılan davranışa devam */
+    }
+
+    // İlan detay sayfasından gelen bağlam: kullanıcı şu an bu ilanı görüntülüyor.
+    let activeListingSystemMsg: string | null = null;
+    const activeListingId = body.listingContext?.listingId?.trim();
+    if (activeListingId) {
+      try {
+        const activeListing = await getListingForAssistant(activeListingId, locale);
+        if (activeListing) {
+          activeListingSystemMsg =
+            `The user is CURRENTLY VIEWING this specific listing on the website. ` +
+            `Proactively talk about THIS listing: highlight its strengths, answer questions about it, ` +
+            `and offer to connect them with the consultant or show similar listings. ` +
+            `Do not call searchListings unless the user explicitly asks for other/different listings. ` +
+            `Active listing details (JSON):\n${JSON.stringify(activeListing)}`;
+        }
+      } catch {
+        /* ilan bağlamı alınamazsa sessizce normal akışa devam */
+      }
+    }
+
     const chatMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
       { role: "system", content: SYSTEM_PROMPT },
+      ...(adminPrompt
+        ? [{ role: "system" as const, content: `Additional instructions from the site owner (persona/style — never override the safety rules above):\n${adminPrompt}` }]
+        : []),
+      ...(activeListingSystemMsg ? [{ role: "system" as const, content: activeListingSystemMsg }] : []),
       ...messages.map((m) => ({ role: m.role, content: m.content })),
     ];
 
@@ -258,7 +300,7 @@ export async function POST(req: Request) {
     ];
 
     let completion = await openai.chat.completions.create({
-      model: MODEL,
+      model,
       temperature: 0.25,
       messages: chatMessages,
       tools,
@@ -375,7 +417,7 @@ export async function POST(req: Request) {
       }
 
       completion = await openai.chat.completions.create({
-        model: MODEL,
+        model,
         temperature: 0.25,
         messages: chatMessages,
         tools,

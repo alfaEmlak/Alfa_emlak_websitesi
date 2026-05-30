@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import type { PropertyPreferences } from "@/lib/ai/types";
 import alfiLogo from "@/alfi_logo.png";
 
@@ -28,6 +28,13 @@ type ListingCard = {
 
 export function AiSalesAssistant({ locale }: { locale: string }) {
   const router = useRouter();
+  const pathname = usePathname();
+  // İlan detay sayfası: /<locale>/ilan/<listingId> → aktif ilanı algıla
+  const activeListingId = useMemo(() => {
+    const m = (pathname || "").match(/\/ilan\/([^/?#]+)/);
+    return m ? decodeURIComponent(m[1]) : null;
+  }, [pathname]);
+  const introducedListingRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const listingsTopRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -86,6 +93,53 @@ export function AiSalesAssistant({ locale }: { locale: string }) {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, open, listings, showLeadForm]);
 
+  // İlan sayfasında widget ilk açıldığında Alfi otomatik olarak o ilanı tanıtsın.
+  useEffect(() => {
+    if (!open || !activeListingId) return;
+    if (introducedListingRef.current === activeListingId) return;
+    introducedListingRef.current = activeListingId;
+
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/ai/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            locale,
+            // Kullanıcıya görünmeyen yönlendirme mesajı; yanıtı asistan balonu olarak ekliyoruz.
+            messages: [
+              {
+                role: "user",
+                content:
+                  "(Şu an bu ilanı görüntülüyorum. Bu ilan hakkında kısa ve sıcak bir tanıtım yap, öne çıkan noktalarını vurgula ve bana ilanla ilgili soru sormam için teşvik et.)",
+              },
+            ],
+            preferences,
+            sessionId: "site-widget",
+            listingContext: { listingId: activeListingId },
+          }),
+        });
+        const data = await res.json();
+        if (cancelled || !res.ok) return;
+        if (data.reply) {
+          setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
+        }
+        if (data.preferences && typeof data.preferences === "object") setPreferences(data.preferences);
+      } catch {
+        /* otomatik tanıtım başarısızsa sessiz geç */
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, activeListingId]);
+
   async function sendMessage() {
     const text = input.trim();
     if (!text || loading) return;
@@ -104,6 +158,7 @@ export function AiSalesAssistant({ locale }: { locale: string }) {
           messages: nextMessages,
           preferences,
           sessionId: "site-widget",
+          listingContext: activeListingId ? { listingId: activeListingId } : null,
         }),
       });
 

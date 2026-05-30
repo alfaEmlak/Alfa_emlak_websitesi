@@ -2132,13 +2132,13 @@ export function ListingEditor({
             <div className="sm:col-span-2 lg:col-span-3 rounded-xl border border-zinc-200 bg-zinc-50/60 p-4">
               <p className="text-sm font-medium text-zinc-800">Sahip olunan kat</p>
               <p className="mt-0.5 text-xs text-zinc-500">
-                Mülkün yalnızca bir katta mı yoksa birden fazla kata mı yayıldığını belirtin.
+                Mülkün tek katta mı yoksa kaç kata yayıldığını seçin (dubleks, tripleks, tüm bina veya elle 2–99 kat).
               </p>
-              <div className="mt-3 flex flex-wrap gap-4">
+              <div className="mt-3 flex flex-wrap items-center gap-4">
                 <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
                   <input
                     type="radio"
-                    name="ownedFloorsScope"
+                    name="ownedFloorsLayout"
                     className="h-4 w-4 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
                     checked={form.ownedFloorsScope === "single"}
                     onChange={() =>
@@ -2150,116 +2150,95 @@ export function ListingEditor({
                       }))
                     }
                   />
-                  Tek kata sahip
+                  Tek katlı
                 </label>
                 <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
                   <input
                     type="radio"
-                    name="ownedFloorsScope"
+                    name="ownedFloorsLayout"
                     className="h-4 w-4 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
-                    checked={form.ownedFloorsScope === "multiple"}
+                    checked={form.ownedFloorsScope === "multiple" && form.ownedFloorsLayout === OWNED_FLOORS_LAYOUT_KEYS.duplex}
                     onChange={() =>
                       setForm((prev) => ({
                         ...prev,
                         ownedFloorsScope: "multiple",
+                        ownedFloorsLayout: OWNED_FLOORS_LAYOUT_KEYS.duplex,
+                        ownedFloorsFloorCount: "",
                       }))
                     }
                   />
-                  Birden fazla kata sahip
+                  Dubleks
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                  <input
+                    type="radio"
+                    name="ownedFloorsLayout"
+                    className="h-4 w-4 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
+                    checked={form.ownedFloorsScope === "multiple" && form.ownedFloorsLayout === OWNED_FLOORS_LAYOUT_KEYS.triplex}
+                    onChange={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        ownedFloorsScope: "multiple",
+                        ownedFloorsLayout: OWNED_FLOORS_LAYOUT_KEYS.triplex,
+                        ownedFloorsFloorCount: "",
+                      }))
+                    }
+                  />
+                  Tripleks
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                  <input
+                    type="radio"
+                    name="ownedFloorsLayout"
+                    className="h-4 w-4 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
+                    checked={form.ownedFloorsScope === "multiple" && form.ownedFloorsLayout === OWNED_FLOORS_LAYOUT_KEYS.whole_building}
+                    onChange={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        ownedFloorsScope: "multiple",
+                        ownedFloorsLayout: OWNED_FLOORS_LAYOUT_KEYS.whole_building,
+                        ownedFloorsFloorCount: "",
+                      }))
+                    }
+                  />
+                  Tüm bina
+                </label>
+                <label className="flex cursor-pointer flex-wrap items-center gap-2 text-sm text-zinc-700">
+                  <span className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="ownedFloorsLayout"
+                      className="h-4 w-4 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
+                      checked={form.ownedFloorsScope === "multiple" && form.ownedFloorsLayout === OWNED_FLOORS_LAYOUT_KEYS.custom}
+                      onChange={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          ownedFloorsScope: "multiple",
+                          ownedFloorsLayout: OWNED_FLOORS_LAYOUT_KEYS.custom,
+                        }))
+                      }
+                    />
+                    Elle kat sayısı
+                  </span>
+                  {form.ownedFloorsScope === "multiple" && form.ownedFloorsLayout === OWNED_FLOORS_LAYOUT_KEYS.custom ? (
+                    <span className="flex items-center gap-1.5 pl-6 sm:pl-0">
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={2}
+                        max={99}
+                        step={1}
+                        placeholder="örn. 4"
+                        className="w-20 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                        value={form.ownedFloorsFloorCount}
+                        onChange={(e) => set("ownedFloorsFloorCount", e.target.value)}
+                        aria-label="Sahip olunan kat adedi"
+                      />
+                      <span className="text-zinc-600">kat</span>
+                    </span>
+                  ) : null}
                 </label>
               </div>
-              {form.ownedFloorsScope === "multiple" ? (
-                <div className="mt-4 border-t border-zinc-200 pt-4">
-                  <p className="text-sm font-medium text-zinc-800">Çok katlı kullanım tipi</p>
-                  <p className="mt-0.5 text-xs text-zinc-500">
-                    Dubleks, tripleks, tüm bina veya elle kaç kata yayıldığını yazın (2–99 kat).
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-4">
-                    <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
-                      <input
-                        type="radio"
-                        name="ownedFloorsLayout"
-                        className="h-4 w-4 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
-                        checked={form.ownedFloorsLayout === OWNED_FLOORS_LAYOUT_KEYS.duplex}
-                        onChange={() =>
-                          setForm((prev) => ({
-                            ...prev,
-                            ownedFloorsLayout: OWNED_FLOORS_LAYOUT_KEYS.duplex,
-                            ownedFloorsFloorCount: "",
-                          }))
-                        }
-                      />
-                      Dubleks
-                    </label>
-                    <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
-                      <input
-                        type="radio"
-                        name="ownedFloorsLayout"
-                        className="h-4 w-4 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
-                        checked={form.ownedFloorsLayout === OWNED_FLOORS_LAYOUT_KEYS.triplex}
-                        onChange={() =>
-                          setForm((prev) => ({
-                            ...prev,
-                            ownedFloorsLayout: OWNED_FLOORS_LAYOUT_KEYS.triplex,
-                            ownedFloorsFloorCount: "",
-                          }))
-                        }
-                      />
-                      Tripleks
-                    </label>
-                    <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
-                      <input
-                        type="radio"
-                        name="ownedFloorsLayout"
-                        className="h-4 w-4 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
-                        checked={form.ownedFloorsLayout === OWNED_FLOORS_LAYOUT_KEYS.whole_building}
-                        onChange={() =>
-                          setForm((prev) => ({
-                            ...prev,
-                            ownedFloorsLayout: OWNED_FLOORS_LAYOUT_KEYS.whole_building,
-                            ownedFloorsFloorCount: "",
-                          }))
-                        }
-                      />
-                      Tüm bina
-                    </label>
-                    <label className="flex cursor-pointer flex-wrap items-center gap-2 text-sm text-zinc-700">
-                      <span className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          name="ownedFloorsLayout"
-                          className="h-4 w-4 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
-                          checked={form.ownedFloorsLayout === OWNED_FLOORS_LAYOUT_KEYS.custom}
-                          onChange={() =>
-                            setForm((prev) => ({
-                              ...prev,
-                              ownedFloorsLayout: OWNED_FLOORS_LAYOUT_KEYS.custom,
-                            }))
-                          }
-                        />
-                        Elle kat sayısı
-                      </span>
-                      {form.ownedFloorsLayout === OWNED_FLOORS_LAYOUT_KEYS.custom ? (
-                        <span className="flex items-center gap-1.5 pl-6 sm:pl-0">
-                          <input
-                            type="number"
-                            inputMode="numeric"
-                            min={2}
-                            max={99}
-                            step={1}
-                            placeholder="örn. 4"
-                            className="w-20 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                            value={form.ownedFloorsFloorCount}
-                            onChange={(e) => set("ownedFloorsFloorCount", e.target.value)}
-                            aria-label="Sahip olunan kat adedi"
-                          />
-                          <span className="text-zinc-600">kat</span>
-                        </span>
-                      ) : null}
-                    </label>
-                  </div>
-                </div>
-              ) : null}
             </div>
 
             {!isTicari

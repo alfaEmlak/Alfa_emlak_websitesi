@@ -193,6 +193,7 @@
       "categoryFilters": "Category-specific",
       "arsaType": "Land type",
       "region": "Region",
+      "consultant": "Consultant",
       "apply": "Apply",
       "clearAll": "Clear all",
       "remove": "Remove"
@@ -602,6 +603,7 @@
       "consultantSettings": "Consultant settings",
       "lookups": "Lookup lists",
       "siteSettings": "Site settings",
+      "aiTraining": "AI Training",
       "deedsDocuments": "Title deeds & documents"
     },
     "deedsDocuments": {

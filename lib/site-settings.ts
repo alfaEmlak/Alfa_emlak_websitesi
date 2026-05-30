@@ -182,3 +182,19 @@ export function getAnalysisSettings(
     bars: bars.length > 0 ? bars : ANALYSIS_DEFAULT_BARS,
   };
 }
+
+export type AiAssistantSettings = {
+  /** Admin'in eklediği persona/üslup/eğitim talimatı (sabit guardrail promptuna eklenir). */
+  systemPrompt: string;
+  /** Opsiyonel model override (boşsa env/GEMINI_MODEL kullanılır). */
+  model: string;
+};
+
+export function getAiAssistantSettings(
+  row: { ai_system_prompt?: string | null; ai_model?: string | null } | null | undefined,
+): AiAssistantSettings {
+  return {
+    systemPrompt: typeof row?.ai_system_prompt === "string" ? row.ai_system_prompt.trim() : "",
+    model: typeof row?.ai_model === "string" ? row.ai_model.trim() : "",
+  };
+}

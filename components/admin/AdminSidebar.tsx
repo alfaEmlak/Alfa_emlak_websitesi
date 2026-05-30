@@ -73,6 +73,7 @@ const navGroups: NavGroup[] = [
       { href: "/karealfaadmin/giris-gecmisi", labelKey: "nav.loginHistory", icon: "analytics", match: "prefix", adminOnly: true },
       { href: "/karealfaadmin/danisman-ayarlar", labelKey: "nav.consultantSettings", icon: "person", match: "prefix", consultantOnly: true },
       { href: "/karealfaadmin/lookups", labelKey: "nav.lookups", icon: "list", match: "prefix", adminOnly: true },
+      { href: "/karealfaadmin/ai-egitimi", labelKey: "nav.aiTraining", icon: "support_agent", match: "prefix", adminOnly: true },
       { href: "/karealfaadmin/ayarlar", labelKey: "nav.siteSettings", icon: "settings", match: "prefix", adminOnly: true },
     ],
   },

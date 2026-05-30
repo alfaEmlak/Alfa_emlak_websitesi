@@ -33,10 +33,11 @@ function buildPageHref(sp: SearchParams, page: number) {
 }
 
 /** Verilen parametreyi (ve sayfa numarasını) çıkararak URL üretir. */
-function buildRemoveHref(sp: SearchParams, removeKey: string) {
+function buildRemoveHref(sp: SearchParams, removeKey: string | string[]) {
+  const removeKeys = Array.isArray(removeKey) ? removeKey : [removeKey];
   const p = new URLSearchParams();
   for (const [k, val] of Object.entries(sp)) {
-    if (val == null || k === removeKey || k === "page") continue;
+    if (val == null || removeKeys.includes(k) || k === "page") continue;
     if (Array.isArray(val)) val.forEach((x) => p.append(k, x));
     else p.set(k, val);
   }
@@ -75,7 +76,7 @@ export default async function ListingsPage({ params, searchParams }: Props) {
     return v;
   };
 
-  const activeFilters: { key: string; label: string; value: string }[] = [];
+  const activeFilters: { key: string; label: string; value: string; removeKeys?: string[] }[] = [];
   const fCity = first(sp.sehir);
   if (fCity) activeFilters.push({ key: "sehir", label: t("filters.city"), value: kktcCities.find((c) => c.v === fCity)?.l ?? fCity });
   const fBolge = first(sp.bolge);
@@ -104,6 +105,16 @@ export default async function ListingsPage({ params, searchParams }: Props) {
   if (fEsy === "1" || fEsy === "true") activeFilters.push({ key: "esyali", label: t("filters.furnished"), value: "✓" });
   const fQ = first(sp.q);
   if (fQ) activeFilters.push({ key: "q", label: tc("search"), value: fQ });
+  const fDanismanAdi = first(sp.danismanAdi);
+  const fDanisman = first(sp.danisman);
+  if (fDanismanAdi || fDanisman) {
+    activeFilters.push({
+      key: "danismanAdi",
+      label: t("filters.consultant"),
+      value: fDanismanAdi ?? fDanisman ?? "",
+      removeKeys: ["danisman", "danismanAdi"],
+    });
+  }
 
   const clearAllHref = (() => {
     const turv = first(sp.tur);
@@ -174,7 +185,7 @@ export default async function ListingsPage({ params, searchParams }: Props) {
                   key={f.key}
                   label={f.label}
                   value={f.value}
-                  removeHref={buildRemoveHref(sp, f.key)}
+                  removeHref={buildRemoveHref(sp, f.removeKeys ?? f.key)}
                   removeLabel={t("filters.remove")}
                 />
               ))}

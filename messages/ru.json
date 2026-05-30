@@ -192,6 +192,7 @@
       "furnished": "С мебелью",
       "arsaType": "Тип участка",
       "region": "Район",
+      "consultant": "Консультант",
       "apply": "Применить",
       "clearAll": "Очистить всё",
       "remove": "Удалить"
@@ -601,6 +602,7 @@
       "consultantSettings": "Настройки консультанта",
       "lookups": "Справочники",
       "siteSettings": "Настройки сайта",
+      "aiTraining": "Обучение ИИ",
       "deedsDocuments": "Кочаны и документы"
     },
     "deedsDocuments": {

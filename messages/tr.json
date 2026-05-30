@@ -193,6 +193,7 @@
       "categoryFilters": "Kategoriye özel",
       "arsaType": "Arsa tipi",
       "region": "Bölge",
+      "consultant": "Danışman",
       "apply": "Uygula",
       "clearAll": "Tümünü temizle",
       "remove": "Kaldır"
@@ -611,6 +612,7 @@
       "consultantSettings": "Danışman ayarları",
       "lookups": "Sabit listeler",
       "siteSettings": "Site ayarları",
+      "aiTraining": "AI Eğitimi",
       "deedsDocuments": "Koçan ve belgeler",
       "feedStatus": "Feed durumu"
     },

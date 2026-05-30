@@ -1482,6 +1482,38 @@ export async function saveSiteSettings(formData: FormData) {
   revalidatePath("/", "layout");
 }
 
+const AI_SYSTEM_PROMPT_MAX = 6000;
+
+/** Alfi AI asistanı — admin'den düzenlenebilir persona/eğitim promptu + opsiyonel model. */
+export async function saveAiTraining(formData: FormData) {
+  await requireAdmin();
+
+  const systemPrompt = String(formData.get("ai_system_prompt") ?? "").trim().slice(0, AI_SYSTEM_PROMPT_MAX);
+  const model = String(formData.get("ai_model") ?? "").trim().slice(0, 120);
+
+  const settingsData = {
+    ai_system_prompt: systemPrompt || null,
+    ai_model: model || null,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data: existing } = await supabaseAdmin
+    .from("site_settings")
+    .select("id")
+    .eq("id", 1)
+    .single();
+
+  if (existing) {
+    const { error } = await supabaseAdmin.from("site_settings").update(settingsData).eq("id", 1);
+    if (error) throw new Error(`AI ayarları kaydedilemedi: ${error.message}`);
+  } else {
+    const { error } = await supabaseAdmin.from("site_settings").insert({ id: 1, ...settingsData });
+    if (error) throw new Error(`AI ayarları kaydedilemedi: ${error.message}`);
+  }
+
+  revalidatePath("/karealfaadmin/ai-egitimi");
+}
+
 export async function saveMyConsultantProfile(formData: FormData) {
   const user = await requireRole("CONSULTANT");
   const tp = await getPanelTranslations();
