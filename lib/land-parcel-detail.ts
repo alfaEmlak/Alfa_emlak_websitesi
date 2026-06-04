@@ -196,7 +196,19 @@ export function landParcelHighlightLinesFromDetailFields(detailFieldsRaw: unknow
 }
 
 export function listingPropertyTypeIsArsa(propertyType: unknown): boolean {
-  return String(propertyType ?? "")
+  // Normalize Turkish text so "İ/ı", accents ve ayraçlar eşleşmeyi bozmasın.
+  const normalized = String(propertyType ?? "")
     .toLocaleLowerCase("tr-TR")
-    .includes("arsa");
+    .normalize("NFD")
+    .replace(new RegExp("[\\u0300-\\u036f]", "g"), "")
+    .replace(/ı/g, "i");
+  // Hem yeni kayıtlar ("arsa · Tarla") hem de eski/feed kaynaklı ham değerler
+  // ("Arazi", "Tarla", "Bağ & Bahçe", "Sanayi Arsası" …) arsa/arazi sayılır.
+  return (
+    normalized.includes("arsa") ||
+    normalized.includes("arazi") ||
+    normalized.includes("tarla") ||
+    normalized.includes("bag") ||
+    normalized.includes("bahce")
+  );
 }
