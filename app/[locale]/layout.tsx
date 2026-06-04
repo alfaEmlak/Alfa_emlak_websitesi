@@ -8,6 +8,7 @@ import { Cormorant_Garamond, Inter, Manrope } from "next/font/google";
 import "../material-symbols.css";
 import "../globals.css";
 import { getSiteSettingsOrFallback } from "@/lib/site-settings";
+import MetaPixel from "@/components/site/MetaPixel";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -60,6 +61,7 @@ export default async function RootLayout({
       style={{ colorScheme: "light" }}
     >
       <body className="flex min-h-full flex-col bg-surface font-sans text-on-surface selection:bg-secondary/30">
+        <MetaPixel />
         <NextIntlClientProvider messages={messages}>
           {children}
         </NextIntlClientProvider>
