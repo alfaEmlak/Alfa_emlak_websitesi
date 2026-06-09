@@ -58,6 +58,13 @@ export const defaultMegaMenu: MenuTopItem[] = [
     ],
   },
   {
+    id: "gunluk",
+    label: "Günlük Kiralık",
+    columns: [
+      { title: "Günlük Kiralık", links: regionsAllCyprus.map((l) => ({ ...l, href: l.href + "&tur=gunluk" })) },
+    ],
+  },
+  {
     id: "daha-fazla",
     label: "Daha Fazla",
     columns: [

@@ -10,7 +10,7 @@ import { CareerModal } from "@/components/site/CareerModal";
 import { useTranslations } from "next-intl";
 import alfaLogo from "@/alfaemlaklogov1-removebg-preview.png";
 
-type ActiveNav = "satilik" | "proje" | "kiralik" | "hakkimizda" | "ilanlar" | null;
+type ActiveNav = "satilik" | "proje" | "kiralik" | "gunluk" | "hakkimizda" | "ilanlar" | null;
 
 function computeActive(pathname: string, tur: string | null): ActiveNav {
   // next-intl usePathname returns path WITHOUT locale prefix
@@ -18,7 +18,8 @@ function computeActive(pathname: string, tur: string | null): ActiveNav {
   if (pathname === "/ilanlar" || pathname.startsWith("/ilan/")) {
     if (!tur) return "ilanlar";
     if (tur === "proje") return "proje";
-    if (tur === "kiralik" || tur === "gunluk") return "kiralik";
+    if (tur === "gunluk") return "gunluk";
+    if (tur === "kiralik") return "kiralik";
     if (tur === "satilik") return "satilik";
     return "ilanlar";
   }
@@ -91,6 +92,7 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
   const satilik = menu.find((m) => m.id === "satilik");
   const projeler = menu.find((m) => m.id === "projeler");
   const kiralik = menu.find((m) => m.id === "kiralik");
+  const gunluk = menu.find((m) => m.id === "gunluk");
   const dahaFazla = menu.find((m) => m.id === "daha-fazla");
   const desktopActiveMega = menu.find((m) => m.id === desktopOpenId) ?? null;
   const cancelDesktopClose = () => {
@@ -152,6 +154,16 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
                 }}>
                   <Link href="/ilanlar?tur=kiralik" className={navItemClass(active === "kiralik")}>
                     {t("forRent")}
+                  </Link>
+                </div>
+              ) : null}
+              {gunluk ? (
+                <div className="relative" onMouseEnter={() => {
+                  cancelDesktopClose();
+                  setDesktopOpenId("gunluk");
+                }}>
+                  <Link href="/ilanlar?tur=gunluk" className={navItemClass(active === "gunluk")}>
+                    {t("dailyRent")}
                   </Link>
                 </div>
               ) : null}
@@ -253,6 +265,16 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
               </li>
               <li>
                 <Link
+                  href="/ilanlar?tur=gunluk"
+                  className="flex items-center justify-between rounded-xl border border-transparent px-3 py-3 text-primary transition hover:border-slate-200 hover:bg-slate-50"
+                  onClick={() => setOpen(false)}
+                >
+                  <span>{t("dailyRent")}</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/ilanlar"
                   className="flex items-center justify-between rounded-xl border border-transparent px-3 py-3 text-primary transition hover:border-slate-200 hover:bg-slate-50"
                   onClick={() => setOpen(false)}
@@ -335,6 +357,7 @@ function SiteHeaderFallback({ menu, siteName }: { menu: MenuTopItem[]; siteName:
   const satilik = menu.find((m) => m.id === "satilik");
   const projeler = menu.find((m) => m.id === "projeler");
   const kiralik = menu.find((m) => m.id === "kiralik");
+  const gunluk = menu.find((m) => m.id === "gunluk");
   const dahaFazla = menu.find((m) => m.id === "daha-fazla");
   const desktopActiveMega = menu.find((m) => m.id === desktopOpenId) ?? null;
   const cancelDesktopClose = () => {
@@ -395,6 +418,16 @@ function SiteHeaderFallback({ menu, siteName }: { menu: MenuTopItem[]; siteName:
                 }}>
                   <Link href="/ilanlar?tur=kiralik" className={navItemClass(false)}>
                     Kiralık
+                  </Link>
+                </div>
+              ) : null}
+              {gunluk ? (
+                <div className="relative" onMouseEnter={() => {
+                  cancelDesktopClose();
+                  setDesktopOpenId("gunluk");
+                }}>
+                  <Link href="/ilanlar?tur=gunluk" className={navItemClass(false)}>
+                    Günlük Kiralık
                   </Link>
                 </div>
               ) : null}
@@ -478,6 +511,16 @@ function SiteHeaderFallback({ menu, siteName }: { menu: MenuTopItem[]; siteName:
                   onClick={() => setOpen(false)}
                 >
                   <span>Kiralık</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/ilanlar?tur=gunluk"
+                  className="flex items-center justify-between rounded-xl border border-transparent px-3 py-3 text-primary transition hover:border-slate-200 hover:bg-slate-50"
+                  onClick={() => setOpen(false)}
+                >
+                  <span>Günlük Kiralık</span>
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
                 </Link>
               </li>
