@@ -25,7 +25,6 @@ export function PropertyCard({ listing, stagger }: { listing: ListingPublic; sta
   const row = listing as Record<string, unknown>;
   const tapuLabel = titleDeedOwnershipLabel(row.titleDeedOwnership ?? row.title_deed_ownership);
   const img = primaryImageUrl(listing) || "/placeholder-property.svg";
-  const isRemote = img.startsWith("http");
 
   return (
     <article
@@ -39,7 +38,6 @@ export function PropertyCard({ listing, stagger }: { listing: ListingPublic; sta
             fill
             sizes="(max-width:768px) 100vw, 33vw"
             className="object-cover grayscale-[0.2] transition-[transform,filter] duration-700 group-hover:scale-[1.02] group-hover:grayscale-0 motion-reduce:transition-none"
-            unoptimized={isRemote}
           />
         </Link>
         <div className="pointer-events-none absolute right-4 top-4 z-[1] flex flex-col items-end gap-1">

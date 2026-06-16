@@ -276,7 +276,6 @@ export function PhotoGallery({
                     fill
                     className="object-cover"
                     sizes="80px"
-                    unoptimized
                   />
                 </button>
               ))}

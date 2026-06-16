@@ -369,7 +369,7 @@ export default async function ListingDetailPage({ params }: Props) {
                 rel="noopener noreferrer"
                 className="relative mt-4 block aspect-video overflow-hidden rounded-2xl bg-zinc-900"
               >
-                <Image src={primaryImageUrl(listing)} alt="" fill className="object-cover opacity-70" sizes="100vw" unoptimized />
+                <Image src={primaryImageUrl(listing)} alt="" fill className="object-cover opacity-70" sizes="100vw" />
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
                   <span className="text-5xl">▶</span>
                   <span className="mt-2 font-semibold">{t("startTour")}</span>
