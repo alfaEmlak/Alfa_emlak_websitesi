@@ -251,6 +251,7 @@
   "Wizard": {
     "propertyLabels": {
       "bedrooms": "Спальни",
+      "roomCount": "Количество комнат",
       "bathrooms": "Ванные комнаты",
       "toilets": "Отдельный туалет",
       "areaM2": "Площадь (м²)",

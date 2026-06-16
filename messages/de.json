@@ -251,6 +251,7 @@
   "Wizard": {
     "propertyLabels": {
       "bedrooms": "Schlafzimmer",
+      "roomCount": "Zimmeranzahl",
       "bathrooms": "Badezimmer",
       "toilets": "WC (separat)",
       "areaM2": "Fläche (m²)",

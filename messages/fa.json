@@ -251,6 +251,7 @@
   "Wizard": {
     "propertyLabels": {
       "bedrooms": "اتاق خواب",
+      "roomCount": "تعداد اتاق",
       "bathrooms": "حمام",
       "toilets": "توالت جداگانه",
       "areaM2": "متراژ (مترمربع)",

@@ -108,8 +108,9 @@ export default async function ListingDetailPage({ params }: Props) {
   pushRow("propertyType", tw("labels.propertyType"), propertyTypeLabel);
   pushRow("kind", tw("labels.listingType"), tc(`listingKinds.${listing.kind}`));
 
+  const isRentalListing = listing.kind === "KIRALIK" || listing.kind === "GUNLUK_KIRALIK";
   const bedroomsVal = (listing as any).bedrooms ?? (listing as any).bed_rooms;
-  pushRow("bedrooms", tw("propertyLabels.bedrooms"), bedroomsVal);
+  pushRow("bedrooms", isRentalListing ? tw("propertyLabels.roomCount") : tw("propertyLabels.bedrooms"), bedroomsVal);
   const livingRoomsVal = (listing as any).livingRooms ?? (listing as any).living_rooms;
   pushRow("livingRooms", tw("propertyLabels.livingRooms"), livingRoomsVal);
   pushRow("bathrooms", tw("propertyLabels.bathrooms"), (listing as any).bathrooms);

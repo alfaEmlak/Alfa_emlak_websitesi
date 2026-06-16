@@ -252,6 +252,7 @@
   "Wizard": {
     "propertyLabels": {
       "bedrooms": "Yatak Odası",
+      "roomCount": "Oda Sayısı",
       "bathrooms": "Banyo",
       "toilets": "Tuvalet (WC)",
       "areaM2": "Alan (m²)",
