@@ -31,7 +31,6 @@ export function HeroSlider({ images, interval = 5000 }: Props) {
           src={src}
           alt={`Slide ${index + 1}`}
           fill
-          priority={index === 0}
           fetchPriority={index === 0 ? "high" : "auto"}
           loading={index === 0 ? "eager" : "lazy"}
           quality={75}

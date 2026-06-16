@@ -120,7 +120,8 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
               width={240}
               height={64}
               className="h-14 w-auto max-w-[280px] object-contain md:h-16"
-              priority
+              loading="eager"
+              fetchPriority="high"
             />
           </Link>
 
@@ -385,7 +386,8 @@ function SiteHeaderFallback({ menu, siteName }: { menu: MenuTopItem[]; siteName:
               width={240}
               height={64}
               className="h-14 w-auto max-w-[280px] object-contain md:h-16"
-              priority
+              loading="eager"
+              fetchPriority="high"
             />
           </Link>
           <div className="hidden flex-1 justify-center md:flex" onMouseEnter={cancelDesktopClose} onMouseLeave={scheduleDesktopClose}>

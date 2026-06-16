@@ -61,7 +61,8 @@ export default async function HomePage({ params }: Props) {
                   height={653}
                   sizes="(max-width: 1024px) 280px, 450px"
                   className="h-auto w-full max-w-[280px] object-contain drop-shadow-[0_14px_38px_rgba(0,0,0,0.45)] sm:max-w-[320px] md:max-w-[380px] lg:max-w-[450px] xl:max-w-[500px]"
-                  priority
+                  loading="eager"
+                  fetchPriority="high"
                 />
               </div>
               <div className="w-full max-w-3xl space-y-7 text-center lg:ml-auto lg:w-auto lg:max-w-4xl lg:text-right">

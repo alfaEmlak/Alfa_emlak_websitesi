@@ -93,7 +93,8 @@ export function PhotoGallery({
               fill
               className="object-cover transition-transform duration-500 group-hover:scale-105"
               sizes="(max-width:1024px) 100vw, 58vw"
-              priority
+              loading="eager"
+              fetchPriority="high"
             />
           ) : (
             <Image
@@ -102,7 +103,8 @@ export function PhotoGallery({
               fill
               className="object-cover transition-transform duration-500 group-hover:scale-105"
               sizes="(max-width:1024px) 100vw, 58vw"
-              priority
+              loading="eager"
+              fetchPriority="high"
             />
           )}
           {badgeVirtualTour && virtualTourEnabled ? (
@@ -232,7 +234,7 @@ export function PhotoGallery({
                 className="object-contain"
                 sizes="100vw"
                 unoptimized
-                priority
+                loading="eager"
               />
             </button>
 

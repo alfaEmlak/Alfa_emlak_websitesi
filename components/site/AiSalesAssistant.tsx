@@ -263,7 +263,7 @@ export function AiSalesAssistant({ locale }: { locale: string }) {
           aria-label="Alfi yapay zeka asistanını aç"
           title="Alfi ile ev arayın"
         >
-          <Image src={alfiLogo} alt="Alfi" width={104} height={104} className="h-24 w-24 object-contain" priority />
+          <Image src={alfiLogo} alt="Alfi" width={104} height={104} className="h-24 w-24 object-contain" />
         </button>
       </div>
 
