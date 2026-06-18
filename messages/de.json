@@ -281,6 +281,7 @@
     "labels": {
       "listingCode": "Anzeigencode (URL)",
       "listingTitle": "Anzeigentitel",
+      "listingType": "Anzeigentyp",
       "kind": "Anzeigenart",
       "propertyType": "Immobilientyp",
       "city": "Stadt (Bezirk)",

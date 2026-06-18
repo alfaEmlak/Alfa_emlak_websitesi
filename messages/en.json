@@ -282,6 +282,7 @@
     "labels": {
       "listingCode": "Listing code (URL suffix)",
       "listingTitle": "Listing title",
+      "listingType": "Listing type",
       "kind": "Listing kind",
       "propertyType": "Property type",
       "city": "City (district)",

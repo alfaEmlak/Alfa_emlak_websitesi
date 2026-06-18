@@ -281,6 +281,7 @@
     "labels": {
       "listingCode": "کد آگهی (URL)",
       "listingTitle": "عنوان آگهی",
+      "listingType": "نوع آگهی",
       "kind": "نوع آگهی",
       "propertyType": "نوع ملک",
       "city": "شهر (منطقه)",

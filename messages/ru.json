@@ -281,6 +281,7 @@
     "labels": {
       "listingCode": "Код объявления (URL)",
       "listingTitle": "Заголовок объявления",
+      "listingType": "Тип объявления",
       "kind": "Тип объявления",
       "propertyType": "Тип недвижимости",
       "city": "Город (район)",
