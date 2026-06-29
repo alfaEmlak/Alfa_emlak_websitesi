@@ -40,6 +40,26 @@ export function PropertyCard({ listing, stagger }: { listing: ListingPublic; sta
             className="object-cover grayscale-[0.2] transition-[transform,filter] duration-700 group-hover:scale-[1.02] group-hover:grayscale-0 motion-reduce:transition-none"
           />
         </Link>
+        {listing.consultantName ? (
+          <div className="absolute left-3 top-3 z-[2] flex items-center gap-2 rounded-full bg-white/90 py-1 pr-3 pl-1 shadow-md backdrop-blur-sm">
+            {listing.consultantPhoto ? (
+              <Image
+                src={listing.consultantPhoto}
+                alt={listing.consultantName}
+                width={28}
+                height={28}
+                className="rounded-full object-cover"
+              />
+            ) : (
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white">
+                {listing.consultantName.charAt(0).toUpperCase()}
+              </span>
+            )}
+            <span className="max-w-[120px] truncate text-[11px] font-semibold text-primary">
+              {listing.consultantName}
+            </span>
+          </div>
+        ) : null}
         <div className="pointer-events-none absolute right-4 top-4 z-[1] flex flex-col items-end gap-1">
           {listing.badgeExclusive ? <Badge>{t("exclusive")}</Badge> : null}
           {listing.badgeNew ? <Badge accent>{t("new")}</Badge> : null}
