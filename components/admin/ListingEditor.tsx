@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import type { Listing, ListingImage } from "@prisma/client";
 import { saveListing, suggestListingId, type ListingSavePayload } from "@/app/karealfaadmin/actions";
 import { kktcCities, kktcRegions, kktcCityCoords, kktcRegionCoords } from "@/lib/kktc-regions";
+import RichTextEditor from "@/components/admin/RichTextEditor";
 import {
   NEARBY_POI_CATEGORIES,
   parseNearbyPoiCategoriesJson,
@@ -108,7 +109,6 @@ function wizardBasicsStepComplete(f: {
   propertySubtypeKey: string;
   price: string;
   currency: string;
-  shortDescription: string;
 }): boolean {
   return (
     f.listingId.trim().length > 0 &&
@@ -117,13 +117,12 @@ function wizardBasicsStepComplete(f: {
     f.propertyCategory.trim().length > 0 &&
     f.propertySubtypeKey.trim().length > 0 &&
     wizardPricePositive(f.price) &&
-    f.currency.trim().length > 0 &&
-    f.shortDescription.trim().length > 0
+    f.currency.trim().length > 0
   );
 }
 
-/** Sihirbazda adım sırası: 4 = mal sahibi (`stepOwner`), sonrası danışman / yayın seçenekleri */
-const WIZARD_OWNER_STEP_INDEX = 4;
+/** Sihirbazda adım sırası: 5 = mal sahibi (`stepOwner`), sonrası danışman / yayın seçenekleri */
+const WIZARD_OWNER_STEP_INDEX = 5;
 
 function wizardOwnerStepComplete(f: {
   ownerFirstName: string;
@@ -714,7 +713,6 @@ export function ListingEditor({
         propertySubtypeKey: form.propertySubtypeKey,
         price: form.price,
         currency: form.currency,
-        shortDescription: form.shortDescription,
       })
     ) {
       setWizardNavBlock(null);
@@ -1429,6 +1427,7 @@ export function ListingEditor({
     { icon: "map" as AdminIconName, label: tp("listingEditor.stepMap") },
     { icon: "home" as AdminIconName, label: tp("listingEditor.stepFeatures") },
     { icon: "photo_library" as AdminIconName, label: tp("listingEditor.stepMedia") },
+    { icon: "description" as AdminIconName, label: "Açıklama" },
     { icon: "call" as AdminIconName, label: tp("listingEditor.stepOwner") },
     { icon: "person" as AdminIconName, label: tp("listingEditor.stepConsultant") },
     { icon: "settings" as AdminIconName, label: tp("listingEditor.step101") },
@@ -1447,7 +1446,6 @@ export function ListingEditor({
         propertySubtypeKey: form.propertySubtypeKey,
         price: form.price,
         currency: form.currency,
-        shortDescription: form.shortDescription,
       });
     if (leavingIncompleteBasics) {
       setWizardNavBlock("basics");
@@ -1697,11 +1695,6 @@ export function ListingEditor({
                 <span className="mt-1 block text-xs text-zinc-400">Arsa/arazi ilanlarında oda tipi girilmez</span>
               )}
             </label>
-            <label className="block text-sm font-medium text-zinc-700 sm:col-span-2">
-              Kısa Açıklama <span className="text-red-500">*</span>
-              <input className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" value={form.shortDescription} onChange={(e) => set("shortDescription", e.target.value)} />
-              <span className="mt-1 block text-xs text-zinc-400">Listeleme sayfalarında görünen kısa açıklama</span>
-            </label>
 
           </div>
         </section>
@@ -1851,16 +1844,6 @@ export function ListingEditor({
             </div>
           </section>
 
-          <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-zinc-800">Detaylı Açıklama</h2>
-            <p className="mt-1 text-sm text-zinc-500">İlanın detaylı açıklamasını yazın</p>
-            <textarea
-              className="mt-4 min-h-[140px] w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm leading-relaxed outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-              placeholder="İlan hakkında detaylı bilgi..."
-              value={form.longDescription}
-              onChange={(e) => set("longDescription", e.target.value)}
-            />
-          </section>
         </>
       )}
 
@@ -2534,8 +2517,43 @@ export function ListingEditor({
         </>
       )}
 
-      {/* STEP 4: Mal sahibi (yalnızca panel) */}
+      {/* STEP 4: Açıklama */}
       {wizardStep === 4 && (
+        <div className="space-y-6">
+          <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-zinc-800">Kısa Açıklama</h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              Listeleme sayfalarında ve arama motorlarında görünen özet metin
+            </p>
+            <textarea
+              className="mt-4 min-h-[100px] w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm leading-relaxed outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+              placeholder="İlanı birkaç cümleyle özetleyin…"
+              value={form.shortDescription}
+              onChange={(e) => set("shortDescription", e.target.value)}
+            />
+            <span className="mt-1 block text-xs text-zinc-400">
+              Google arama sonuçlarında ilanın altında görünür
+            </span>
+          </section>
+
+          <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-zinc-800">Detaylı Açıklama</h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              İlan sayfasında ziyaretçilerin göreceği detaylı bilgi — madde işaretleri, kalın yazı ve listeler kullanabilirsiniz
+            </p>
+            <div className="mt-4 [&_.ql-container]:min-h-[200px] [&_.ql-container]:rounded-b-xl [&_.ql-container]:border-zinc-200 [&_.ql-container]:bg-zinc-50 [&_.ql-container]:text-sm [&_.ql-editor]:leading-relaxed [&_.ql-toolbar]:rounded-t-xl [&_.ql-toolbar]:border-zinc-200">
+              <RichTextEditor
+                value={form.longDescription}
+                onChange={(v) => set("longDescription", v)}
+                placeholder="İlan hakkında detaylı bilgi yazın…"
+              />
+            </div>
+          </section>
+        </div>
+      )}
+
+      {/* STEP 5: Mal sahibi (yalnızca panel) */}
+      {wizardStep === 5 && (
         <section className="rounded-2xl border border-amber-200 bg-amber-50/50 p-6 shadow-sm">
           <h2 className="text-lg font-bold text-zinc-800">Mal sahibi bilgileri</h2>
           <p className="mt-1 text-sm text-zinc-600">
@@ -2659,8 +2677,8 @@ export function ListingEditor({
         </section>
       )}
 
-      {/* STEP 5: Danışman & Yayın */}
-      {wizardStep === 5 && (
+      {/* STEP 6: Danışman & Yayın */}
+      {wizardStep === 6 && (
         <>
           <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-bold text-zinc-800">{tp("listingEditor.consultantCardTitle")}</h2>
@@ -2841,8 +2859,8 @@ export function ListingEditor({
         </>
       )}
 
-      {/* STEP 6: 101evler XML Yayını */}
-      {wizardStep === 6 && (
+      {/* STEP 7: 101evler XML Yayını */}
+      {wizardStep === 7 && (
         <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-bold text-zinc-800">101evler XML Yayını</h2>
           <p className="mt-1 text-sm text-zinc-500">
@@ -3040,8 +3058,8 @@ export function ListingEditor({
         </section>
       )}
 
-      {/* STEP 7: Hangiev XML Yayını */}
-      {wizardStep === 7 && (
+      {/* STEP 8: Hangiev XML Yayını */}
+      {wizardStep === 8 && (
         <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-bold text-zinc-800">Hangiev XML Yayını</h2>
           <p className="mt-1 text-sm text-zinc-500">

@@ -319,7 +319,7 @@ export default async function ListingDetailPage({ params }: Props) {
                 {listingPropertyTypeDisplayLabel(String(listing.propertyType ?? ""))} {t("description")}
               </h2>
               <div
-                className="mt-4 max-w-none text-base leading-relaxed text-primary [&_p]:mt-3"
+                className="mt-4 max-w-none text-base leading-relaxed text-primary [&_p]:mt-3 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mt-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mt-1 [&_strong]:font-bold [&_em]:italic [&_u]:underline"
                 dangerouslySetInnerHTML={{ __html: listing.longDescription }}
               />
             </div>
