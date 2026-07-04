@@ -523,6 +523,46 @@ export function ListingEditor({
   const [galleryDraggingIdx, setGalleryDraggingIdx] = useState<number | null>(null);
   const [galleryDragOverIdx, setGalleryDragOverIdx] = useState<number | null>(null);
   const [uploadBusy, setUploadBusy] = useState(false);
+  const [aiShortBusy, setAiShortBusy] = useState(false);
+  const [aiLongBusy, setAiLongBusy] = useState(false);
+
+  async function generateAiDescription(mode: "short" | "long") {
+    const setBusy = mode === "short" ? setAiShortBusy : setAiLongBusy;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/admin/ai-description", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode,
+          title: form.title,
+          kind: form.kind,
+          propertyCategory: form.propertyCategory,
+          city: form.city,
+          region: form.region,
+          bedrooms: form.bedrooms,
+          bathrooms: form.bathrooms,
+          squareMeters: form.squareMeters,
+          price: form.price,
+          currency: form.currency,
+          currentShort: form.shortDescription,
+          currentLong: form.longDescription,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "AI hatası");
+      if (mode === "short") {
+        set("shortDescription", data.text);
+      } else {
+        set("longDescription", data.text);
+      }
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "AI açıklama üretilemedi");
+      setMessageType("error");
+    } finally {
+      setBusy(false);
+    }
+  }
   const [uploadHint, setUploadHint] = useState("");
   const [ownerDocUploadBusy, setOwnerDocUploadBusy] = useState(false);
 
@@ -2521,10 +2561,27 @@ export function ListingEditor({
       {wizardStep === 4 && (
         <div className="space-y-6">
           <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-zinc-800">Kısa Açıklama</h2>
-            <p className="mt-1 text-sm text-zinc-500">
-              Listeleme sayfalarında ve arama motorlarında görünen özet metin
-            </p>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-zinc-800">Kısa Açıklama</h2>
+                <p className="mt-1 text-sm text-zinc-500">
+                  Listeleme sayfalarında ve arama motorlarında görünen özet metin
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={aiShortBusy}
+                onClick={() => generateAiDescription("short")}
+                className="flex shrink-0 items-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:from-violet-600 hover:to-indigo-700 hover:shadow-lg disabled:opacity-50"
+              >
+                {aiShortBusy ? (
+                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
+                ) : (
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" /></svg>
+                )}
+                {aiShortBusy ? "Üretiliyor…" : "AI ile Üret"}
+              </button>
+            </div>
             <textarea
               className="mt-4 min-h-[100px] w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm leading-relaxed outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
               placeholder="İlanı birkaç cümleyle özetleyin…"
@@ -2532,15 +2589,32 @@ export function ListingEditor({
               onChange={(e) => set("shortDescription", e.target.value)}
             />
             <span className="mt-1 block text-xs text-zinc-400">
-              Google arama sonuçlarında ilanın altında görünür
+              Google arama sonuçlarında ilanın altında görünür · 140-160 karakter ideal
             </span>
           </section>
 
           <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-zinc-800">Detaylı Açıklama</h2>
-            <p className="mt-1 text-sm text-zinc-500">
-              İlan sayfasında ziyaretçilerin göreceği detaylı bilgi — madde işaretleri, kalın yazı ve listeler kullanabilirsiniz
-            </p>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-zinc-800">Detaylı Açıklama</h2>
+                <p className="mt-1 text-sm text-zinc-500">
+                  İlan sayfasında ziyaretçilerin göreceği detaylı bilgi — madde işaretleri, kalın yazı ve listeler kullanabilirsiniz
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={aiLongBusy}
+                onClick={() => generateAiDescription("long")}
+                className="flex shrink-0 items-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:from-violet-600 hover:to-indigo-700 hover:shadow-lg disabled:opacity-50"
+              >
+                {aiLongBusy ? (
+                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
+                ) : (
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" /></svg>
+                )}
+                {aiLongBusy ? "Üretiliyor…" : "AI ile Üret"}
+              </button>
+            </div>
             <div className="mt-4 [&_.ql-container]:min-h-[200px] [&_.ql-container]:rounded-b-xl [&_.ql-container]:border-zinc-200 [&_.ql-container]:bg-zinc-50 [&_.ql-container]:text-sm [&_.ql-editor]:leading-relaxed [&_.ql-toolbar]:rounded-t-xl [&_.ql-toolbar]:border-zinc-200">
               <RichTextEditor
                 value={form.longDescription}
