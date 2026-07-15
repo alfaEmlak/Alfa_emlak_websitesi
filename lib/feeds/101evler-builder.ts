@@ -95,6 +95,8 @@ export type RealtorIds = {
   second_realtor_id?: number | string | null;
 };
 
+export type RealtorMap = Record<string, number>;
+
 export type FeedBuildOptions = {
   siteUrl: string;       // örn: https://www.alfaemlak.com
   defaultLocale: string; // örn: "tr"
@@ -146,6 +148,18 @@ function mapCurrency(currency: string | null | undefined): number | null {
   if (!currency) return null;
   const code = CURRENCY_CODE_MAP[currency.toUpperCase()];
   return code ?? null;
+}
+
+function resolveFirstRealtorId(
+  row: FeedListingRow,
+  fallback: RealtorIds,
+  realtorMap?: RealtorMap,
+): number | string | null | undefined {
+  if (realtorMap) {
+    const email = (row.consultant_email as string | undefined)?.trim().toLowerCase();
+    if (email && realtorMap[email] != null) return realtorMap[email];
+  }
+  return fallback.first_realtor_id;
 }
 
 function getTranslation(
@@ -291,6 +305,7 @@ export function buildAdElement(
   rawListing: FeedListingRow,
   realtors: RealtorIds,
   opts: FeedBuildOptions,
+  realtorMap?: RealtorMap,
 ): AdBuildResult {
   const normalized = normalizeListing(rawListing);
   if (!normalized) return { ok: false, reason: "missing_price" };
@@ -330,7 +345,7 @@ export function buildAdElement(
   const parts: string[] = [
     tag("lastupdate", fmtDate(l.updatedAt ?? l.createdAt)),
     tag("type_id", ext.type_id),
-    tag("first_realtor_id", realtors.first_realtor_id),
+    tag("first_realtor_id", resolveFirstRealtorId(rawListing, realtors, realtorMap)),
     tag("second_realtor_id", realtors.second_realtor_id),
     tag("area_id", ext.area_id),
     tag("reference_no", ext.reference_no || l.listingId),
@@ -424,12 +439,13 @@ export function buildFeedXml(
   listings: FeedListingRow[],
   realtors: RealtorIds,
   opts: FeedBuildOptions,
+  realtorMap?: RealtorMap,
 ): FeedBuildSummary {
   const ads: string[] = [];
   const skipped: { listingId: string; reason: FeedSkipReason }[] = [];
 
   for (const row of listings) {
-    const result = buildAdElement(row, realtors, opts);
+    const result = buildAdElement(row, realtors, opts, realtorMap);
     if (result.ok) {
       ads.push(result.xml);
     } else {

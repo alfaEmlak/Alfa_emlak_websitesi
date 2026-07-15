@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { buildFeedXml, type RealtorIds } from "@/lib/feeds/101evler-builder";
+import { buildFeedXml, type RealtorIds, type RealtorMap } from "@/lib/feeds/101evler-builder";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -45,6 +45,19 @@ export async function GET(request: Request) {
     };
   }
 
+  // Danışman bazında realtor ID haritası
+  const { data: agents } = await supabaseAdmin
+    .from("agents")
+    .select("email, realtor_id_101")
+    .not("realtor_id_101", "is", null);
+
+  const realtorMap: RealtorMap = {};
+  for (const a of agents ?? []) {
+    if (a.email && a.realtor_id_101 != null) {
+      realtorMap[a.email.trim().toLowerCase()] = a.realtor_id_101;
+    }
+  }
+
   // PUBLISHED + export_to_101evler=true ilanlar
   const { data: listings, error } = await supabaseAdmin
     .from("listings")
@@ -67,7 +80,7 @@ export async function GET(request: Request) {
   const summary = buildFeedXml(listings ?? [], realtors, {
     siteUrl,
     defaultLocale: "tr",
-  });
+  }, realtorMap);
 
   // İsteğe bağlı debug: ?debug=1 → JSON özeti döner (XML yerine)
   if (url.searchParams.get("debug") === "1") {

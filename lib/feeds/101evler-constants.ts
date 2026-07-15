@@ -27,6 +27,11 @@ export const TYPE_ID_OPTIONS: Option[] = [
   { id: 19, label: "Ofis" },
   { id: 20, label: "Residence" },
   { id: 21, label: "Yarım İnşaat" },
+  { id: 22, label: "Konut ve Ticari İmarlı Arsa" },
+  { id: 23, label: "Ticari İmarlı Arsa" },
+  { id: 24, label: "Sanayi İmarlı Arsa" },
+  { id: 25, label: "Turizm İmarlı Arsa" },
+  { id: 27, label: "Zeytinlik" },
 ];
 
 /* ────────── Bölgeler <area_id> (şehre göre gruplanmış) ────────── */
@@ -53,6 +58,7 @@ export const AREA_ID_OPTIONS: Record<string, Option[]> = {
     { id: 26,  label: "Taşkınköy" }, { id: 145, label: "Türkeli" },
     { id: 101, label: "Yeniceköy" }, { id: 27,  label: "Yenikent" },
     { id: 28,  label: "Yenişehir" }, { id: 32,  label: "Yılmazköy" },
+    { id: 210, label: "Batıkent" },  { id: 207, label: "Yiğitler" },
   ],
   "Girne": [
     { id: 33,  label: "Ağırdağ" },   { id: 155, label: "Akçiçek" },
@@ -104,6 +110,7 @@ export const AREA_ID_OPTIONS: Record<string, Option[]> = {
     { id: 181, label: "Ulukışla" },  { id: 65,  label: "Vadili" },
     { id: 197, label: "Yamaçköy" },  { id: 63,  label: "Yeni Boğaziçi" },
     { id: 137, label: "Yıldırım" },
+    { id: 213, label: "Muratağa" },
   ],
   "Güzelyurt": [
     { id: 186, label: "Akçay" },     { id: 66,  label: "Aşağı Bostancı" },
@@ -111,6 +118,7 @@ export const AREA_ID_OPTIONS: Record<string, Option[]> = {
     { id: 70,  label: "Güzelyurt Merkez" }, { id: 90,  label: "Kalkanlı" },
     { id: 202, label: "Serhatköy" }, { id: 185, label: "Yayla" },
     { id: 74,  label: "Yukarı Bostancı" }, { id: 75,  label: "Zümrütköy" },
+    { id: 211, label: "Mevlevi" },
   ],
   "İskele": [
     { id: 173, label: "Ağıllar" },   { id: 100, label: "Altınova" },
@@ -142,6 +150,7 @@ export const AREA_ID_OPTIONS: Record<string, Option[]> = {
     { id: 69,  label: "Gemikonağı" }, { id: 71,  label: "Lefke" },
     { id: 72,  label: "Yedidalga" }, { id: 73,  label: "Yeşilırmak" },
     { id: 151, label: "Yeşilyurt" },
+    { id: 206, label: "Bağlıköy" },  { id: 212, label: "Taşpınar" },
   ],
 };
 
@@ -244,10 +253,12 @@ export const AD_SPECS_FROM_FEATURES: Record<string, string> = {
   "balkon": "balcony",
   "barbekü": "barbeku",
   "barbeku": "barbeku",
-  "banyo": "bounding_wall",
-  "panjur": "builtin_kitchen",
-  "sınır duvarları": "ceramic",
-  "sınır duvarı": "ceramic",
+  "ankastre mutfak": "builtin_kitchen",
+  "banyo": "bath_check",
+  "panjur": "blind",
+  "seramik": "ceramic",
+  "sınır duvarları": "bounding_wall",
+  "sınır duvarı": "bounding_wall",
   "çift cam": "cift_cam",
   "şehir manzarası": "city_view",
   "kapalı otopark": "closed_park",

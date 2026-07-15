@@ -17,6 +17,7 @@ type Props = {
     title: string | null;
     role: string;
     is_active: boolean;
+    realtor_id_101?: number | null;
   } | null;
 };
 
@@ -42,6 +43,7 @@ export function AgentEditor({ agent }: Props) {
     role: defaultRole,
     password: "",
     is_active: agent?.is_active ?? true,
+    realtor_id_101: agent?.realtor_id_101 != null ? String(agent.realtor_id_101) : "",
   });
 
   const set = (key: keyof typeof form, value: string | boolean) => {
@@ -115,6 +117,7 @@ export function AgentEditor({ agent }: Props) {
           photo: form.photo,
           title: form.title,
           role: form.role,
+          realtor_id_101: form.realtor_id_101 ? Number(form.realtor_id_101) : null,
         });
 
         setMessage(agent ? "Danisman guncellendi" : "Danisman olusturuldu");
@@ -211,6 +214,11 @@ export function AgentEditor({ agent }: Props) {
           <label className="block text-sm font-medium text-zinc-700">
             Unvan
             <input className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="Emlak Danismani" />
+          </label>
+
+          <label className="block text-sm font-medium text-zinc-700">
+            101evler Realtor ID
+            <input className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" type="number" value={form.realtor_id_101} onChange={(e) => set("realtor_id_101", e.target.value)} placeholder="101evler panelindeki ID" />
           </label>
 
           {!agent ? (

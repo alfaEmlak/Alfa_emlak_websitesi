@@ -177,6 +177,7 @@ export async function saveAgent(data: {
   photo?: string;
   title?: string;
   role: string;
+  realtor_id_101?: number | null;
 }) {
   await requireAdmin();
 
@@ -194,6 +195,7 @@ export async function saveAgent(data: {
       photo: data.photo?.trim() || null,
       title: data.title?.trim() || "Emlak Danışmanı",
       role: normalizedRole,
+      realtor_id_101: data.realtor_id_101 ?? null,
       updated_at: new Date().toISOString(),
     };
 
@@ -216,6 +218,7 @@ export async function saveAgent(data: {
       photo: data.photo?.trim() || null,
       title: data.title?.trim() || "Emlak Danışmanı",
       role: normalizedRole,
+      realtor_id_101: data.realtor_id_101 ?? null,
     });
 
     if (error) throw new Error(`Agent create failed: ${error.message}`);

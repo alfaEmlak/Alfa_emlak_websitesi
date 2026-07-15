@@ -542,7 +542,7 @@ export function ListingEditor({
           region: form.region,
           bedrooms: form.bedrooms,
           bathrooms: form.bathrooms,
-          squareMeters: form.squareMeters,
+          squareMeters: form.areaM2,
           price: form.price,
           currency: form.currency,
           currentShort: form.shortDescription,
@@ -1706,6 +1706,7 @@ export function ListingEditor({
               <select className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20" value={form.currency} onChange={(e) => set("currency", e.target.value)}>
                 <option value="GBP">GBP (£)</option>
                 <option value="EUR">EUR (€)</option>
+                <option value="USD">USD ($)</option>
                 <option value="TRY">TRY (₺)</option>
               </select>
             </label>

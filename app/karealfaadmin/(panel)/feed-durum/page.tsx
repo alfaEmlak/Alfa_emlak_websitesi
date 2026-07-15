@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import {
   buildFeedXml as build101evlerFeed,
   type RealtorIds,
+  type RealtorMap,
   type FeedSkipReason as Skip101,
 } from "@/lib/feeds/101evler-builder";
 import {
@@ -79,6 +80,18 @@ export default async function FeedDurumPage() {
     };
   }
 
+  const { data: agentRows } = await supabaseAdmin
+    .from("agents")
+    .select("email, realtor_id_101")
+    .not("realtor_id_101", "is", null);
+
+  const realtorMap: RealtorMap = {};
+  for (const a of agentRows ?? []) {
+    if (a.email && a.realtor_id_101 != null) {
+      realtorMap[a.email.trim().toLowerCase()] = a.realtor_id_101;
+    }
+  }
+
   const [list101, listHE] = await Promise.all([
     fetchListings("export_to_101evler"),
     fetchListings("export_to_hangiev"),
@@ -90,7 +103,7 @@ export default async function FeedDurumPage() {
     if (id) titleMap.set(id, ((r as Record<string, unknown>).title as string | null) ?? null);
   }
 
-  const sum101 = build101evlerFeed(list101, realtors, { siteUrl: siteUrl(), defaultLocale: "tr" });
+  const sum101 = build101evlerFeed(list101, realtors, { siteUrl: siteUrl(), defaultLocale: "tr" }, realtorMap);
   const sumHE = buildHangievFeed(listHE, hangievAccount, { siteUrl: siteUrl(), defaultLocale: "tr" });
 
   return (
