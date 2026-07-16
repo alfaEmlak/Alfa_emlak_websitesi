@@ -176,10 +176,16 @@ export type PriceFor = keyof typeof PRICE_FOR;
 
 /* ────────── Kira Ödeme Dönemi <billing_cycle_id> ────────── */
 export const BILLING_CYCLE_OPTIONS: Option[] = [
-  { id: 1, label: "Aylık Ödemeli" },
-  { id: 2, label: "3 Aylık Peşin" },
-  { id: 3, label: "6 Aylık Peşin" },
-  { id: 4, label: "12 Aylık Peşin" },
+  { id: 5, label: "Aylık Ödemeli" },
+  { id: 6, label: "3 Aylık Peşin" },
+  { id: 7, label: "6 Aylık Peşin" },
+  { id: 8, label: "12 Aylık Peşin" },
+];
+
+/* ────────── Fiyat Dönemi <price_period_id> ────────── */
+export const PRICE_PERIOD_OPTIONS: Option[] = [
+  { id: 3, label: "1 Yıl" },
+  { id: 5, label: "6 Ay" },
 ];
 
 /* ────────── Oda Sayısı <room_count_id> ────────── */
@@ -228,16 +234,55 @@ export const PHOTO_GROUP_OPTIONS: Option[] = [
 ];
 
 /* ────────── Para Birimi kodları (currency) ──────────
- * PDF örneğinde 601 (TRY) ve 602 (USD) görüldü. EUR ve GBP için resmî kod
- * 101evler dokümantasyonunda yok; sıralı tahmin (603, 604) kullanıldı.
- * UYARI: 101evler'den resmî kod teyidi alınmalı, gerekirse güncellenmeli.
+ * 101evler gerçek XML export'undan doğrulanmış: GBP = 601.
+ * Diğer kodlar henüz export'ta görülmedi, tahminî.
  */
 export const CURRENCY_CODE_MAP: Record<string, number> = {
-  TRY: 601,
+  GBP: 601,
   USD: 602,
   EUR: 603,
-  GBP: 604,
+  TRY: 604,
 };
+
+/* ────────── Reverse lookup yardımcıları ────────── */
+
+export const TYPE_ID_LABEL_MAP: Record<number, string> = Object.fromEntries(
+  TYPE_ID_OPTIONS.map((o) => [o.id, o.label]),
+);
+
+export const AREA_ID_LABEL_MAP: Record<number, string> = Object.fromEntries(
+  Object.values(AREA_ID_OPTIONS)
+    .flat()
+    .map((o) => [o.id, o.label]),
+);
+
+export const TITLE_TYPE_LABEL_MAP: Record<number, string> = Object.fromEntries(
+  TITLE_TYPE_OPTIONS.map((o) => [o.id, o.label]),
+);
+
+export const ROOM_COUNT_LABEL_MAP: Record<number, string> = Object.fromEntries(
+  ROOM_COUNT_OPTIONS.map((o) => [o.id, o.label]),
+);
+
+export const BUILD_AGE_LABEL_MAP: Record<number, string> = Object.fromEntries(
+  BUILD_AGE_OPTIONS.map((o) => [o.id, o.label]),
+);
+
+export const FURNISHING_LABEL_MAP: Record<number, string> = Object.fromEntries(
+  FURNISHING_OPTIONS.map((o) => [o.id, o.label]),
+);
+
+export const BILLING_CYCLE_LABEL_MAP: Record<number, string> = Object.fromEntries(
+  BILLING_CYCLE_OPTIONS.map((o) => [o.id, o.label]),
+);
+
+export const PRICE_PERIOD_LABEL_MAP: Record<number, string> = Object.fromEntries(
+  PRICE_PERIOD_OPTIONS.map((o) => [o.id, o.label]),
+);
+
+export const CURRENCY_NUMBER_TO_CODE: Record<number, string> = Object.fromEntries(
+  Object.entries(CURRENCY_CODE_MAP).map(([code, num]) => [num, code]),
+);
 
 /* ────────── İlan Özellikleri <ad_specs> ──────────
  * features (jsonb) dizisindeki TR etiketten 101evler tag adına eşleme.

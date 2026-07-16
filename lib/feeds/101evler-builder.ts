@@ -9,6 +9,16 @@ import { normalizeListing } from "@/lib/listing-normalize";
 import {
   AD_SPECS_FROM_FEATURES,
   CURRENCY_CODE_MAP,
+  CURRENCY_NUMBER_TO_CODE,
+  TYPE_ID_LABEL_MAP,
+  AREA_ID_LABEL_MAP,
+  TITLE_TYPE_LABEL_MAP,
+  ROOM_COUNT_LABEL_MAP,
+  BUILD_AGE_LABEL_MAP,
+  FURNISHING_LABEL_MAP,
+  BILLING_CYCLE_LABEL_MAP,
+  PRICE_PERIOD_LABEL_MAP,
+  SALE_OR_RENT,
 } from "./101evler-constants";
 
 function toStringArray(input: unknown): string[] {
@@ -36,8 +46,21 @@ type Ext101evler = {
   build_age_id?: number | string | null;
   furnishing_id?: number | string | null;
   billing_cycle_id?: number | string | null;
+  price_period_id?: number | string | null;
   price_for?: "T" | "U" | null;
   reference_no?: string | null;
+  property_id?: number | string | null;
+  hoa_fee?: number | string | null;
+  hoa_fee_currency?: number | string | null;
+  floor_count?: number | string | null;
+  donum?: number | string | null;
+  evlek?: number | string | null;
+  ayakkare?: number | string | null;
+  land_use?: number | string | null;
+  floor_ratio?: number | string | null;
+  flat_for_land?: number | string | null;
+  swap?: number | string | null;
+  on_site?: number | string | null;
 };
 
 type FeedListingRow = Record<string, unknown> & {
@@ -49,8 +72,21 @@ type FeedListingRow = Record<string, unknown> & {
   build_age_id_101?: number | null;
   furnishing_id_101?: number | null;
   billing_cycle_id_101?: number | null;
+  price_period_id_101?: number | null;
   price_for_101?: string | null;
   reference_no_101?: string | null;
+  property_id_101?: number | null;
+  hoa_fee_101?: number | null;
+  hoa_fee_currency_101?: number | null;
+  floor_count_101?: number | null;
+  donum_101?: number | null;
+  evlek_101?: number | null;
+  ayakkare_101?: number | null;
+  land_use_101?: number | null;
+  floor_ratio_101?: number | null;
+  flat_for_land_101?: number | null;
+  swap_101?: number | null;
+  on_site_101?: number | null;
   listing_images?: Array<{ url: string; sort_order?: number; sortOrder?: number; is_primary?: boolean; isPrimary?: boolean }> | null;
   images?: Array<{ url: string; sort_order?: number; sortOrder?: number; is_primary?: boolean; isPrimary?: boolean }> | null;
 };
@@ -118,6 +154,13 @@ function tag(name: string, value: unknown): string {
   const s = String(value).trim();
   if (s === "") return "";
   return `<${name}>${escapeXml(s)}</${name}>`;
+}
+
+function cdataTag(name: string, value: unknown): string {
+  if (value === null || value === undefined) return "";
+  const s = String(value).trim();
+  if (s === "") return "";
+  return `<${name}><![CDATA[${s}]]></${name}>`;
 }
 
 function rawTag(name: string, inner: string): string {
@@ -280,11 +323,24 @@ function resolve101Mapping(row: FeedListingRow): Ext101evler {
     build_age_id: pick(row.build_age_id_101 ?? null, fromJson.build_age_id ?? null),
     furnishing_id: pick(row.furnishing_id_101 ?? null, fromJson.furnishing_id ?? null),
     billing_cycle_id: pick(row.billing_cycle_id_101 ?? null, fromJson.billing_cycle_id ?? null),
+    price_period_id: pick(row.price_period_id_101 ?? null, fromJson.price_period_id ?? null),
     price_for: (pick(row.price_for_101 as "T" | "U" | null | undefined, fromJson.price_for ?? null) ?? null) as
       | "T"
       | "U"
       | null,
     reference_no: pick(row.reference_no_101 ?? null, fromJson.reference_no ?? null) ?? null,
+    property_id: pick(row.property_id_101 ?? null, fromJson.property_id ?? null),
+    hoa_fee: pick(row.hoa_fee_101 ?? null, fromJson.hoa_fee ?? null),
+    hoa_fee_currency: pick(row.hoa_fee_currency_101 ?? null, fromJson.hoa_fee_currency ?? null),
+    floor_count: pick(row.floor_count_101 ?? null, fromJson.floor_count ?? null),
+    donum: pick(row.donum_101 ?? null, fromJson.donum ?? null),
+    evlek: pick(row.evlek_101 ?? null, fromJson.evlek ?? null),
+    ayakkare: pick(row.ayakkare_101 ?? null, fromJson.ayakkare ?? null),
+    land_use: pick(row.land_use_101 ?? null, fromJson.land_use ?? null),
+    floor_ratio: pick(row.floor_ratio_101 ?? null, fromJson.floor_ratio ?? null),
+    flat_for_land: pick(row.flat_for_land_101 ?? null, fromJson.flat_for_land ?? null),
+    swap: pick(row.swap_101 ?? null, fromJson.swap ?? null),
+    on_site: pick(row.on_site_101 ?? null, fromJson.on_site ?? null),
   };
 }
 
@@ -329,8 +385,6 @@ export function buildAdElement(
     return { ok: false, reason: "missing_price" };
   }
 
-  const isNew = l.badgeNew ? "Y" : "N";
-
   const titleTr =
     getTranslation(rawListing.translations, "tr", "title") || l.title || "";
   const descTr =
@@ -339,43 +393,55 @@ export function buildAdElement(
     l.shortDescription ||
     "";
 
-  const adUrl = `${opts.siteUrl.replace(/\/$/, "")}/${opts.defaultLocale}/ilan/${l.listingId}`;
-  const adKey = rawListing.id ?? l.id ?? l.listingId;
+  const typeId = Number(ext.type_id);
+  const areaId = Number(ext.area_id);
+  const titleTypeId = ext.title_type_id != null ? Number(ext.title_type_id) : 0;
+  const roomCountId = ext.room_count_id != null ? Number(ext.room_count_id) : 0;
+  const buildAgeId = ext.build_age_id != null ? Number(ext.build_age_id) : 0;
+  const furnishingId = ext.furnishing_id != null ? Number(ext.furnishing_id) : 0;
+  const billingCycleId = ext.billing_cycle_id != null ? Number(ext.billing_cycle_id) : 0;
+  const pricePeriodId = ext.price_period_id != null ? Number(ext.price_period_id) : 0;
+  const firstRealtorId = resolveFirstRealtorId(rawListing, realtors, realtorMap);
 
   const parts: string[] = [
     tag("lastupdate", fmtDate(l.updatedAt ?? l.createdAt)),
+    tag("property_id", ext.property_id ?? l.listingId),
     tag("type_id", ext.type_id),
-    tag("first_realtor_id", resolveFirstRealtorId(rawListing, realtors, realtorMap)),
-    tag("second_realtor_id", realtors.second_realtor_id),
+    tag("type", TYPE_ID_LABEL_MAP[typeId] ?? ""),
+    tag("first_realtor_id", firstRealtorId),
+    tag("first_realtor", (rawListing.consultant_name as string) ?? ""),
+    tag("second_realtor_id", realtors.second_realtor_id ?? 0),
     tag("area_id", ext.area_id),
+    tag("area", AREA_ID_LABEL_MAP[areaId] ?? ""),
     tag("reference_no", ext.reference_no || l.listingId),
-    tag("title_type_id", ext.title_type_id),
+    tag("title_type_id", titleTypeId),
+    tag("title_type", TITLE_TYPE_LABEL_MAP[titleTypeId] ?? ""),
     tag("sale_or_rent", saleOrRent),
+    tag("sale_or_rent_text", SALE_OR_RENT[saleOrRent]),
 
-    // Multi-language başlık & açıklama
-    tag("ad_title_tr", titleTr),
-    tag("ad_title_en", getTranslation(rawListing.translations, "en", "title")),
-    tag("ad_title_ru", getTranslation(rawListing.translations, "ru", "title")),
-    tag("ad_title_de", getTranslation(rawListing.translations, "de", "title")),
-    tag("ad_title_fa", getTranslation(rawListing.translations, "fa", "title")),
+    cdataTag("ad_title_tr", titleTr),
+    cdataTag("ad_title_en", getTranslation(rawListing.translations, "en", "title")),
+    cdataTag("ad_title_ru", getTranslation(rawListing.translations, "ru", "title")),
+    cdataTag("ad_title_de", getTranslation(rawListing.translations, "de", "title")),
+    cdataTag("ad_title_fa", getTranslation(rawListing.translations, "fa", "title")),
 
-    tag("ad_description_tr", descTr),
-    tag(
+    cdataTag("ad_description_tr", descTr),
+    cdataTag(
       "ad_description_en",
       getTranslation(rawListing.translations, "en", "longDescription") ||
         getTranslation(rawListing.translations, "en", "shortDescription"),
     ),
-    tag(
+    cdataTag(
       "ad_description_ru",
       getTranslation(rawListing.translations, "ru", "longDescription") ||
         getTranslation(rawListing.translations, "ru", "shortDescription"),
     ),
-    tag(
+    cdataTag(
       "ad_description_de",
       getTranslation(rawListing.translations, "de", "longDescription") ||
         getTranslation(rawListing.translations, "de", "shortDescription"),
     ),
-    tag(
+    cdataTag(
       "ad_description_fa",
       getTranslation(rawListing.translations, "fa", "longDescription") ||
         getTranslation(rawListing.translations, "fa", "shortDescription"),
@@ -384,28 +450,42 @@ export function buildAdElement(
     tag("price", Math.round(Number(l.price))),
     tag("price_for", ext.price_for || "T"),
     tag("currency", currencyCode),
+    tag("currency_code", CURRENCY_NUMBER_TO_CODE[currencyCode] ?? l.currency ?? ""),
+    tag("price_period_id", pricePeriodId),
+    pricePeriodId ? tag("price_period", PRICE_PERIOD_LABEL_MAP[pricePeriodId] ?? "") : "",
+    tag("billing_cycle_id", billingCycleId),
+    billingCycleId ? tag("billing_cycle", BILLING_CYCLE_LABEL_MAP[billingCycleId] ?? "") : "",
+    tag("hoa_fee", ext.hoa_fee ?? 0),
+    tag("hoa_fee_currency", ext.hoa_fee_currency ?? currencyCode),
 
-    saleOrRent === "R" ? tag("billing_cycle_id", ext.billing_cycle_id) : "",
-
-    tag("room_count_id", ext.room_count_id),
-    tag("is_new", isNew),
+    tag("room_count_id", roomCountId),
+    roomCountId ? tag("room_count", ROOM_COUNT_LABEL_MAP[roomCountId] ?? "") : "",
     tag("bedroom_count", l.bedrooms),
     tag("bathroom_count", l.bathrooms),
     tag("floor", l.floor),
+    tag("floor_count", ext.floor_count ?? 0),
     tag("total_area", l.areaM2),
-    tag("build_age_id", ext.build_age_id),
-    tag("furnishing_id", ext.furnishing_id),
-    tag("house_land_space", l.plotAreaM2 ? `${l.plotAreaM2} sqm` : ""),
+    buildAgeId ? tag("build_age_id", buildAgeId) : "",
+    buildAgeId ? tag("build_age", BUILD_AGE_LABEL_MAP[buildAgeId] ?? "") : "",
+    furnishingId ? tag("furnishing_id", furnishingId) : "",
+    furnishingId ? tag("furnishing", FURNISHING_LABEL_MAP[furnishingId] ?? "") : "",
+
+    tag("donum", ext.donum ?? 0),
+    tag("evlek", ext.evlek ?? 0),
+    tag("ayakkare", ext.ayakkare ?? 0),
+    tag("land_use", ext.land_use ?? 0),
+    tag("floor_ratio", ext.floor_ratio ?? 0),
+    tag("flat_for_land", ext.flat_for_land ?? 0),
 
     tag("map_available", l.mapEnabled ? 1 : 0),
-    tag("lat", l.lat),
-    tag("lng", l.lng),
+    tag("approx_map", l.lat ? 1 : 0),
+    l.lat ? tag("lat", l.lat) : "",
+    l.lng ? tag("lng", l.lng) : "",
 
     tag("youtube", l.videoUrl),
-    tag("t_360", l.virtualTourUrl),
 
-    tag("ad_key", adKey),
-    tag("url", adUrl),
+    tag("swap", ext.swap ?? 0),
+    tag("on_site", ext.on_site ?? 0),
 
     buildAdSpecs(rawListing.features, {
       hasPool: l.hasPool,
