@@ -393,6 +393,11 @@ export function buildAdElement(
     l.shortDescription ||
     "";
 
+  // ad_key: 101evler ilana özgü serbest metin anahtarı. Gerçek export'ta
+  // İngilizce başlık kullanılıyor; yoksa TR başlığa düş.
+  const adKey =
+    getTranslation(rawListing.translations, "en", "title") || titleTr;
+
   const typeId = Number(ext.type_id);
   const areaId = Number(ext.area_id);
   const titleTypeId = ext.title_type_id != null ? Number(ext.title_type_id) : 0;
@@ -486,6 +491,8 @@ export function buildAdElement(
 
     tag("swap", ext.swap ?? 0),
     tag("on_site", ext.on_site ?? 0),
+
+    cdataTag("ad_key", adKey),
 
     buildAdSpecs(rawListing.features, {
       hasPool: l.hasPool,

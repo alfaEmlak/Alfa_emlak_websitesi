@@ -2,13 +2,13 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/panel-auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import {
-  buildFeedXml as build101evlerFeed,
+  buildAdElement,
   type RealtorIds,
   type RealtorMap,
   type FeedSkipReason as Skip101,
 } from "@/lib/feeds/101evler-builder";
 import {
-  buildFeedXml as buildHangievFeed,
+  buildListingElement as buildHangievAd,
   type HangievAccount,
   type FeedSkipReason as SkipHE,
 } from "@/lib/feeds/hangiev-builder";
@@ -29,9 +29,19 @@ const REASON_LABEL_HE: Record<SkipHE, string> = {
   missing_price: "Fiyat tanımlı değil veya 0",
 };
 
-type ListingMeta = {
-  listing_id: string;
+type IncludedItem = {
+  listingId: string;
   title: string | null;
+  price: string | null;
+  currency: string | null;
+  kind: string | null;
+  consultantName: string | null;
+};
+
+type SkippedItem = {
+  listingId: string;
+  title: string | null;
+  reason: string;
 };
 
 async function fetchListings(column: "export_to_101evler" | "export_to_hangiev") {
@@ -48,6 +58,17 @@ function siteUrl() {
   return process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://example.com";
 }
 
+function kindLabel(kind: string | null): string {
+  if (!kind) return "—";
+  const map: Record<string, string> = {
+    SATILIK: "Satılık",
+    KIRALIK: "Kiralık",
+    GUNLUK_KIRALIK: "Günlük Kiralık",
+    PROJE: "Proje",
+  };
+  return map[kind] ?? kind;
+}
+
 export default async function FeedDurumPage() {
   await requireAdmin();
 
@@ -60,7 +81,7 @@ export default async function FeedDurumPage() {
   let realtors: RealtorIds = {};
   if (settingsRow?.ext_101evler) {
     const raw = settingsRow.ext_101evler;
-    let parsed: { first_realtor_id?: number | string | null; second_realtor_id?: number | string | null } =
+    const parsed: { first_realtor_id?: number | string | null; second_realtor_id?: number | string | null } =
       typeof raw === "string" ? safeJson(raw) : (raw as Record<string, unknown>);
     realtors = {
       first_realtor_id: parsed?.first_realtor_id ?? null,
@@ -71,7 +92,7 @@ export default async function FeedDurumPage() {
   let hangievAccount: HangievAccount = {};
   if (settingsRow?.ext_hangiev) {
     const raw = settingsRow.ext_hangiev;
-    let parsed: { portal_id?: number | string | null; agent_id?: number | string | null; office_id?: number | string | null } =
+    const parsed: { portal_id?: number | string | null; agent_id?: number | string | null; office_id?: number | string | null } =
       typeof raw === "string" ? safeJson(raw) : (raw as Record<string, unknown>);
     hangievAccount = {
       portal_id: parsed?.portal_id ?? null,
@@ -97,14 +118,55 @@ export default async function FeedDurumPage() {
     fetchListings("export_to_hangiev"),
   ]);
 
-  const titleMap = new Map<string, string | null>();
-  for (const r of [...list101, ...listHE]) {
-    const id = String((r as Record<string, unknown>).listing_id ?? "");
-    if (id) titleMap.set(id, ((r as Record<string, unknown>).title as string | null) ?? null);
+  const opts = { siteUrl: siteUrl(), defaultLocale: "tr" };
+
+  const included101: IncludedItem[] = [];
+  const skipped101: SkippedItem[] = [];
+  for (const row of list101) {
+    const r = row as Record<string, unknown>;
+    const id = String(r.listing_id ?? "");
+    const result = buildAdElement(row, realtors, opts, realtorMap);
+    if (result.ok) {
+      included101.push({
+        listingId: id,
+        title: (r.title as string | null) ?? null,
+        price: r.price != null ? String(r.price) : null,
+        currency: (r.currency as string | null) ?? null,
+        kind: (r.kind as string | null) ?? null,
+        consultantName: (r.consultant_name as string | null) ?? null,
+      });
+    } else {
+      skipped101.push({
+        listingId: id,
+        title: (r.title as string | null) ?? null,
+        reason: REASON_LABEL_101[result.reason] ?? result.reason,
+      });
+    }
   }
 
-  const sum101 = build101evlerFeed(list101, realtors, { siteUrl: siteUrl(), defaultLocale: "tr" }, realtorMap);
-  const sumHE = buildHangievFeed(listHE, hangievAccount, { siteUrl: siteUrl(), defaultLocale: "tr" });
+  const includedHE: IncludedItem[] = [];
+  const skippedHE: SkippedItem[] = [];
+  for (const row of listHE) {
+    const r = row as Record<string, unknown>;
+    const id = String(r.listing_id ?? "");
+    const result = buildHangievAd(row, hangievAccount, opts);
+    if (result.ok) {
+      includedHE.push({
+        listingId: id,
+        title: (r.title as string | null) ?? null,
+        price: r.price != null ? String(r.price) : null,
+        currency: (r.currency as string | null) ?? null,
+        kind: (r.kind as string | null) ?? null,
+        consultantName: (r.consultant_name as string | null) ?? null,
+      });
+    } else {
+      skippedHE.push({
+        listingId: id,
+        title: (r.title as string | null) ?? null,
+        reason: REASON_LABEL_HE[result.reason] ?? result.reason,
+      });
+    }
+  }
 
   return (
     <div className="p-6 lg:p-10">
@@ -117,28 +179,16 @@ export default async function FeedDurumPage() {
         </div>
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+      <div className="mt-8 space-y-8">
         <FeedCard
           title="101evler"
-          total={sum101.total}
-          included={sum101.included}
-          skipped={sum101.skipped.map((s) => ({
-            listingId: s.listingId,
-            title: titleMap.get(s.listingId) || null,
-            reason: REASON_LABEL_101[s.reason] ?? s.reason,
-          }))}
-          column="export_to_101evler"
+          included={included101}
+          skipped={skipped101}
         />
         <FeedCard
           title="hangiev"
-          total={sumHE.total}
-          included={sumHE.included}
-          skipped={sumHE.skipped.map((s) => ({
-            listingId: s.listingId,
-            title: titleMap.get(s.listingId) || null,
-            reason: REASON_LABEL_HE[s.reason] ?? s.reason,
-          }))}
-          column="export_to_hangiev"
+          included={includedHE}
+          skipped={skippedHE}
         />
       </div>
 
@@ -157,23 +207,22 @@ export default async function FeedDurumPage() {
 
 function FeedCard({
   title,
-  total,
   included,
   skipped,
 }: {
   title: string;
-  total: number;
-  included: number;
-  skipped: { listingId: string; title: string | null; reason: string }[];
-  column: string;
+  included: IncludedItem[];
+  skipped: SkippedItem[];
 }) {
+  const total = included.length + skipped.length;
+
   return (
     <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-xl font-bold text-zinc-900">{title}</h2>
         <div className="flex gap-2">
           <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-            Gönderilen: {included}
+            Gönderilen: {included.length}
           </span>
           <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
             Atlanan: {skipped.length}
@@ -184,41 +233,89 @@ function FeedCard({
         </div>
       </div>
 
-      {skipped.length === 0 ? (
-        <p className="mt-6 rounded-xl bg-emerald-50 px-4 py-6 text-center text-sm font-semibold text-emerald-700">
-          Tüm ilanlar başarıyla feed&apos;e dahil edildi.
-        </p>
-      ) : (
-        <div className="mt-6 overflow-hidden rounded-xl border border-zinc-200">
-          <table className="min-w-full divide-y divide-zinc-200 text-sm">
-            <thead className="bg-zinc-50 text-left text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-              <tr>
-                <th className="px-4 py-2.5">İlan</th>
-                <th className="px-4 py-2.5">Sebep</th>
-                <th className="px-4 py-2.5 text-right">Düzenle</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100 bg-white">
-              {skipped.map((s) => (
-                <tr key={s.listingId}>
-                  <td className="px-4 py-3">
-                    <div className="font-mono text-xs text-zinc-500">{s.listingId}</div>
-                    <div className="font-semibold text-zinc-800 line-clamp-1">{s.title || "—"}</div>
-                  </td>
-                  <td className="px-4 py-3 text-amber-700">{s.reason}</td>
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/karealfaadmin/ilanlar/${encodeURIComponent(s.listingId)}/duzenle`}
-                      className="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-bold text-white hover:bg-zinc-700"
-                    >
-                      Aç
-                    </Link>
-                  </td>
+      {/* Gönderilen ilanlar */}
+      {included.length > 0 && (
+        <div className="mt-6">
+          <h3 className="mb-3 text-sm font-bold text-emerald-700">Gönderilen ilanlar</h3>
+          <div className="overflow-hidden rounded-xl border border-zinc-200">
+            <table className="min-w-full divide-y divide-zinc-200 text-sm">
+              <thead className="bg-zinc-50 text-left text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                <tr>
+                  <th className="px-4 py-2.5">İlan No</th>
+                  <th className="px-4 py-2.5">Başlık</th>
+                  <th className="px-4 py-2.5">Tür</th>
+                  <th className="px-4 py-2.5">Fiyat</th>
+                  <th className="px-4 py-2.5">Danışman</th>
+                  <th className="px-4 py-2.5 text-right">Düzenle</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 bg-white">
+                {included.map((item) => (
+                  <tr key={item.listingId} className="hover:bg-zinc-50">
+                    <td className="px-4 py-3 font-mono text-xs text-zinc-500">{item.listingId}</td>
+                    <td className="max-w-[250px] px-4 py-3 font-semibold text-zinc-800 line-clamp-1">{item.title || "—"}</td>
+                    <td className="px-4 py-3 text-zinc-600">{kindLabel(item.kind)}</td>
+                    <td className="px-4 py-3 text-zinc-700">
+                      {item.price ? `${Number(item.price).toLocaleString("tr-TR")} ${item.currency ?? ""}` : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-zinc-600">{item.consultantName || "—"}</td>
+                    <td className="px-4 py-3 text-right">
+                      <Link
+                        href={`/karealfaadmin/ilanlar/${encodeURIComponent(item.listingId)}/duzenle`}
+                        className="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-bold text-white hover:bg-zinc-700"
+                      >
+                        Aç
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
+      )}
+
+      {/* Atlanan ilanlar */}
+      {skipped.length > 0 && (
+        <div className="mt-6">
+          <h3 className="mb-3 text-sm font-bold text-amber-700">Atlanan ilanlar</h3>
+          <div className="overflow-hidden rounded-xl border border-zinc-200">
+            <table className="min-w-full divide-y divide-zinc-200 text-sm">
+              <thead className="bg-zinc-50 text-left text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                <tr>
+                  <th className="px-4 py-2.5">İlan</th>
+                  <th className="px-4 py-2.5">Sebep</th>
+                  <th className="px-4 py-2.5 text-right">Düzenle</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 bg-white">
+                {skipped.map((s) => (
+                  <tr key={s.listingId} className="hover:bg-zinc-50">
+                    <td className="px-4 py-3">
+                      <div className="font-mono text-xs text-zinc-500">{s.listingId}</div>
+                      <div className="font-semibold text-zinc-800 line-clamp-1">{s.title || "—"}</div>
+                    </td>
+                    <td className="px-4 py-3 text-amber-700">{s.reason}</td>
+                    <td className="px-4 py-3 text-right">
+                      <Link
+                        href={`/karealfaadmin/ilanlar/${encodeURIComponent(s.listingId)}/duzenle`}
+                        className="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-bold text-white hover:bg-zinc-700"
+                      >
+                        Aç
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {included.length === 0 && skipped.length === 0 && (
+        <p className="mt-6 rounded-xl bg-zinc-50 px-4 py-6 text-center text-sm text-zinc-500">
+          Bu feed için henüz ilan işaretlenmemiş.
+        </p>
       )}
     </section>
   );

@@ -7,6 +7,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { requireAdmin, requirePanelUser } from "@/lib/panel-auth";
 import { hashPassword } from "@/lib/password";
 import { sendTempPasswordEmail } from "@/lib/email";
+import { getRequestBaseUrl } from "@/lib/request-url";
 
 async function assertContactMessageAccess(messageId: string) {
   const user = await requirePanelUser();
@@ -304,7 +305,7 @@ export async function adminGenerateTempPassword(agentId: string): Promise<TempPa
     return { ok: false, error: `Şifre kaydedilemedi: ${updErr.message}` };
   }
 
-  const loginUrl = `${(process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "")}/karealfaadmin`;
+  const loginUrl = `${await getRequestBaseUrl()}/karealfaadmin`;
   const email = typeof agent.email === "string" ? agent.email : "";
   const name = typeof agent.name === "string" ? agent.name : "";
 

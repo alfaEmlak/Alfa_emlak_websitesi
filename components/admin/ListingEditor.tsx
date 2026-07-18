@@ -593,6 +593,15 @@ export function ListingEditor({
     reference_no: listing?.reference_no_hg ?? extHangievFromJson.reference_no ?? null,
   };
 
+  // Gönderim bayrağı "yapışkan" olsun: danışman/admin bir kez 101evler ya da
+  // hangiev eşleştirmesini (emlak tipi + bölge) doldurduysa, sonraki
+  // düzenlemelerde kutucuk otomatik işaretli gelir; kimsenin tekrar seçmesine
+  // gerek kalmaz. Bayrak DB'de kapalı kalmış eski ilanlar da böylece açılır.
+  const has101Config =
+    initialExt101.type_id != null && initialExt101.area_id != null;
+  const hasHangievConfig =
+    initialExtHangiev.property_type_id != null && initialExtHangiev.area_id != null;
+
   const initialBuildingAgePreset = parseBuildingAgePresetFromListing(listing);
   const initialBuildingAgeStr =
     initialBuildingAgePreset === "project" || initialBuildingAgePreset === "zero"
@@ -713,7 +722,7 @@ export function ListingEditor({
     rating: listing?.rating != null ? String(listing.rating) : "",
     favoritesCount: listing?.favoritesCount ?? 0,
     translations: typeof listing?.translations === "string" ? listing.translations : "{}",
-    exportTo101evler: listing?.exportTo101evler ?? false,
+    exportTo101evler: (listing?.exportTo101evler ?? false) || has101Config,
     ext101_type_id: initialExt101.type_id != null ? String(initialExt101.type_id) : "",
     ext101_area_id: initialExt101.area_id != null ? String(initialExt101.area_id) : "",
     ext101_title_type_id: initialExt101.title_type_id != null ? String(initialExt101.title_type_id) : "",
@@ -724,7 +733,7 @@ export function ListingEditor({
     ext101_price_for: (initialExt101.price_for as string | null | undefined) ?? "T",
     ext101_reference_no: initialExt101.reference_no ?? "",
     ext101_area_city: infer101AreaCity(initialCity),
-    exportToHangiev: listing?.exportToHangiev ?? false,
+    exportToHangiev: (listing?.exportToHangiev ?? false) || hasHangievConfig,
     hangiev_property_type_id: initialExtHangiev.property_type_id != null ? String(initialExtHangiev.property_type_id) : "",
     hangiev_area_id: initialExtHangiev.area_id != null ? String(initialExtHangiev.area_id) : "",
     hangiev_room_count_id: initialExtHangiev.room_count_id != null ? String(initialExtHangiev.room_count_id) : "",

@@ -20,6 +20,7 @@ import { countPublishedFeaturedExcluding, SHOWCASE_MAX_PUBLISHED_FEATURED } from
 import { isUuidString } from "@/lib/listing-identity";
 import { parseTitleDeedOwnership } from "@/lib/title-deed-ownership";
 import { loadFeedLookups } from "@/lib/feeds/lookups";
+import { getRequestBaseUrl } from "@/lib/request-url";
 import { customAlphabet } from "nanoid";
 
 // Giriş yapabilen tüm DB hesap rolleri (yönetici yetkili danışman dahil).
@@ -385,7 +386,7 @@ export async function requestPasswordReset(formData: FormData) {
     try {
       const issued = await issuePasswordResetToken(email);
       if (issued) {
-        const base = (process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "");
+        const base = await getRequestBaseUrl();
         const resetUrl = `${base}/karealfaadmin/sifre-belirle?token=${issued.token}`;
         const mail = await sendPasswordResetEmail(issued.email, issued.name, resetUrl);
         if (!mail.ok) {
