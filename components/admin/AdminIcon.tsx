@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  ArrowLeftRight,
   ArrowRight,
   BarChart3,
   Building2,
@@ -79,7 +80,8 @@ export type AdminIconName =
   | "image"
   | "list"
   | "analytics"
-  | "documents";
+  | "documents"
+  | "swap";
 
 const ICONS: Record<AdminIconName, LucideIcon> = {
   dashboard: LayoutDashboard,
@@ -120,6 +122,7 @@ const ICONS: Record<AdminIconName, LucideIcon> = {
   list: List,
   analytics: BarChart3,
   documents: FolderOpen,
+  swap: ArrowLeftRight,
 };
 
 type AdminIconProps = {

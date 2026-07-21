@@ -1275,11 +1275,36 @@ export async function setListingPublishStatus(
   return { ok: true, status: nextStatus };
 }
 
-export async function deleteListing(id: string) {
+/**
+ * Silme sonrası dönülecek adresi güvenli hâle getirir.
+ *
+ * returnTo istemciden geldiği için doğrudan redirect'e verilemez (açık
+ * yönlendirme). Yalnızca ilan listesi yoluna izin verilir, sorgu dizesi
+ * (aktif filtreler) korunur; ek olarak `delete` durum parametresi eklenir.
+ */
+function listingsRedirectUrl(returnTo: string | undefined, deleteStatus?: string): string {
+  const base = "/karealfaadmin/ilanlar";
+  let params = new URLSearchParams();
+
+  if (returnTo) {
+    // Sadece göreli yol kabul edilir; "//host" ve "http://…" reddedilir.
+    const isRelative = returnTo.startsWith("/") && !returnTo.startsWith("//");
+    if (isRelative) {
+      const [path, query = ""] = returnTo.split("?");
+      if (path === base) params = new URLSearchParams(query);
+    }
+  }
+
+  if (deleteStatus) params.set("delete", deleteStatus);
+  const qs = params.toString();
+  return qs ? `${base}?${qs}` : base;
+}
+
+export async function deleteListing(id: string, returnTo?: string) {
   const user = await requirePanelUser();
   const rowId = await resolveListingRowId(String(id ?? "").trim());
   if (!rowId) {
-    redirect("/karealfaadmin/ilanlar?delete=notfound");
+    redirect(listingsRedirectUrl(returnTo, "notfound"));
   }
 
   const { data: row, error: fetchErr } = await supabaseAdmin
@@ -1290,13 +1315,13 @@ export async function deleteListing(id: string) {
 
   if (fetchErr || !row) {
     console.error("[deleteListing] fetch:", fetchErr);
-    redirect("/karealfaadmin/ilanlar?delete=notfound");
+    redirect(listingsRedirectUrl(returnTo, "notfound"));
   }
 
   if (user.role !== "ADMIN") {
     const ownerId = row.created_by_agent_id != null ? String(row.created_by_agent_id) : null;
     if (!user.agentId || ownerId !== user.agentId) {
-      redirect("/karealfaadmin/ilanlar?delete=forbidden");
+      redirect(listingsRedirectUrl(returnTo, "forbidden"));
     }
   }
 
@@ -1306,7 +1331,7 @@ export async function deleteListing(id: string) {
 
   if (error) {
     console.error("[deleteListing]", error);
-    redirect("/karealfaadmin/ilanlar?delete=error");
+    redirect(listingsRedirectUrl(returnTo, "error"));
   }
 
   revalidatePath("/");
@@ -1322,7 +1347,8 @@ export async function deleteListing(id: string) {
     }
   }
 
-  redirect("/karealfaadmin/ilanlar");
+  // Aktif filtrelerle aynı listeye dön (ör. danışman filtresi korunur).
+  redirect(listingsRedirectUrl(returnTo));
 }
 
 export async function suggestListingId() {

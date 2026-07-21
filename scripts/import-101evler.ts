@@ -105,8 +105,21 @@ async function main() {
   let unlinked = 0;
   const unlinkedNames = new Set<string>();
 
+  // Danışman kilidi olan ilanlar: panelden başka danışmana devredilmişler.
+  // Feed hâlâ eski danışmanı gönderdiği için upsert bunları geri yazardı.
+  const { data: lockedRows } = await supabase
+    .from("listings")
+    .select("listing_id")
+    .eq("agent_locked", true);
+  const lockedIds = new Set(
+    (lockedRows ?? [])
+      .map((r) => (typeof r.listing_id === "string" ? r.listing_id : null))
+      .filter((x): x is string => Boolean(x)),
+  );
+
   let ok = 0;
   let fail = 0;
+  let lockedKept = 0;
   const now = new Date().toISOString();
 
   for (const it of plan.items) {
@@ -118,7 +131,20 @@ async function main() {
       unlinked++;
       unlinkedNames.add(feedRealtor);
     }
-    const row = { ...it.row, created_by_agent_id: agentId, updated_at: now };
+    const row: Record<string, unknown> = {
+      ...it.row,
+      created_by_agent_id: agentId,
+      updated_at: now,
+    };
+
+    // Devredilmiş ilanlarda danışman alanlarına dokunma; geri kalan alanlar
+    // (fiyat, açıklama, görsel vb.) normal şekilde güncellenmeye devam eder.
+    if (lockedIds.has(it.listing_id)) {
+      delete row.created_by_agent_id;
+      delete row.created_by_name;
+      delete row.consultant_name;
+      lockedKept++;
+    }
 
     // 1) listings upsert (listing_id benzersiz)
     const { data: up, error: upErr } = await supabase
@@ -155,6 +181,9 @@ async function main() {
   console.log("─".repeat(60));
   console.log(`Tamamlandı. Başarılı: ${ok}, Hatalı: ${fail}`);
   console.log(`Danışmana bağlanan: ${linked}, bağlanamayan: ${unlinked}`);
+  if (lockedKept) {
+    console.log(`Danışman kilidi nedeniyle korunan ilan: ${lockedKept} (panelden devredilmiş)`);
+  }
   if (unlinkedNames.size) {
     console.log(
       `! Eşleşmeyen realtor adları (lib/feeds/agent-aliases.ts içine ekleyin): ${[...unlinkedNames].join(", ")}`,

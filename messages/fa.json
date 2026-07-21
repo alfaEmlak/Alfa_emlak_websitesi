@@ -605,7 +605,8 @@
       "lookups": "فهرست‌های ثابت",
       "siteSettings": "تنظیمات سایت",
       "aiTraining": "آموزش هوش مصنوعی",
-      "deedsDocuments": "سند تاپو و مدارک"
+      "deedsDocuments": "سند تاپو و مدارک",
+      "listingTransfer": "انتقال آگهی"
     },
     "deedsDocuments": {
       "title": "سند تاپو و مدارک",

@@ -142,6 +142,150 @@ function DropdownField({
   );
 }
 
+/**
+ * Çoklu seçimli açılır liste (bölge filtresi için).
+ * Boş seçim = "Tüm Bölgeler"; liste dışına tıklanınca kapanır.
+ */
+function MultiDropdownField({
+  label,
+  options,
+  values,
+  onChange,
+  isOverlay,
+  allLabel,
+}: {
+  label: string;
+  /** Boş `v` değerli "hepsi" seçeneği hariç, gerçek seçenekler. */
+  options: Option[];
+  values: string[];
+  onChange: (values: string[]) => void;
+  isOverlay: boolean;
+  allLabel: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onPointer = (e: MouseEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, []);
+
+  // Tek seçimde bölge adı, çoklu seçimde "N bölge" yazılır — kutu dar.
+  const summary =
+    values.length === 0
+      ? allLabel
+      : values.length === 1
+        ? (options.find((o) => o.v === values[0])?.l ?? values[0])
+        : `${values.length} bölge`;
+
+  function toggle(v: string) {
+    onChange(values.includes(v) ? values.filter((x) => x !== v) : [...values, v]);
+  }
+
+  const labelCls = isOverlay
+    ? "mb-1.5 block text-[11px] font-headline font-bold uppercase tracking-[0.08em] text-white/55"
+    : "mb-1.5 block text-[11px] font-headline font-bold uppercase tracking-[0.08em] text-on-surface/45";
+
+  return (
+    <div ref={rootRef} className="relative">
+      <span className={labelCls}>{label}</span>
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className={`flex w-full items-center justify-between gap-3 rounded text-left font-headline text-base font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/50 ${
+          isOverlay ? "text-white" : "text-primary"
+        }`}
+      >
+        <span className="truncate">{summary}</span>
+        <span
+          className={`text-sm transition-transform ${open ? "rotate-180" : ""} ${
+            isOverlay ? "text-white/70" : "text-primary/60"
+          }`}
+        >
+          ▼
+        </span>
+      </button>
+
+      {open ? (
+        <div
+          className={`absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 rounded-xl border shadow-[0_12px_30px_rgba(4,21,70,0.18)] ${
+            isOverlay ? "border-white/25 bg-primary/95" : "border-slate-200 bg-white"
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => onChange([])}
+            className={`w-full rounded-t-xl px-3 py-2.5 text-left text-base transition ${
+              values.length === 0
+                ? isOverlay
+                  ? "bg-white/20 text-white"
+                  : "bg-primary/10 text-primary"
+                : isOverlay
+                  ? "text-white/90 hover:bg-white/10"
+                  : "text-primary/85 hover:bg-slate-100"
+            }`}
+          >
+            {allLabel}
+          </button>
+
+          <ul role="listbox" aria-multiselectable className="max-h-56 overflow-auto p-1">
+            {options.map((o) => {
+              const active = values.includes(o.v);
+              return (
+                <li key={o.v + o.l}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={active}
+                    onClick={() => toggle(o.v)}
+                    className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-base transition ${
+                      active
+                        ? isOverlay
+                          ? "bg-white/20 text-white"
+                          : "bg-primary/10 text-primary"
+                        : isOverlay
+                          ? "text-white/90 hover:bg-white/10"
+                          : "text-primary/85 hover:bg-slate-100"
+                    }`}
+                  >
+                    <span
+                      aria-hidden
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[11px] font-bold ${
+                        active
+                          ? isOverlay
+                            ? "border-white bg-white text-primary"
+                            : "border-primary bg-primary text-white"
+                          : isOverlay
+                            ? "border-white/50"
+                            : "border-slate-300"
+                      }`}
+                    >
+                      {active ? "✓" : ""}
+                    </span>
+                    <span className="truncate">{o.l}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function HeroSearch({ variant = "light" }: { variant?: "light" | "overlay" }) {
   const router = useRouter();
   const t = useTranslations("HeroSearch");
@@ -150,7 +294,7 @@ export function HeroSearch({ variant = "light" }: { variant?: "light" | "overlay
   const [kategori, setKategori] = useState("");
   const [emlakTipi, setEmlakTipi] = useState("");
   const [city, setCity] = useState("");
-  const [region, setRegion] = useState("");
+  const [regions, setRegions] = useState<string[]>([]);
 
   // Advanced filters state
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -199,9 +343,11 @@ export function HeroSearch({ variant = "light" }: { variant?: "light" | "overlay
     const p = new URLSearchParams();
     p.set("tur", turParam);
     if (kategori) p.set("emlak", kategori);
-    if (emlakTipi) p.set("tip", emlakTipi);
+    // Parametre adı "altTip" olmalı — sorgu (listings-query.ts) ve ilanlar
+    // sayfasındaki filtre paneli bu adı okuyor.
+    if (emlakTipi) p.set("altTip", emlakTipi);
     if (city) p.set("sehir", city);
-    if (region) p.set("bolge", region);
+    if (regions.length > 0) p.set("bolge", regions.join(","));
     if (budgetMin.trim()) p.set("minFiyat", budgetMin.replace(/\D/g, ""));
     if (budgetMax.trim()) p.set("maxFiyat", budgetMax.replace(/\D/g, ""));
 
@@ -226,7 +372,7 @@ export function HeroSearch({ variant = "light" }: { variant?: "light" | "overlay
   }, [kategori]);
 
   useEffect(() => {
-    setRegion("");
+    setRegions([]);
   }, [city]);
 
   const isOverlay = variant === "overlay";
@@ -254,9 +400,9 @@ export function HeroSearch({ variant = "light" }: { variant?: "light" | "overlay
     ...kktcCities.filter((c) => c.v !== "").map((c) => ({ v: c.v, l: c.l })),
   ];
 
-  const regionOptions: Option[] = city
-    ? [{ v: "", l: t("allRegions") }, ...(kktcRegions[city] || [])]
-    : [{ v: "", l: t("allRegions") }];
+  // Çoklu seçimde "hepsi" ayrı bir buton olarak render edildiği için
+  // listede yalnızca gerçek bölgeler bulunur.
+  const regionOptions: Option[] = city ? (kktcRegions[city] || []) : [];
 
   const handleFeatureToggle = (feat: string) => {
     setFeatures((prev) => (prev.includes(feat) ? prev.filter((f) => f !== feat) : [...prev, feat]));
@@ -291,7 +437,14 @@ export function HeroSearch({ variant = "light" }: { variant?: "light" | "overlay
             <DropdownField label={t("city")} options={cityOptions} value={city} onChange={setCity} isOverlay={isOverlay} />
           </div>
           <div className={fieldShell}>
-            <DropdownField label={t("region")} options={regionOptions} value={region} onChange={setRegion} isOverlay={isOverlay} />
+            <MultiDropdownField
+              label={t("region")}
+              options={regionOptions}
+              values={regions}
+              onChange={setRegions}
+              isOverlay={isOverlay}
+              allLabel={t("allRegions")}
+            />
           </div>
           <button
             type="button"

@@ -70,6 +70,7 @@ const navGroups: NavGroup[] = [
     titleKey: "groups.management",
     items: [
       { href: "/karealfaadmin/danismanlar", labelKey: "nav.consultants", icon: "group", match: "prefix", adminOnly: true },
+      { href: "/karealfaadmin/ilan-aktarimi", labelKey: "nav.listingTransfer", icon: "swap", match: "prefix", adminOnly: true },
       { href: "/karealfaadmin/giris-gecmisi", labelKey: "nav.loginHistory", icon: "analytics", match: "prefix", adminOnly: true },
       { href: "/karealfaadmin/danisman-ayarlar", labelKey: "nav.consultantSettings", icon: "person", match: "prefix", consultantOnly: true },
       { href: "/karealfaadmin/lookups", labelKey: "nav.lookups", icon: "list", match: "prefix", adminOnly: true },

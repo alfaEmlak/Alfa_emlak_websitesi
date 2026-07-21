@@ -615,7 +615,8 @@
       "siteSettings": "Site ayarları",
       "aiTraining": "AI Eğitimi",
       "deedsDocuments": "Koçan ve belgeler",
-      "feedStatus": "Feed durumu"
+      "feedStatus": "Feed durumu",
+      "listingTransfer": "İlan aktarımı"
     },
     "deedsDocuments": {
       "title": "Koçan ve belgeler",

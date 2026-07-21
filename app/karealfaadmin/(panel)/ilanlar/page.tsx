@@ -258,8 +258,9 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
 
   const listings = (result.data ?? []) as ListingRow[];
 
-  // Mevcut filtreleri koruyan sayfa bağlantısı üretir.
-  const pageHref = (target: number) => {
+  // Aktif filtreler — hem sayfalama bağlantıları hem de silme sonrası
+  // geri dönüş adresi için tek kaynaktan üretilir.
+  const filterParams = () => {
     const params = new URLSearchParams();
     if (qId) params.set("listingId", qId);
     if (qTitle) params.set("title", qTitle);
@@ -268,9 +269,22 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
     if (selectedPropertyTypeOption) params.set("propertyType", selectedPropertyTypeOption.rawValueKey);
     if (status) params.set("status", status);
     if (agentFilterValid && agentFilter) params.set("agent", agentFilter);
+    return params;
+  };
+
+  const pageHref = (target: number) => {
+    const params = filterParams();
     params.set("page", String(target));
     return `?${params.toString()}`;
   };
+
+  // Silme işlemi sunucuda redirect ettiği için filtreler bu adresle taşınır.
+  const returnTo = (() => {
+    const params = filterParams();
+    if (page > 1) params.set("page", String(page));
+    const qs = params.toString();
+    return qs ? `/karealfaadmin/ilanlar?${qs}` : "/karealfaadmin/ilanlar";
+  })();
 
   const hasActiveFilter = !!(qId || qTitle || city || kind || selectedPropertyTypeOption || status || agentFilterValid);
 
@@ -426,6 +440,7 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
                         status={listing.publish_status}
                         statusLabel={publishLabel(listing.publish_status)}
                         editHref={`/karealfaadmin/ilanlar/${listing.id}/duzenle`}
+                        returnTo={returnTo}
                         labels={actionLabels}
                       />
                     </div>
@@ -492,6 +507,7 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
                         status={listing.publish_status}
                         statusLabel={publishLabel(listing.publish_status)}
                         editHref={`/karealfaadmin/ilanlar/${listing.id}/duzenle`}
+                        returnTo={returnTo}
                         labels={actionLabels}
                       />
                     </td>

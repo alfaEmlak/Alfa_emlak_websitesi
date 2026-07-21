@@ -605,7 +605,8 @@
       "lookups": "Справочники",
       "siteSettings": "Настройки сайта",
       "aiTraining": "Обучение ИИ",
-      "deedsDocuments": "Кочаны и документы"
+      "deedsDocuments": "Кочаны и документы",
+      "listingTransfer": "Передача объявлений"
     },
     "deedsDocuments": {
       "title": "Кочаны и документы",

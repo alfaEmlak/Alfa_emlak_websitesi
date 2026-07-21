@@ -9,6 +9,8 @@ type Props = {
   status: string;
   statusLabel: string;
   editHref: string;
+  /** Silme sonrası dönülecek adres — aktif filtreleri korur. */
+  returnTo?: string;
   labels: {
     publish: string;
     unpublish: string;
@@ -27,7 +29,7 @@ const STATUS_STYLES: Record<string, string> = {
   REJECTED: "bg-rose-100 text-rose-700",
 };
 
-export function ListingActionsMenu({ listingId, status, statusLabel, editHref, labels }: Props) {
+export function ListingActionsMenu({ listingId, status, statusLabel, editHref, returnTo, labels }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -68,7 +70,7 @@ export function ListingActionsMenu({ listingId, status, statusLabel, editHref, l
     setOpen(false);
     if (!window.confirm(labels.confirmDelete)) return;
     startTransition(() => {
-      void deleteListing(listingId);
+      void deleteListing(listingId, returnTo);
     });
   }
 

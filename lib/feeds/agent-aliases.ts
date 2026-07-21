@@ -1,18 +1,22 @@
 /**
  * 101evler feed'indeki "realtor" adı ile paneldeki danışman (agents) adını eşler.
  *
- * Feed bazı danışmanları farklı adla gönderiyor (örn. "Alfa Yousra" → panelde
- * "Yousra El Mabrouki"). Bu eşleme sayesinde içe aktarım, ilanı doğru danışmana
+ * Feed bazı danışmanları farklı adla/sırayla gönderiyor (örn. "Umut Alfa" →
+ * panelde "ALFA UMUT"). Bu eşleme sayesinde içe aktarım, ilanı doğru danışmana
  * (created_by_agent_id) bağlar; böylece panel filtreleri ilanları yakalar.
  *
  * Yeni bir uyumsuzluk çıkarsa buraya "feed adı: panel adı" satırı eklemek yeterli.
  * Anahtar: feed'deki ad — Değer: agents tablosundaki birebir ad.
+ *
+ * DİKKAT: Danışman adı panelden değiştirilirse buradaki değer de güncellenmeli.
+ * Aksi hâlde eşleme sessizce kırılır ve ilanlar hiçbir danışmana bağlanmaz —
+ * bu tablodaki üç satır tam olarak bu yüzden bozulmuştu (2026-07).
  */
 export const FEED_REALTOR_ALIASES: Record<string, string> = {
-  "Alfa Doğa": "Doğa Bahçeci",
-  "Alfa Yousra": "Yousra El Mabrouki",
+  "Alfa Doğa": "ALFA DOĞA",
+  "Alfa Yousra": "ALFA YOUSRA",
   "Belkıs Alfa": "ALFA Belkıs",
-  "Umut Alfa": "Umut Hamitoğlu",
+  "Umut Alfa": "ALFA UMUT",
   "Alfa Elena": "Elena",
 };
 

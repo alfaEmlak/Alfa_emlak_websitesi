@@ -3,6 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { kktcCities, kktcRegions } from "@/lib/kktc-regions";
+import {
+  LISTING_SUBTYPE_LABEL_TR,
+  LISTING_SUBTYPE_MAP,
+  type ListingCategoryKey,
+} from "@/lib/listing-property-taxonomy";
 
 type Props = {
   locale: string;
@@ -33,11 +38,20 @@ const ROOM_TYPE_OPTIONS = [
   "7+1","7+2","7+3","8+",
 ];
 
+/** "alsancak,lapta" → ["alsancak", "lapta"] */
+function parseRegions(raw: string): string[] {
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 export function ListingFilters({ locale, initial, hidden }: Props) {
   const t = useTranslations("ListingsPage");
   const tc = useTranslations("Common");
   const [sehir, setSehir] = useState(initial.sehir);
-  const [bolge, setBolge] = useState(initial.bolge);
+  // Bölge çoklu seçilebilir; URL'de virgülle ayrılmış tek parametre olarak taşınır.
+  const [bolge, setBolge] = useState<string[]>(() => parseRegions(initial.bolge));
   const [emlak, setEmlak] = useState(initial.emlak);
   const [altTip, setAltTip] = useState(initial.altTip);
   const [selectedOda, setSelectedOda] = useState(initial.oda);
@@ -46,7 +60,7 @@ export function ListingFilters({ locale, initial, hidden }: Props) {
 
   useEffect(() => {
     setSehir(initial.sehir);
-    setBolge(initial.bolge);
+    setBolge(parseRegions(initial.bolge));
     setEmlak(initial.emlak);
     setAltTip(initial.altTip);
     setSelectedOda(initial.oda);
@@ -55,6 +69,11 @@ export function ListingFilters({ locale, initial, hidden }: Props) {
   const isKonut = emlak === "konut";
   const isArsa = emlak === "arsa";
   const isTicari = emlak === "ticari";
+
+  const subtypeOptions =
+    emlak && emlak in LISTING_SUBTYPE_MAP
+      ? LISTING_SUBTYPE_MAP[emlak as ListingCategoryKey]
+      : [];
 
   const activeCount =
     (initial.sehir ? 1 : 0) +
@@ -151,9 +170,8 @@ export function ListingFilters({ locale, initial, hidden }: Props) {
             onChange={(e) => {
               const val = e.target.value;
               setEmlak(val);
-              if (val !== "arsa") {
-                setAltTip("");
-              }
+              // Alt tipler kategoriye özel — kategori değişince seçim geçersiz kalır.
+              setAltTip("");
             }}
             className={fieldCls}
           >
@@ -172,7 +190,7 @@ export function ListingFilters({ locale, initial, hidden }: Props) {
             onChange={(e) => {
               const val = e.target.value;
               setSehir(val);
-              setBolge("");
+              setBolge([]);
             }}
             className={fieldCls}
           >
@@ -188,19 +206,36 @@ export function ListingFilters({ locale, initial, hidden }: Props) {
         {sehir && kktcRegions[sehir]?.length > 0 ? (
           <div>
             <label className={labelCls}>{t("filters.region") || "Bölge"}</label>
-            <select
-              name="bolge"
-              value={bolge}
-              onChange={(e) => setBolge(e.target.value)}
-              className={fieldCls}
-            >
-              <option value="">Tüm Bölgeler</option>
+            {/* Çoklu seçim: form tek bir virgüllü "bolge" değeri gönderir. */}
+            <input type="hidden" name="bolge" value={bolge.join(",")} />
+            <div className="max-h-44 space-y-0.5 overflow-y-auto rounded-lg border border-slate-200 p-1.5">
+              {bolge.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setBolge([])}
+                  className="mb-1 w-full rounded px-2 py-1 text-left text-xs font-semibold text-primary/70 hover:bg-slate-100"
+                >
+                  Tüm Bölgeler
+                </button>
+              ) : null}
               {kktcRegions[sehir].map((r) => (
-                <option key={r.v} value={r.v}>
-                  {r.l}
-                </option>
+                <label
+                  key={r.v}
+                  className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-slate-100"
+                >
+                  <input
+                    type="checkbox"
+                    checked={bolge.includes(r.v)}
+                    onChange={() =>
+                      setBolge((prev) =>
+                        prev.includes(r.v) ? prev.filter((x) => x !== r.v) : [...prev, r.v],
+                      )
+                    }
+                  />
+                  <span className="truncate">{r.l}</span>
+                </label>
               ))}
-            </select>
+            </div>
           </div>
         ) : null}
 
@@ -271,9 +306,13 @@ export function ListingFilters({ locale, initial, hidden }: Props) {
             </>
           ) : null}
 
-          {isArsa ? (
+          {/* Alt tip her kategoride seçilebilir (Konut → Villa, Ticari → Ofis…).
+              Ana sayfadan "altTip" ile gelen seçim burada korunur. */}
+          {subtypeOptions.length > 0 ? (
             <div>
-              <label className={labelCls}>{t("filters.arsaType") || "Arsa Tipi"}</label>
+              <label className={labelCls}>
+                {isArsa ? t("filters.arsaType") || "Arsa Tipi" : t("filters.propertyType")}
+              </label>
               <select
                 name="altTip"
                 value={altTip}
@@ -281,12 +320,11 @@ export function ListingFilters({ locale, initial, hidden }: Props) {
                 className={fieldCls}
               >
                 <option value="">Tüm Tipler</option>
-                <option value="konutImarli">Konut İmarlı</option>
-                <option value="ticariImarli">Ticari İmarlı</option>
-                <option value="konutTicariImarli">Konut + Ticari İmarlı</option>
-                <option value="tarla">Tarla</option>
-                <option value="sanayiArsasi">Sanayi Arsası</option>
-                <option value="bagBahce">Bağ &amp; Bahçe</option>
+                {subtypeOptions.map((key) => (
+                  <option key={key} value={key}>
+                    {LISTING_SUBTYPE_LABEL_TR[key] ?? key}
+                  </option>
+                ))}
               </select>
             </div>
           ) : null}

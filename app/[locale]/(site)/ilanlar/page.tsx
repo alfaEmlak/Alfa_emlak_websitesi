@@ -79,17 +79,33 @@ export default async function ListingsPage({ params, searchParams }: Props) {
   const activeFilters: { key: string; label: string; value: string; removeKeys?: string[] }[] = [];
   const fCity = first(sp.sehir);
   if (fCity) activeFilters.push({ key: "sehir", label: t("filters.city"), value: kktcCities.find((c) => c.v === fCity)?.l ?? fCity });
+  // Bölge çoklu seçilebilir ("bolge=alsancak,lapta"); hepsi tek çipte listelenir.
   const fBolge = first(sp.bolge);
   if (fBolge && fCity) {
-    const regLabel = kktcRegions[fCity]?.find((r) => r.v === fBolge)?.l ?? fBolge;
-    activeFilters.push({ key: "bolge", label: t("filters.region") || "Bölge", value: regLabel });
+    const regLabels = fBolge
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((v) => kktcRegions[fCity]?.find((r) => r.v === v)?.l ?? v);
+    if (regLabels.length > 0) {
+      activeFilters.push({
+        key: "bolge",
+        label: t("filters.region") || "Bölge",
+        value: regLabels.join(", "),
+      });
+    }
   }
   const fEmlak = first(sp.emlak);
   if (fEmlak) activeFilters.push({ key: "emlak", label: t("filters.propertyType"), value: emlakLabel(fEmlak) });
+  // Alt tip her kategoride geçerli (Konut → Villa, Ticari → Ofis…), sadece arsa değil.
   const fAltTip = first(sp.altTip);
-  if (fAltTip && fEmlak === "arsa") {
+  if (fAltTip) {
     const subLabel = LISTING_SUBTYPE_LABEL_TR[fAltTip] || fAltTip;
-    activeFilters.push({ key: "altTip", label: t("filters.arsaType") || "Arsa Tipi", value: subLabel });
+    activeFilters.push({
+      key: "altTip",
+      label: fEmlak === "arsa" ? t("filters.arsaType") || "Arsa Tipi" : t("filters.propertyType"),
+      value: subLabel,
+    });
   }
   const fOda = first(sp.oda);
   if (fOda) {

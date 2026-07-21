@@ -39,9 +39,15 @@ export function buildListingFilters(sp: Record<string, string | string[] | undef
   const sehir = get("sehir");
   if (sehir) where.city = sehir;
 
+  // Bölge çoklu seçilebilir: "bolge=girne-merkez,alsancak".
+  // Tek değer de çalışır (eski bağlantılar, default-menu.ts vb. bozulmaz).
   const bolge = get("bolge");
-  if (bolge && bolge !== "tum-kibris") {
-    where.region = bolge;
+  if (bolge) {
+    const regions = bolge
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s && s !== "tum-kibris");
+    if (regions.length > 0) where.regions = Array.from(new Set(regions));
   }
 
   const q = get("q");
@@ -129,10 +135,16 @@ function applyListingFilters(query: any, where: Record<string, any>) {
     query = query.in("city", expandListingCityFilterValues(where.city));
   }
 
-  if (where.region) {
+  if (where.regions?.length) {
+    // DB'de bölge kimi kayıtta slug ("alsancak"), kimide etiket ("Alsancak")
+    // tutulduğu için her seçim iki biçimiyle birden aranır.
     const cityKey = where.city ? normalizeListingCitySlug(where.city) || where.city : "";
-    const l = cityKey ? getRegionLabel(cityKey, where.region) : where.region;
-    query = query.in("region", Array.from(new Set([where.region, l])));
+    const values = new Set<string>();
+    for (const r of where.regions as string[]) {
+      values.add(r);
+      values.add(cityKey ? getRegionLabel(cityKey, r) : r);
+    }
+    query = query.in("region", Array.from(values));
   }
   
   if (where.price) {

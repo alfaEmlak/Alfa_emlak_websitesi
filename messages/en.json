@@ -606,7 +606,8 @@
       "lookups": "Lookup lists",
       "siteSettings": "Site settings",
       "aiTraining": "AI Training",
-      "deedsDocuments": "Title deeds & documents"
+      "deedsDocuments": "Title deeds & documents",
+      "listingTransfer": "Listing transfer"
     },
     "deedsDocuments": {
       "title": "Title deeds & documents",

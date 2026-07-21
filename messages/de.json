@@ -605,7 +605,8 @@
       "lookups": "Auswahllisten",
       "siteSettings": "Website-Einstellungen",
       "aiTraining": "KI-Training",
-      "deedsDocuments": "Grundbuch & Dokumente"
+      "deedsDocuments": "Grundbuch & Dokumente",
+      "listingTransfer": "Inserate übertragen"
     },
     "deedsDocuments": {
       "title": "Grundbuch & Dokumente",
