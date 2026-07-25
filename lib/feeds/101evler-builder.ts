@@ -393,10 +393,11 @@ export function buildAdElement(
     l.shortDescription ||
     "";
 
-  // ad_key: 101evler ilana özgü serbest metin anahtarı. Gerçek export'ta
-  // İngilizce başlık kullanılıyor; yoksa TR başlığa düş.
-  const adKey =
-    getTranslation(rawListing.translations, "en", "title") || titleTr;
+  // ad_key: 101evler ilana özgü KISA benzersiz anahtar (dokümanda UUID benzeri).
+  // 101evler bunu "Firma İlan No" hücresinde gösteriyor; uzun/emojili başlık
+  // gönderilirse hücreden taşıyor. Bu yüzden reference_no'ya (yoksa listingId)
+  // düşüyoruz.
+  const adKey = ext.reference_no || l.listingId || "";
 
   const typeId = Number(ext.type_id);
   const areaId = Number(ext.area_id);
