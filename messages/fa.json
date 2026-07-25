@@ -502,6 +502,7 @@
     "catArsa": "زمین",
     "catTicari": "تجاری",
     "catProje": "پروژه",
+    "catYurt": "خوابگاه",
     "allSubTypes": "همه انواع",
     "selectCategoryFirst": "ابتدا دسته‌بندی را انتخاب کنید",
     "subTypes": {
@@ -530,7 +531,10 @@
       "depo": "انبار",
       "fabrika": "کارخانه",
       "devamEden": "پروژه‌های در حال انجام",
-      "tamamlanmis": "پروژه‌های تکمیل شده"
+      "tamamlanmis": "پروژه‌های تکمیل شده",
+      "ozelYurt": "خوابگاه خصوصی",
+      "universiteYurdu": "خوابگاه دانشگاهی",
+      "apartYurt": "خوابگاه آپارتمانی"
     },
     "selectCity": "شهر را انتخاب کنید",
     "allRegions": "همه مناطق",

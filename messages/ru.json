@@ -502,6 +502,7 @@
     "catArsa": "Земля",
     "catTicari": "Коммерческая",
     "catProje": "Проект",
+    "catYurt": "Общежитие",
     "allSubTypes": "Все типы",
     "selectCategoryFirst": "Сначала выберите категорию",
     "subTypes": {
@@ -530,7 +531,10 @@
       "depo": "Склад",
       "fabrika": "Фабрика",
       "devamEden": "Текущие проекты",
-      "tamamlanmis": "Завершённые проекты"
+      "tamamlanmis": "Завершённые проекты",
+      "ozelYurt": "Частное общежитие",
+      "universiteYurdu": "Университетское общежитие",
+      "apartYurt": "Апарт-общежитие"
     },
     "selectCity": "Выберите город",
     "allRegions": "Все районы",

@@ -503,6 +503,7 @@
     "catArsa": "Land",
     "catTicari": "Commercial",
     "catProje": "Project",
+    "catYurt": "Dormitory",
     "allSubTypes": "All Types",
     "selectCategoryFirst": "Select category first",
     "subTypes": {
@@ -531,7 +532,10 @@
       "depo": "Warehouse",
       "fabrika": "Factory",
       "devamEden": "Ongoing Projects",
-      "tamamlanmis": "Completed Projects"
+      "tamamlanmis": "Completed Projects",
+      "ozelYurt": "Private Dormitory",
+      "universiteYurdu": "University Dormitory",
+      "apartYurt": "Apart Dormitory"
     },
     "selectCity": "Select city",
     "allRegions": "All Regions",

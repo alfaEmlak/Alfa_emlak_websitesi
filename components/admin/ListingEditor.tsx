@@ -50,6 +50,15 @@ import {
   parseTicariTagsFromDetailFields,
 } from "@/lib/commercial-parcel-detail";
 import {
+  YURT_TAG_DEFS,
+  YURT_FIELD_DEFS,
+  emptyYurtTags,
+  emptyYurtFields,
+  mergeYurtDetailFields,
+  parseYurtTagsFromDetailFields,
+  parseYurtFieldsFromDetailFields,
+} from "@/lib/yurt-detail";
+import {
   mergeOwnedFloorsDetailFields,
   OWNED_FLOORS_LAYOUT_KEYS,
   parseOwnedFloorsFromDetailFields,
@@ -614,6 +623,8 @@ export function ListingEditor({
   const initialOwnerContact = parseOwnerContactPrivate(listing?.detailFields);
   const initialLand = parseLandFieldsFromDetailFields(listing?.detailFields);
   const initialTicariTags = parseTicariTagsFromDetailFields(listing?.detailFields);
+  const initialYurtTags = parseYurtTagsFromDetailFields(listing?.detailFields);
+  const initialYurtFields = parseYurtFieldsFromDetailFields(listing?.detailFields);
   const initialOwnedFloors = parseOwnedFloorsFromDetailFields(listing?.detailFields);
 
   // roomType: detailFields'dan oku, yoksa bedrooms+livingRooms'tan infer et
@@ -687,6 +698,8 @@ export function ListingEditor({
     landPricePerDonum: initialLand.pricePerDonum,
     landTags: { ...emptyLandTags(), ...initialLand.tags },
     ticariTags: { ...emptyTicariTags(), ...initialTicariTags },
+    yurtTags: { ...emptyYurtTags(), ...initialYurtTags },
+    yurtFields: { ...emptyYurtFields(), ...initialYurtFields },
     ownedFloorsScope: initialOwnedFloors.ownedFloorsScope,
     ownedFloorsLayout: initialOwnedFloors.ownedFloorsLayout,
     ownedFloorsFloorCount: initialOwnedFloors.ownedFloorsFloorCount,
@@ -1319,9 +1332,16 @@ export function ListingEditor({
       isTicariSave && !isArsaSave,
       f.ticariTags,
     );
-    const detailFieldsForSave = mergeOwnedFloorsDetailFields(
+    const isYurtSave = f.propertyCategory === "yurt";
+    const detailAfterYurt = mergeYurtDetailFields(
       detailAfterCommercial,
-      !isArsaSave,
+      isYurtSave,
+      f.yurtTags,
+      f.yurtFields,
+    );
+    const detailFieldsForSave = mergeOwnedFloorsDetailFields(
+      detailAfterYurt,
+      !isArsaSave && !isYurtSave,
       f.ownedFloorsScope,
       f.ownedFloorsLayout,
       f.ownedFloorsFloorCount,
@@ -1368,18 +1388,18 @@ export function ListingEditor({
           : f.buildingAgePreset === "zero"
             ? "0"
             : f.buildingAge,
-      livingRooms: isArsaSave || isTicariSave ? "" : f.livingRooms,
-      hasPool: isArsaSave || isTicariSave ? false : f.hasPool,
-      hasGarden: isArsaSave || isTicariSave ? false : f.hasGarden,
-      hasFireplace: isArsaSave || isTicariSave ? false : f.hasFireplace,
-      hasParking: isArsaSave || isTicariSave ? false : f.hasParking,
-      furnished: isArsaSave || isTicariSave ? false : f.furnished,
-      seaView: isArsaSave || isTicariSave ? false : f.seaView,
-      hasElevator: isArsaSave ? false : f.hasElevator,
-      hasBalcony: isArsaSave || isTicariSave ? false : f.hasBalcony,
-      hasTerrace: isArsaSave || isTicariSave ? false : f.hasTerrace,
-      hasAirConditioning: isArsaSave || isTicariSave ? false : f.hasAirConditioning,
-      hasGatedCommunity: isArsaSave || isTicariSave ? false : f.hasGatedCommunity,
+      livingRooms: isArsaSave || isTicariSave || isYurtSave ?"" : f.livingRooms,
+      hasPool: isArsaSave || isTicariSave || isYurtSave ?false : f.hasPool,
+      hasGarden: isArsaSave || isTicariSave || isYurtSave ?false : f.hasGarden,
+      hasFireplace: isArsaSave || isTicariSave || isYurtSave ?false : f.hasFireplace,
+      hasParking: isArsaSave || isTicariSave || isYurtSave ?false : f.hasParking,
+      furnished: isArsaSave || isTicariSave || isYurtSave ?false : f.furnished,
+      seaView: isArsaSave || isTicariSave || isYurtSave ?false : f.seaView,
+      hasElevator: isArsaSave || isYurtSave ? false : f.hasElevator,
+      hasBalcony: isArsaSave || isTicariSave || isYurtSave ?false : f.hasBalcony,
+      hasTerrace: isArsaSave || isTicariSave || isYurtSave ?false : f.hasTerrace,
+      hasAirConditioning: isArsaSave || isTicariSave || isYurtSave ?false : f.hasAirConditioning,
+      hasGatedCommunity: isArsaSave || isTicariSave || isYurtSave ?false : f.hasGatedCommunity,
       titleDeedOwnership: f.titleDeedOwnership,
       detailFields: detailFieldsFinal,
       features: JSON.stringify(featuresLines),
@@ -1523,6 +1543,7 @@ export function ListingEditor({
 
   const isArsa = form.propertyCategory === "arsa";
   const isTicari = form.propertyCategory === "ticari" && !isArsa;
+  const isYurt = form.propertyCategory === "yurt";
 
   const adminNeedsConsultantSelection =
     viewerRole === "ADMIN" &&
@@ -1673,7 +1694,9 @@ export function ListingEditor({
                         ? th("catArsa")
                         : k === "ticari"
                           ? th("catTicari")
-                          : th("catProje")}
+                          : k === "yurt"
+                            ? th("catYurt")
+                            : th("catProje")}
                   </option>
                 ))}
               </select>
@@ -2343,6 +2366,23 @@ export function ListingEditor({
                   Asansör
                 </label>
               </>
+            ) : isYurt ? (
+              YURT_TAG_DEFS.map((t) => (
+                <label key={t.id} className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                  <input
+                    type="checkbox"
+                    checked={form.yurtTags[t.id]}
+                    onChange={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        yurtTags: { ...prev.yurtTags, [t.id]: !prev.yurtTags[t.id] },
+                      }))
+                    }
+                    className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
+                  />
+                  {t.label}
+                </label>
+              ))
             ) : (
               ([
                 ["hasPool", "Havuz"],
@@ -2370,6 +2410,60 @@ export function ListingEditor({
             )}
           </div>
             </>
+          )}
+
+          {isYurt && (
+            <fieldset className="mt-6 rounded-xl border border-zinc-200 bg-zinc-50/70 p-4">
+              <legend className="px-1 text-sm font-semibold text-zinc-800">Yurt bilgileri</legend>
+              <p className="mt-1 text-xs text-zinc-500">
+                Doldurduğunuz alanlar ilan detayında gösterilir. Gizle işaretlerseniz kaydedilir ama yayımda görünmez (ör. gelir bilgisi).
+              </p>
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {YURT_FIELD_DEFS.map((fd) => {
+                  const entry = form.yurtFields[fd.id];
+                  return (
+                    <label key={fd.id} className="block text-sm font-medium text-zinc-700">
+                      <span className="flex items-center justify-between gap-2">
+                        <span>{fd.label}</span>
+                        <span className="flex items-center gap-1 text-[11px] font-normal text-zinc-500">
+                          <input
+                            type="checkbox"
+                            checked={entry.visible !== false}
+                            onChange={(e) =>
+                              setForm((prev) => ({
+                                ...prev,
+                                yurtFields: {
+                                  ...prev.yurtFields,
+                                  [fd.id]: { ...prev.yurtFields[fd.id], visible: e.target.checked },
+                                },
+                              }))
+                            }
+                            className="h-3.5 w-3.5 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500/20"
+                          />
+                          Göster
+                        </span>
+                      </span>
+                      <input
+                        type={fd.kind === "number" ? "number" : "text"}
+                        inputMode={fd.kind === "number" ? "numeric" : undefined}
+                        min={fd.kind === "number" ? 0 : undefined}
+                        className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                        value={entry.value}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            yurtFields: {
+                              ...prev.yurtFields,
+                              [fd.id]: { ...prev.yurtFields[fd.id], value: e.target.value },
+                            },
+                          }))
+                        }
+                      />
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
           )}
 
           <fieldset className="mt-6 rounded-xl border border-zinc-200 bg-zinc-50/70 p-4">

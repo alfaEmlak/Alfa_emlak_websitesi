@@ -8,7 +8,7 @@
 
 export const LISTING_PROPERTY_TYPE_SEPARATOR = " \u00b7 ";
 
-export const LISTING_CATEGORY_KEYS = ["konut", "arsa", "ticari", "proje"] as const;
+export const LISTING_CATEGORY_KEYS = ["konut", "arsa", "ticari", "proje", "yurt"] as const;
 export type ListingCategoryKey = (typeof LISTING_CATEGORY_KEYS)[number];
 
 export const LISTING_SUBTYPE_MAP: Record<ListingCategoryKey, readonly string[]> = {
@@ -28,6 +28,7 @@ export const LISTING_SUBTYPE_MAP: Record<ListingCategoryKey, readonly string[]> 
   arsa: ["konutImarli", "ticariImarli", "konutTicariImarli", "tarla", "sanayiArsasi", "bagBahce"],
   ticari: ["ofis", "dukkan", "magaza", "otel", "restoran", "depo", "fabrika"],
   proje: ["devamEden", "tamamlanmis"],
+  yurt: ["ozelYurt", "universiteYurdu", "apartYurt"],
 };
 
 /** Turkish labels — keep in sync with messages/tr.json HeroSearch.subTypes */
@@ -58,6 +59,9 @@ export const LISTING_SUBTYPE_LABEL_TR: Record<string, string> = {
   fabrika: "Fabrika",
   devamEden: "Devam Eden Projeler",
   tamamlanmis: "Tamamlanmış Projeler",
+  ozelYurt: "Özel Yurt",
+  universiteYurdu: "Üniversite Yurdu",
+  apartYurt: "Apart Yurt",
 };
 
 export const LISTING_CATEGORY_LABEL_TR: Record<ListingCategoryKey, string> = {
@@ -65,6 +69,7 @@ export const LISTING_CATEGORY_LABEL_TR: Record<ListingCategoryKey, string> = {
   arsa: "Arsa/Arazi",
   ticari: "Ticari",
   proje: "Proje",
+  yurt: "Yurt",
 };
 
 function normalizeTaxonomyText(value: string): string {
@@ -123,6 +128,7 @@ export function propertyTypeForFeedLookup(stored: string): string {
   if (key === "ticari") return "İş Yeri";
   if (key === "konut") return "Daire";
   if (key === "proje") return "Proje";
+  if (key === "yurt") return "İş Yeri";
   return s;
 }
 

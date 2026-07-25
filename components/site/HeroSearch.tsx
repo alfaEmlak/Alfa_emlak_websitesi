@@ -308,9 +308,9 @@ export function HeroSearch({ variant = "light" }: { variant?: "light" | "overlay
   const [m2Max, setM2Max] = useState("");
 
   const allowedCategoriesByTab: Record<TabId, string[]> = {
-    SATILIK: ["konut", "arsa", "ticari", "proje"],
+    SATILIK: ["konut", "arsa", "ticari", "proje", "yurt"],
     PROJE: ["proje"],
-    KIRALIK: ["konut", "arsa", "ticari"],
+    KIRALIK: ["konut", "arsa", "ticari", "yurt"],
     GUNLUK: ["konut", "proje"],
   };
   const allowed = allowedCategoriesByTab[tab];
@@ -320,6 +320,7 @@ export function HeroSearch({ variant = "light" }: { variant?: "light" | "overlay
     ...(allowed.includes("arsa") ? [{ v: "arsa", l: t("catArsa") }] : []),
     ...(allowed.includes("ticari") ? [{ v: "ticari", l: t("catTicari") }] : []),
     ...(allowed.includes("proje") ? [{ v: "proje", l: t("catProje") }] : []),
+    ...(allowed.includes("yurt") ? [{ v: "yurt", l: t("catYurt") }] : []),
   ];
 
   useEffect(() => {

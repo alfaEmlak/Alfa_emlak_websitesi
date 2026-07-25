@@ -502,6 +502,7 @@
     "catArsa": "Grundstück",
     "catTicari": "Gewerbe",
     "catProje": "Projekt",
+    "catYurt": "Wohnheim",
     "allSubTypes": "Alle Typen",
     "selectCategoryFirst": "Zuerst Kategorie wählen",
     "subTypes": {
@@ -530,7 +531,10 @@
       "depo": "Lager",
       "fabrika": "Fabrik",
       "devamEden": "Laufende Projekte",
-      "tamamlanmis": "Abgeschlossene Projekte"
+      "tamamlanmis": "Abgeschlossene Projekte",
+      "ozelYurt": "Privates Wohnheim",
+      "universiteYurdu": "Universitätswohnheim",
+      "apartYurt": "Apart-Wohnheim"
     },
     "selectCity": "Stadt wählen",
     "allRegions": "Alle Regionen",

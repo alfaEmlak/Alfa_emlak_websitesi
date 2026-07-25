@@ -10,6 +10,12 @@ import {
   OWNED_FLOORS_LAYOUT_KEYS,
   OWNED_FLOORS_SCOPE_KEYS,
 } from "@/lib/owned-floors-detail";
+import {
+  listingPropertyTypeIsYurt,
+  yurtHighlightLinesFromDetailFields,
+  YURT_TAG_DETAIL_KEYS,
+  YURT_FIELD_LABELS,
+} from "@/lib/yurt-detail";
 
 export type DetailFieldEntry = { value: string; visible: boolean };
 export type DetailFieldsMap = Record<string, DetailFieldEntry>;
@@ -41,6 +47,7 @@ export const DETAIL_FIELD_LABELS: Record<string, string> = {
   ticariKendiBodrum: "Kendine ait bodrum",
   ownedFloorsScope: "Sahip olunan kat",
   ownedFloorsLayout: "Çok katlı tip",
+  ...YURT_FIELD_LABELS,
 };
 
 export function parseDetailFields(raw: string | null | undefined): DetailFieldsMap {
@@ -114,6 +121,7 @@ export function visibleDetailRows(raw: string | null | undefined) {
         key !== OWNER_CONTACT_PRIVATE_KEY &&
         !key.startsWith("land") &&
         !key.startsWith("ticari") &&
+        !YURT_TAG_DETAIL_KEYS.includes(key) &&
         key !== "ownedFloorsFloorCount" &&
         typeof v === "object" &&
         v !== null &&
@@ -177,11 +185,14 @@ export function mergeListingHighlightLines(listing: Record<string, unknown>): st
   const isArsa = listingPropertyTypeIsArsa(listing.propertyType ?? listing.property_type);
   const isTicari =
     !isArsa && listingPropertyTypeIsTicari(listing.propertyType ?? listing.property_type);
-  const fromBools = isArsa
+  const isYurt =
+    !isArsa && !isTicari && listingPropertyTypeIsYurt(listing.propertyType ?? listing.property_type);
+  const fromBools = isArsa || isTicari || isYurt
     ? []
-    : isTicari
-      ? []
-      : LISTING_BOOLEAN_HIGHLIGHT_LABELS.filter(({ key }) => listing[key] === true).map(({ label }) => label);
+    : LISTING_BOOLEAN_HIGHLIGHT_LABELS.filter(({ key }) => listing[key] === true).map(({ label }) => label);
+  const fromYurtTags = isYurt
+    ? yurtHighlightLinesFromDetailFields(listing.detailFields ?? listing.detail_fields)
+    : [];
   const fromLandArsa = isArsa
     ? landParcelHighlightLinesFromDetailFields(listing.detailFields ?? listing.detail_fields)
     : [];
@@ -209,6 +220,7 @@ export function mergeListingHighlightLines(listing: Record<string, unknown>): st
     ...fromLandArsa,
     ...fromTicariTags,
     ...fromTicariElevator,
+    ...fromYurtTags,
     ...fromBools,
     ...fromText,
   ]) {
