@@ -35,6 +35,13 @@ const navGroups: NavGroup[] = [
       { href: "/karealfaadmin/onay-bekleyen", labelKey: "nav.approval", icon: "warning", match: "prefix" },
       { href: "/karealfaadmin/ilanlar/vitrin", labelKey: "nav.showcase", icon: "star", match: "exact", adminOnly: true },
       {
+        href: "/karealfaadmin/ilanlar/cop-kutusu",
+        labelKey: "nav.listingTrash",
+        icon: "trash",
+        match: "exact",
+        adminOnly: true,
+      },
+      {
         href: "/karealfaadmin/kocan-belgeler",
         labelKey: "nav.deedsDocuments",
         icon: "documents",
@@ -72,6 +79,13 @@ const navGroups: NavGroup[] = [
       { href: "/karealfaadmin/danismanlar", labelKey: "nav.consultants", icon: "group", match: "prefix", adminOnly: true },
       { href: "/karealfaadmin/ilan-aktarimi", labelKey: "nav.listingTransfer", icon: "swap", match: "prefix", adminOnly: true },
       { href: "/karealfaadmin/giris-gecmisi", labelKey: "nav.loginHistory", icon: "analytics", match: "prefix", adminOnly: true },
+      {
+        href: "/karealfaadmin/toplu-islem-gecmisi",
+        labelKey: "nav.bulkHistory",
+        icon: "analytics",
+        match: "prefix",
+        adminOnly: true,
+      },
       { href: "/karealfaadmin/danisman-ayarlar", labelKey: "nav.consultantSettings", icon: "person", match: "prefix", consultantOnly: true },
       { href: "/karealfaadmin/lookups", labelKey: "nav.lookups", icon: "list", match: "prefix", adminOnly: true },
       { href: "/karealfaadmin/ai-egitimi", labelKey: "nav.aiTraining", icon: "support_agent", match: "prefix", adminOnly: true },
@@ -86,6 +100,7 @@ function isLinkActive(pathname: string, href: string, match: NavItem["match"]) {
   if (match === "ilanlar") {
     if (pathname === "/karealfaadmin/ilanlar/yeni") return false;
     if (pathname === "/karealfaadmin/ilanlar/vitrin") return false;
+    if (pathname === "/karealfaadmin/ilanlar/cop-kutusu") return false;
     return pathname === href || pathname.startsWith(`${href}/`);
   }
   return false;

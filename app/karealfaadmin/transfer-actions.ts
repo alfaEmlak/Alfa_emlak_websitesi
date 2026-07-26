@@ -67,6 +67,7 @@ export async function listTransferableListings(fromAgentId: string) {
   const { data } = await supabaseAdmin
     .from("listings")
     .select("id, listing_id, title, publish_status, price, currency, consultant_name, agent_locked")
+    .is("deleted_at", null)
     .or(`created_by_agent_id.eq.${from.id},created_by_name.eq."${nameEsc}"`)
     .order("updated_at", { ascending: false });
 

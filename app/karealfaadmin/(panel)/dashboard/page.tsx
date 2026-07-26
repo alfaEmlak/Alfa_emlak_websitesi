@@ -26,7 +26,7 @@ async function selectDashboardRows(
   limit: number,
   statuses?: readonly string[],
 ) {
-  let query = supabaseAdmin.from("listings").select(columns);
+  let query = supabaseAdmin.from("listings").select(columns).is("deleted_at", null);
   if (user.role !== "ADMIN" && user.agentId) {
     query = query.eq("created_by_agent_id", user.agentId);
   }
@@ -43,7 +43,10 @@ async function selectDashboardRows(
     return [];
   }
 
-  let fallback = supabaseAdmin.from("listings").select("id, listing_id, title, publish_status, price, currency, updated_at");
+  let fallback = supabaseAdmin
+    .from("listings")
+    .select("id, listing_id, title, publish_status, price, currency, updated_at")
+    .is("deleted_at", null);
   if (user.role !== "ADMIN" && user.agentId) {
     fallback = fallback.eq("created_by_agent_id", user.agentId);
   }
@@ -61,7 +64,7 @@ export default async function AdminDashboardPage() {
   const locale = await getPanelLocale();
 
   const listingsCountSource = () => {
-    let query = supabaseAdmin.from("listings").select("*", { count: "exact", head: true });
+    let query = supabaseAdmin.from("listings").select("*", { count: "exact", head: true }).is("deleted_at", null);
     if (user.role !== "ADMIN" && user.agentId) {
       query = query.eq("created_by_agent_id", user.agentId);
     }

@@ -13,11 +13,12 @@ type Props = { params: Promise<{ id: string }> };
 export default async function EditListingPage({ params }: Props) {
   const user = await requirePanelUser();
   const { id } = await params;
+  // Çöp kutusundaki ilanlar düzenlenemez; önce geri yüklenmeleri gerekir.
   const byId = isUuidString(id)
-    ? await supabaseAdmin.from("listings").select("*, listing_images(*)").eq("id", id).maybeSingle()
+    ? await supabaseAdmin.from("listings").select("*, listing_images(*)").eq("id", id).is("deleted_at", null).maybeSingle()
     : { data: null, error: null };
   const byListingId = !byId.data && !byId.error
-    ? await supabaseAdmin.from("listings").select("*, listing_images(*)").eq("listing_id", id).maybeSingle()
+    ? await supabaseAdmin.from("listings").select("*, listing_images(*)").eq("listing_id", id).is("deleted_at", null).maybeSingle()
     : byId;
   const { data: listingRaw, error } = byId.data ? byId : byListingId;
 

@@ -22,20 +22,24 @@ export function isTruePendingApprovalRow(row: { publish_status: string; detail_f
  * REJECTED durumu veya HIDDEN+adminReject burada sayılmaz.
  */
 export async function countTruePendingApprovalBadge(agentScopedId: string | undefined): Promise<number> {
+  // Çöp kutusundaki ilanlar HIDDEN olarak durur; onay kuyruğunda sayılmamaları için elenir.
   let qPending = supabaseAdmin
     .from("listings")
     .select("*", { count: "exact", head: true })
+    .is("deleted_at", null)
     .eq("publish_status", "PENDING_APPROVAL");
 
   let qHiddenNoDetail = supabaseAdmin
     .from("listings")
     .select("*", { count: "exact", head: true })
+    .is("deleted_at", null)
     .eq("publish_status", "HIDDEN")
     .is("detail_fields", null);
 
   let qHiddenNotRejected = supabaseAdmin
     .from("listings")
     .select("*", { count: "exact", head: true })
+    .is("deleted_at", null)
     .eq("publish_status", "HIDDEN")
     .not("detail_fields", "is", null)
     .not("detail_fields", "cs", '{"adminReject":true}');

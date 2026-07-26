@@ -29,6 +29,7 @@ export async function fetchListingsWithOwnerDocuments(): Promise<ListingOwnerDoc
     const { data, error } = await supabaseAdmin
       .from("listings")
       .select("id, listing_id, title, publish_status, detail_fields")
+      .is("deleted_at", null)
       .order("updated_at", { ascending: false })
       .range(from, from + pageSize - 1);
 

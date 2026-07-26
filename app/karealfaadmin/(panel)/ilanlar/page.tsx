@@ -1,10 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import {
-  displayListingCity,
-  excludeFromAdminListingCityFilter,
-  normalizeListingCitySlug,
-} from "@/lib/listing-city";
+import { displayListingCity, excludeFromAdminListingCityFilter } from "@/lib/listing-city";
 import { getPanelLocale } from "@/lib/panel-locale";
 import { getPanelTranslations } from "@/lib/panel-translations";
 import { requirePanelUser } from "@/lib/panel-auth";
@@ -12,92 +8,24 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { ListingActionsMenu } from "@/components/admin/ListingActionsMenu";
 import { ListingPreviewModal } from "@/components/admin/ListingPreviewModal";
 import {
-  parseListingPropertyType,
-  LISTING_CATEGORY_LABEL_TR,
-  LISTING_SUBTYPE_LABEL_TR,
-} from "@/lib/listing-property-taxonomy";
-
-async function fetchDistinctListingCities(consultantAgentId?: string | null): Promise<string[]> {
-  const seen = new Set<string>();
-  const pageSize = 1000;
-  let from = 0;
-  for (;;) {
-    let q = supabaseAdmin.from("listings").select("city").range(from, from + pageSize - 1);
-    if (consultantAgentId) {
-      q = q.eq("created_by_agent_id", consultantAgentId);
-    }
-    const { data, error } = await q;
-    if (error) break;
-    if (!data?.length) break;
-    for (const row of data) {
-      const c = typeof row.city === "string" ? row.city.trim() : "";
-      const canon = normalizeListingCitySlug(c);
-      if (canon) seen.add(canon);
-    }
-    if (data.length < pageSize) break;
-    from += pageSize;
-    if (from > 100_000) break;
-  }
-  return [...seen].sort((a, b) => displayListingCity(a).localeCompare(displayListingCity(b), "tr"));
-}
-
-function displayListingPropertyType(stored: string) {
-  const { category, subtypeKey } = parseListingPropertyType(stored);
-  const catLabel = LISTING_CATEGORY_LABEL_TR[category] || category;
-  const subLabel = LISTING_SUBTYPE_LABEL_TR[subtypeKey];
-  if (subLabel) {
-    return `${catLabel} · ${subLabel}`;
-  }
-  return catLabel;
-}
-
-type PropertyTypeOption = {
-  displayLabel: string;
-  dbValues: string[];
-  rawValueKey: string;
-};
-
-async function fetchDistinctListingPropertyTypes(consultantAgentId?: string | null): Promise<PropertyTypeOption[]> {
-  const seen = new Set<string>();
-  const pageSize = 1000;
-  let from = 0;
-  for (;;) {
-    let q = supabaseAdmin.from("listings").select("property_type").range(from, from + pageSize - 1);
-    if (consultantAgentId) {
-      q = q.eq("created_by_agent_id", consultantAgentId);
-    }
-    const { data, error } = await q;
-    if (error) break;
-    if (!data?.length) break;
-    for (const row of data) {
-      const p = typeof row.property_type === "string" ? row.property_type.trim() : "";
-      if (p) seen.add(p);
-    }
-    if (data.length < pageSize) break;
-    from += pageSize;
-    if (from > 100_000) break;
-  }
-
-  const groups: Record<string, string[]> = {};
-  for (const dbVal of seen) {
-    const label = displayListingPropertyType(dbVal);
-    if (!groups[label]) {
-      groups[label] = [];
-    }
-    groups[label].push(dbVal);
-  }
-
-  const options: PropertyTypeOption[] = Object.entries(groups).map(([displayLabel, dbValues]) => {
-    const sortedDbVals = [...dbValues].sort();
-    return {
-      displayLabel,
-      dbValues: sortedDbVals,
-      rawValueKey: sortedDbVals.join(","),
-    };
-  });
-
-  return options.sort((a, b) => a.displayLabel.localeCompare(b.displayLabel, "tr"));
-}
+  adminListingFilterToParams,
+  applyAdminListingFilter,
+  fetchDistinctListingCities,
+  fetchDistinctListingPropertyTypes,
+  hasAnyAdminListingFilter,
+  parseAdminListingFilter,
+  sanitizeAdminListingFilter,
+  LISTING_KINDS,
+  type AdminListingFilterContext,
+} from "@/lib/admin-listing-filter";
+import {
+  BulkHeaderCheckbox,
+  BulkRowCheckbox,
+  BulkSelectionProvider,
+} from "@/components/admin/BulkSelectionProvider";
+import { BulkActionsBar } from "@/components/admin/BulkActionsBar";
+import type { BulkDrawerOptions } from "@/components/admin/BulkActionsDrawer";
+import { buildBulkBarLabels, buildBulkDrawerLabels } from "@/lib/bulk-labels";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 type ListingImageRow = { url: string; sort_order?: number | null; is_primary?: boolean | null };
@@ -145,23 +73,13 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
   const t = await getPanelTranslations();
   const locale = await getPanelLocale();
   const sp = await searchParams;
-  const qId = first(sp.listingId)?.trim();
-  const qTitle = first(sp.title)?.trim();
-  const city = first(sp.city)?.trim();
-  const kind = first(sp.kind)?.trim();
-  const propertyType = first(sp.propertyType)?.trim();
-  const status = first(sp.status)?.trim();
-  const agentFilter = first(sp.agent)?.trim();
   const deleteFlash = first(sp.delete)?.trim();
 
   const consultantAgentId = user.role === "CONSULTANT" && user.agentId ? user.agentId : null;
-  const cityOptions = (await fetchDistinctListingCities(consultantAgentId)).filter(
-    (c) => !excludeFromAdminListingCityFilter(c),
-  );
+  const cityOptions = (await fetchDistinctListingCities(consultantAgentId))
+    .filter((c) => !excludeFromAdminListingCityFilter(c))
+    .sort((a, b) => displayListingCity(a).localeCompare(displayListingCity(b), "tr"));
   const propertyTypeOptions = await fetchDistinctListingPropertyTypes(consultantAgentId);
-  const selectedPropertyTypeOption = propertyType
-    ? propertyTypeOptions.find((o) => o.rawValueKey === propertyType)
-    : undefined;
 
   const agentOptions =
     user.role === "ADMIN"
@@ -169,39 +87,33 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
           (await supabaseAdmin.from("agents").select("id,name").order("name", { ascending: true })).data ?? []
         ).filter((a): a is { id: string; name: string } => !!a?.id)
       : [];
-  const selectedAgent = agentFilter ? agentOptions.find((a) => a.id === agentFilter) : undefined;
-  const agentFilterValid = !!selectedAgent;
-  // Feed (101evler) ilanları danışmana created_by_agent_id ile değil, created_by_name ile bağlı.
-  // Bu yüzden hem agent_id hem isim ile eşleştiriyoruz.
-  const agentOrFilter = selectedAgent
-    ? `created_by_agent_id.eq.${selectedAgent.id},created_by_name.eq."${selectedAgent.name.replace(/"/g, '\\"')}"`
-    : "";
 
   // Sayımlar (sayfalamadan önce): kapsamdaki toplam ve uygulanan filtreye göre filtrelenen ilan sayısı.
   const scopeAgentId = user.role !== "ADMIN" && user.agentId ? user.agentId : null;
+  const filterCtx: AdminListingFilterContext = {
+    cityOptions,
+    propertyTypeOptions,
+    agentOptions,
+    scopeAgentId,
+  };
+  const filter = sanitizeAdminListingFilter(parseAdminListingFilter(sp), filterCtx);
+  const selectedPropertyTypeOption = filter.propertyType
+    ? propertyTypeOptions.find((o) => o.rawValueKey === filter.propertyType)
+    : undefined;
 
-  let totalCountQuery = supabaseAdmin.from("listings").select("*", { count: "exact", head: true });
+  let totalCountQuery = supabaseAdmin
+    .from("listings")
+    .select("*", { count: "exact", head: true })
+    .is("deleted_at", null);
   if (scopeAgentId) totalCountQuery = totalCountQuery.eq("created_by_agent_id", scopeAgentId);
   const { count: totalCountRaw } = await totalCountQuery;
   const totalCount = totalCountRaw ?? 0;
 
-  let filteredCountQuery = supabaseAdmin.from("listings").select("*", { count: "exact", head: true });
-  if (scopeAgentId) filteredCountQuery = filteredCountQuery.eq("created_by_agent_id", scopeAgentId);
-  if (qId) filteredCountQuery = filteredCountQuery.ilike("listing_id", `%${qId}%`);
-  if (qTitle) filteredCountQuery = filteredCountQuery.ilike("title", `%${qTitle}%`);
-  if (city && cityOptions.includes(city)) filteredCountQuery = filteredCountQuery.eq("city", city);
-  if (kind && ["SATILIK", "KIRALIK", "GUNLUK_KIRALIK", "PROJE"].includes(kind)) filteredCountQuery = filteredCountQuery.eq("kind", kind);
-  if (selectedPropertyTypeOption) {
-    const vals = selectedPropertyTypeOption.dbValues;
-    if (vals.length === 1) {
-      filteredCountQuery = filteredCountQuery.eq("property_type", vals[0]);
-    } else if (vals.length > 1) {
-      filteredCountQuery = filteredCountQuery.in("property_type", vals);
-    }
-  }
-  if (status && ["DRAFT", "PENDING_APPROVAL", "PUBLISHED", "HIDDEN", "REJECTED"].includes(status)) filteredCountQuery = filteredCountQuery.eq("publish_status", status);
-  if (agentOrFilter) filteredCountQuery = filteredCountQuery.or(agentOrFilter);
-  const { count: filteredCountRaw } = await filteredCountQuery;
+  const { count: filteredCountRaw } = await applyAdminListingFilter(
+    supabaseAdmin.from("listings").select("*", { count: "exact", head: true }),
+    filter,
+    filterCtx,
+  );
   const filteredCount = filteredCountRaw ?? 0;
 
   // Sayfalama: sayfa başına 50 ilan.
@@ -212,65 +124,19 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
   const rangeFrom = (page - 1) * PAGE_SIZE;
   const rangeTo = rangeFrom + PAGE_SIZE - 1;
 
-  let query = supabaseAdmin.from("listings").select("*, listing_images(*)");
-
-  if (user.role !== "ADMIN" && user.agentId) {
-    query = query.eq("created_by_agent_id", user.agentId);
-  }
-
-  if (qId) query = query.ilike("listing_id", `%${qId}%`);
-  if (qTitle) query = query.ilike("title", `%${qTitle}%`);
-  if (city && cityOptions.includes(city)) query = query.eq("city", city);
-  if (kind && ["SATILIK", "KIRALIK", "GUNLUK_KIRALIK", "PROJE"].includes(kind)) query = query.eq("kind", kind);
-  if (selectedPropertyTypeOption) {
-    const vals = selectedPropertyTypeOption.dbValues;
-    if (vals.length === 1) {
-      query = query.eq("property_type", vals[0]);
-    } else if (vals.length > 1) {
-      query = query.in("property_type", vals);
-    }
-  }
-  if (status && ["DRAFT", "PENDING_APPROVAL", "PUBLISHED", "HIDDEN", "REJECTED"].includes(status)) query = query.eq("publish_status", status);
-  if (agentOrFilter) query = query.or(agentOrFilter);
-
-  let result = await query.order("updated_at", { ascending: false }).range(rangeFrom, rangeTo);
-  if (result.error?.message.includes("Could not find the")) {
-    let fallbackQuery = supabaseAdmin.from("listings").select("*, listing_images(*)");
-    if (user.role !== "ADMIN" && user.agentId) {
-      fallbackQuery = fallbackQuery.eq("created_by_agent_id", user.agentId);
-    }
-    if (qId) fallbackQuery = fallbackQuery.ilike("listing_id", `%${qId}%`);
-    if (qTitle) fallbackQuery = fallbackQuery.ilike("title", `%${qTitle}%`);
-    if (city && cityOptions.includes(city)) fallbackQuery = fallbackQuery.eq("city", city);
-    if (kind && ["SATILIK", "KIRALIK", "GUNLUK_KIRALIK", "PROJE"].includes(kind)) fallbackQuery = fallbackQuery.eq("kind", kind);
-    if (selectedPropertyTypeOption) {
-      const vals = selectedPropertyTypeOption.dbValues;
-      if (vals.length === 1) {
-        fallbackQuery = fallbackQuery.eq("property_type", vals[0]);
-      } else if (vals.length > 1) {
-        fallbackQuery = fallbackQuery.in("property_type", vals);
-      }
-    }
-    if (status && ["DRAFT", "PENDING_APPROVAL", "PUBLISHED", "HIDDEN", "REJECTED"].includes(status)) fallbackQuery = fallbackQuery.eq("publish_status", status);
-    if (agentOrFilter) fallbackQuery = fallbackQuery.or(agentOrFilter);
-    result = await fallbackQuery.order("updated_at", { ascending: false }).range(rangeFrom, rangeTo);
-  }
+  const result = await applyAdminListingFilter(
+    supabaseAdmin.from("listings").select("*, listing_images(*)"),
+    filter,
+    filterCtx,
+  )
+    .order("updated_at", { ascending: false })
+    .range(rangeFrom, rangeTo);
 
   const listings = (result.data ?? []) as ListingRow[];
 
   // Aktif filtreler — hem sayfalama bağlantıları hem de silme sonrası
   // geri dönüş adresi için tek kaynaktan üretilir.
-  const filterParams = () => {
-    const params = new URLSearchParams();
-    if (qId) params.set("listingId", qId);
-    if (qTitle) params.set("title", qTitle);
-    if (city && cityOptions.includes(city)) params.set("city", city);
-    if (kind) params.set("kind", kind);
-    if (selectedPropertyTypeOption) params.set("propertyType", selectedPropertyTypeOption.rawValueKey);
-    if (status) params.set("status", status);
-    if (agentFilterValid && agentFilter) params.set("agent", agentFilter);
-    return params;
-  };
+  const filterParams = () => adminListingFilterToParams(filter);
 
   const pageHref = (target: number) => {
     const params = filterParams();
@@ -286,7 +152,7 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
     return qs ? `/karealfaadmin/ilanlar?${qs}` : "/karealfaadmin/ilanlar";
   })();
 
-  const hasActiveFilter = !!(qId || qTitle || city || kind || selectedPropertyTypeOption || status || agentFilterValid);
+  const hasActiveFilter = hasAnyAdminListingFilter(filter);
 
   const actionLabels = {
     publish: t("listings.actionPublish"),
@@ -314,7 +180,28 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
     }
   }
 
-  return (
+  // Toplu işlemler yalnızca ADMIN'e açık.
+  const bulkEnabled = user.role === "ADMIN";
+  const bulkLabels = bulkEnabled ? buildBulkBarLabels(t) : null;
+  const bulkDrawerLabels = bulkEnabled ? buildBulkDrawerLabels(t) : null;
+  const bulkOptions: BulkDrawerOptions | null = bulkEnabled
+    ? {
+        agents: agentOptions,
+        cities: cityOptions.map((c) => ({ value: c, label: displayListingCity(c) })),
+        // Toplu düzeltmede tek bir db değeri yazılabilir; birleşik gruplar dışarıda kalır.
+        propertyTypes: propertyTypeOptions
+          .filter((o) => o.dbValues.length === 1)
+          .map((o) => ({ value: o.dbValues[0], label: o.displayLabel })),
+        kinds: LISTING_KINDS.map((k) => ({ value: k, label: t(`kindLabels.${k}`) })),
+        statusLabels: {
+          PUBLISHED: t("publishStatus.PUBLISHED"),
+          DRAFT: t("publishStatus.DRAFT"),
+          HIDDEN: t("publishStatus.HIDDEN"),
+        },
+      }
+    : null;
+
+  const content = (
     <div className="p-4 sm:p-6 lg:p-10">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -334,11 +221,11 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
       </div>
 
       <form className={`mt-6 grid grid-cols-1 gap-3 rounded-2xl border border-zinc-200 bg-white p-4 sm:grid-cols-2 ${user.role === "ADMIN" ? "lg:grid-cols-8" : "lg:grid-cols-7"}`}>
-        <input name="listingId" placeholder={t("listings.phListingId")} defaultValue={qId ?? ""} className="min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25" />
-        <input name="title" placeholder={t("listings.phTitle")} defaultValue={qTitle ?? ""} className="min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25" />
+        <input name="listingId" placeholder={t("listings.phListingId")} defaultValue={filter.listingId ?? ""} className="min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25" />
+        <input name="title" placeholder={t("listings.phTitle")} defaultValue={filter.title ?? ""} className="min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25" />
         <select
           name="city"
-          defaultValue={city && cityOptions.includes(city) ? city : ""}
+          defaultValue={filter.city ?? ""}
           className="min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25"
         >
           <option value="">{t("listings.filterCityAll")}</option>
@@ -348,7 +235,7 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
             </option>
           ))}
         </select>
-        <select name="kind" defaultValue={kind ?? ""} className="min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25">
+        <select name="kind" defaultValue={filter.kind ?? ""} className="min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25">
           <option value="">{t("listings.filterKindAll")}</option>
           <option value="SATILIK">{t("kindLabels.SATILIK")}</option>
           <option value="KIRALIK">{t("kindLabels.KIRALIK")}</option>
@@ -367,7 +254,7 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
             </option>
           ))}
         </select>
-        <select name="status" defaultValue={status ?? ""} className="min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25">
+        <select name="status" defaultValue={filter.status ?? ""} className="min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25">
           <option value="">{t("listings.filterStatusAll")}</option>
           <option value="DRAFT">{t("publishStatus.DRAFT")}</option>
           <option value="PENDING_APPROVAL">{t("publishStatus.PENDING_APPROVAL")}</option>
@@ -376,7 +263,7 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
           <option value="REJECTED">{t("publishStatus.REJECTED")}</option>
         </select>
         {user.role === "ADMIN" ? (
-          <select name="agent" defaultValue={agentFilterValid ? agentFilter : ""} className="min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25">
+          <select name="agent" defaultValue={filter.agent ?? ""} className="min-h-[44px] rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/25">
             <option value="">{t("listings.filterAgentAll")}</option>
             {agentOptions.map((a) => (
               <option key={a.id} value={a.id}>
@@ -417,6 +304,11 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
             return (
               <div key={listing.id} className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
                 <div className="flex gap-3">
+                  {bulkEnabled ? (
+                    <span className="mt-1 shrink-0">
+                      <BulkRowCheckbox id={listing.id} label={listing.title} />
+                    </span>
+                  ) : null}
                   <span className="mt-1 shrink-0 text-xs font-semibold tabular-nums text-zinc-400">{rangeFrom + idx + 1}</span>
                   <ListingPreviewModal href={previewHref} title={listing.title} className="block shrink-0 cursor-pointer">
                     <div className="relative h-16 w-20 overflow-hidden rounded-lg bg-zinc-100 ring-1 ring-zinc-200">
@@ -456,6 +348,11 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
         <table className="w-full text-left text-sm">
           <thead className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase tracking-wide text-zinc-500">
             <tr>
+              {bulkEnabled ? (
+                <th className="w-10 px-3 py-3">
+                  <BulkHeaderCheckbox label={t("bulk.selectPage")} />
+                </th>
+              ) : null}
               <th className="w-10 px-3 py-3 text-right">#</th>
               <th className="px-3 py-3">{t("listings.tableCover")}</th>
               <th className="px-3 py-3">{t("dashboard.colListingId")}</th>
@@ -469,7 +366,7 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
           <tbody className="divide-y divide-zinc-100">
             {listings.length === 0 ? (
               <tr>
-                <td colSpan={user.role === "ADMIN" ? 8 : 7} className="px-3 py-8 text-center text-sm text-zinc-400">
+                <td colSpan={(user.role === "ADMIN" ? 8 : 7) + (bulkEnabled ? 1 : 0)} className="px-3 py-8 text-center text-sm text-zinc-400">
                   {t("listings.empty")}
                 </td>
               </tr>
@@ -480,6 +377,11 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
                 const previewHref = `/${locale}/ilan/${listing.listing_id}`;
                 return (
                   <tr key={listing.id} className="transition hover:bg-zinc-50">
+                    {bulkEnabled ? (
+                      <td className="px-3 py-2">
+                        <BulkRowCheckbox id={listing.id} label={listing.title} />
+                      </td>
+                    ) : null}
                     <td className="px-3 py-2 text-right text-xs tabular-nums text-zinc-400">{rangeFrom + idx + 1}</td>
                     <td className="px-3 py-2">
                       <ListingPreviewModal href={previewHref} title={listing.title} className="block cursor-pointer">
@@ -550,6 +452,22 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
           )}
         </nav>
       ) : null}
+
+      {bulkEnabled && bulkLabels && bulkDrawerLabels && bulkOptions ? (
+        <BulkActionsBar labels={bulkLabels} drawerLabels={bulkDrawerLabels} options={bulkOptions} />
+      ) : null}
     </div>
+  );
+
+  if (!bulkEnabled) return content;
+
+  return (
+    <BulkSelectionProvider
+      pageIds={listings.map((l) => l.id)}
+      filteredCount={filteredCount}
+      filter={filter}
+    >
+      {content}
+    </BulkSelectionProvider>
   );
 }

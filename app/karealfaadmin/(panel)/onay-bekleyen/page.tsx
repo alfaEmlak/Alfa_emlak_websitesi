@@ -133,12 +133,22 @@ export default async function PendingApprovalPage({
   const baseSelect =
     "id, listing_id, title, city, region, publish_status, updated_at, created_by_name, detail_fields";
 
-  let pendingQuery = supabaseAdmin.from("listings").select(baseSelect).in("publish_status", [...PENDING_STATUSES]);
+  // Çöp kutusundaki ilanlar HIDDEN olarak durur; onay kuyruğunda görünmemeleri için elenir.
+  let pendingQuery = supabaseAdmin
+    .from("listings")
+    .select(baseSelect)
+    .is("deleted_at", null)
+    .in("publish_status", [...PENDING_STATUSES]);
 
-  let rejectedStatusQuery = supabaseAdmin.from("listings").select(baseSelect).eq("publish_status", "REJECTED");
+  let rejectedStatusQuery = supabaseAdmin
+    .from("listings")
+    .select(baseSelect)
+    .is("deleted_at", null)
+    .eq("publish_status", "REJECTED");
   let rejectedHiddenFlagQuery = supabaseAdmin
     .from("listings")
     .select(baseSelect)
+    .is("deleted_at", null)
     .eq("publish_status", "HIDDEN")
     .contains("detail_fields", { adminReject: true });
 

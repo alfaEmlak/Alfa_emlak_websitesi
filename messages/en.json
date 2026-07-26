@@ -611,7 +611,9 @@
       "siteSettings": "Site settings",
       "aiTraining": "AI Training",
       "deedsDocuments": "Title deeds & documents",
-      "listingTransfer": "Listing transfer"
+      "listingTransfer": "Listing transfer",
+      "listingTrash": "Trash",
+      "bulkHistory": "Bulk operation history"
     },
     "deedsDocuments": {
       "title": "Title deeds & documents",
@@ -899,6 +901,127 @@
       "ownerStepIncomplete": "Enter the owner’s first name, last name, and phone before continuing to the next steps.",
       "navPrev": "Previous",
       "navNext": "Next"
+    },
+    "bulk": {
+      "title": "Bulk actions",
+      "selectPage": "Select all on this page",
+      "selectedCount": "{count} listings selected",
+      "selectAllMatching": "Select all {count} listings matching the filter",
+      "allMatchingActive": "All listings matching the filter are selected",
+      "clear": "Clear selection",
+      "openDrawer": "Bulk actions",
+      "scopeSelection": "{count} selected listings",
+      "scopeFilter": "{count} listings matching the filter",
+      "close": "Close",
+      "back": "Back",
+      "run": "Apply",
+      "running": "Working…",
+      "cancel": "Cancel",
+      "confirmTypeCount": "Type {count} to confirm",
+      "confirmPlaceholder": "Number of listings",
+      "irreversible": "This action cannot be undone.",
+      "reversible": "Deleted listings move to the trash and can be restored.",
+      "resultSuccess": "{count} listings updated.",
+      "resultSkipped": "{count} listings skipped.",
+      "resultError": "The operation failed.",
+      "noteNoPhoto": "Listings without a photo were not approved.",
+      "noteFeaturedLimit": "Some listings were not added because the showcase is full.",
+      "noteFeedFlagsReset": "Feed flags stayed off; turn them back on if needed.",
+      "groups": {
+        "status": "Publish status",
+        "moderation": "Moderation",
+        "assign": "Assignment",
+        "content": "Content",
+        "feed": "Portal feeds",
+        "export": "Export",
+        "danger": "Deletion"
+      },
+      "actions": {
+        "set_status": {
+          "label": "Change status",
+          "description": "Publish, unpublish or hide the selected listings."
+        },
+        "review": {
+          "label": "Approve / reject",
+          "description": "Approve or reject pending listings in bulk."
+        },
+        "assign_agent": {
+          "label": "Assign agent",
+          "description": "Transfer listings to another agent."
+        },
+        "set_featured": {
+          "label": "Showcase",
+          "description": "Turn the showcase flag on or off in bulk."
+        },
+        "update_price": {
+          "label": "Update price",
+          "description": "Percentage or fixed-amount price change."
+        },
+        "set_taxonomy": {
+          "label": "Fix category",
+          "description": "Bulk-correct kind, property type, city or region."
+        },
+        "set_feed_flags": {
+          "label": "Feed flags",
+          "description": "Enable or disable 101evler and hangiev export."
+        },
+        "csv": {
+          "label": "Download CSV",
+          "description": "Download the selected listings as a spreadsheet."
+        },
+        "soft_delete": {
+          "label": "Delete",
+          "description": "Moves listings to the trash and removes them from the site and portals."
+        },
+        "restore": {
+          "label": "Restore",
+          "description": "Returns trashed listings to their previous status."
+        },
+        "purge": {
+          "label": "Delete permanently",
+          "description": "Permanently deletes listings and their images."
+        }
+      },
+      "fields": {
+        "status": "New status",
+        "decision": "Decision",
+        "approve": "Approve",
+        "reject": "Reject",
+        "agent": "New agent",
+        "featuredOn": "Add to showcase",
+        "featuredOff": "Remove from showcase",
+        "priceMode": "Change type",
+        "pricePercent": "Percentage (%)",
+        "priceAmount": "Fixed amount",
+        "priceValue": "Value",
+        "priceRounding": "Rounding step",
+        "priceHint": "A negative value applies a discount. E.g. -10 → 10% off.",
+        "export101": "101evler export",
+        "exportHangiev": "hangiev export",
+        "on": "On",
+        "off": "Off",
+        "unchanged": "Leave unchanged",
+        "kind": "Kind",
+        "propertyType": "Property type",
+        "city": "City",
+        "region": "Region",
+        "taxonomyHint": "Only the fields you fill in are written; empty ones stay unchanged.",
+        "csvHint": "The file downloads to your browser; no listing is modified.",
+        "choose": "Choose"
+      },
+      "errors": {
+        "no_targets": "No listings found for this operation.",
+        "too_many": "Too many listings for a single operation.",
+        "db_error": "Database error.",
+        "unknown_action": "Unknown action.",
+        "invalid_status": "Invalid status selection.",
+        "invalid_decision": "Invalid decision.",
+        "agent_not_found": "Agent not found.",
+        "invalid_price_mode": "Select a price change type.",
+        "invalid_price_value": "Enter a valid price value.",
+        "invalid_kind": "Invalid kind.",
+        "no_changes": "No field selected to change."
+      }
     }
   }
 }

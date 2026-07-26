@@ -610,7 +610,9 @@
       "siteSettings": "Website-Einstellungen",
       "aiTraining": "KI-Training",
       "deedsDocuments": "Grundbuch & Dokumente",
-      "listingTransfer": "Inserate übertragen"
+      "listingTransfer": "Inserate übertragen",
+      "listingTrash": "Papierkorb",
+      "bulkHistory": "Verlauf der Massenaktionen"
     },
     "deedsDocuments": {
       "title": "Grundbuch & Dokumente",
@@ -897,6 +899,127 @@
       "ownerStepIncomplete": "Geben Sie Vorname, Nachname und Telefon des Eigentümers ein, bevor Sie fortfahren.",
       "navPrev": "Zurück",
       "navNext": "Weiter"
+    },
+    "bulk": {
+      "title": "Massenaktionen",
+      "selectPage": "Alle auf dieser Seite auswählen",
+      "selectedCount": "{count} Inserate ausgewählt",
+      "selectAllMatching": "Alle {count} Inserate im Filter auswählen",
+      "allMatchingActive": "Alle Inserate im Filter sind ausgewählt",
+      "clear": "Auswahl aufheben",
+      "openDrawer": "Massenaktionen",
+      "scopeSelection": "{count} ausgewählte Inserate",
+      "scopeFilter": "{count} Inserate im Filter",
+      "close": "Schließen",
+      "back": "Zurück",
+      "run": "Anwenden",
+      "running": "Läuft…",
+      "cancel": "Abbrechen",
+      "confirmTypeCount": "Zum Bestätigen {count} eingeben",
+      "confirmPlaceholder": "Anzahl der Inserate",
+      "irreversible": "Diese Aktion kann nicht rückgängig gemacht werden.",
+      "reversible": "Gelöschte Inserate landen im Papierkorb und können wiederhergestellt werden.",
+      "resultSuccess": "{count} Inserate aktualisiert.",
+      "resultSkipped": "{count} Inserate übersprungen.",
+      "resultError": "Der Vorgang ist fehlgeschlagen.",
+      "noteNoPhoto": "Inserate ohne Foto wurden nicht freigegeben.",
+      "noteFeaturedLimit": "Einige Inserate wurden nicht hinzugefügt, da die Vitrine voll ist.",
+      "noteFeedFlagsReset": "Feed-Kennzeichen blieben aus; bei Bedarf wieder aktivieren.",
+      "groups": {
+        "status": "Veröffentlichungsstatus",
+        "moderation": "Moderation",
+        "assign": "Zuweisung",
+        "content": "Inhalt",
+        "feed": "Portal-Feeds",
+        "export": "Export",
+        "danger": "Löschen"
+      },
+      "actions": {
+        "set_status": {
+          "label": "Status ändern",
+          "description": "Ausgewählte Inserate veröffentlichen, zurückziehen oder ausblenden."
+        },
+        "review": {
+          "label": "Freigeben / ablehnen",
+          "description": "Wartende Inserate im Stapel freigeben oder ablehnen."
+        },
+        "assign_agent": {
+          "label": "Berater zuweisen",
+          "description": "Inserate an einen anderen Berater übertragen."
+        },
+        "set_featured": {
+          "label": "Vitrine",
+          "description": "Vitrinen-Kennzeichen im Stapel ein- oder ausschalten."
+        },
+        "update_price": {
+          "label": "Preis aktualisieren",
+          "description": "Prozentuale oder feste Preisänderung."
+        },
+        "set_taxonomy": {
+          "label": "Kategorie korrigieren",
+          "description": "Art, Objekttyp, Stadt oder Region im Stapel korrigieren."
+        },
+        "set_feed_flags": {
+          "label": "Feed-Kennzeichen",
+          "description": "Export zu 101evler und hangiev ein- oder ausschalten."
+        },
+        "csv": {
+          "label": "CSV herunterladen",
+          "description": "Ausgewählte Inserate als Tabelle herunterladen."
+        },
+        "soft_delete": {
+          "label": "Löschen",
+          "description": "Verschiebt Inserate in den Papierkorb und entfernt sie von Website und Portalen."
+        },
+        "restore": {
+          "label": "Wiederherstellen",
+          "description": "Setzt Inserate aus dem Papierkorb auf ihren vorherigen Status zurück."
+        },
+        "purge": {
+          "label": "Endgültig löschen",
+          "description": "Löscht Inserate und ihre Bilder endgültig."
+        }
+      },
+      "fields": {
+        "status": "Neuer Status",
+        "decision": "Entscheidung",
+        "approve": "Freigeben",
+        "reject": "Ablehnen",
+        "agent": "Neuer Berater",
+        "featuredOn": "Zur Vitrine hinzufügen",
+        "featuredOff": "Aus Vitrine entfernen",
+        "priceMode": "Art der Änderung",
+        "pricePercent": "Prozent (%)",
+        "priceAmount": "Fester Betrag",
+        "priceValue": "Wert",
+        "priceRounding": "Rundungsschritt",
+        "priceHint": "Ein negativer Wert ergibt einen Rabatt. Z. B. -10 → 10 % Rabatt.",
+        "export101": "101evler-Export",
+        "exportHangiev": "hangiev-Export",
+        "on": "Ein",
+        "off": "Aus",
+        "unchanged": "Unverändert lassen",
+        "kind": "Art",
+        "propertyType": "Objekttyp",
+        "city": "Stadt",
+        "region": "Region",
+        "taxonomyHint": "Nur ausgefüllte Felder werden geschrieben; leere bleiben unverändert.",
+        "csvHint": "Die Datei wird heruntergeladen; kein Inserat wird geändert.",
+        "choose": "Auswählen"
+      },
+      "errors": {
+        "no_targets": "Keine Inserate für diesen Vorgang gefunden.",
+        "too_many": "Zu viele Inserate für einen einzelnen Vorgang.",
+        "db_error": "Datenbankfehler.",
+        "unknown_action": "Unbekannte Aktion.",
+        "invalid_status": "Ungültige Statusauswahl.",
+        "invalid_decision": "Ungültige Entscheidung.",
+        "agent_not_found": "Berater nicht gefunden.",
+        "invalid_price_mode": "Art der Preisänderung wählen.",
+        "invalid_price_value": "Gültigen Preiswert eingeben.",
+        "invalid_kind": "Ungültige Art.",
+        "no_changes": "Kein Feld zum Ändern ausgewählt."
+      }
     }
   }
 }

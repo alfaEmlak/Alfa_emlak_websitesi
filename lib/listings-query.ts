@@ -300,6 +300,7 @@ export async function getListingByPublicId(listingId: string, access: Unpublishe
     .from("listings")
     .select("*, listing_images(*)")
     .eq("listing_id", listingId)
+    .is("deleted_at", null)
     .single();
 
   if (!base) return null;

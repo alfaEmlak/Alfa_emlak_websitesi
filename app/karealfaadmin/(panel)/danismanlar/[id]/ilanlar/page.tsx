@@ -58,6 +58,7 @@ export default async function AgentListingsPage({ params }: { params: Promise<{ 
   const { data } = await supabaseAdmin
     .from("listings")
     .select("*, listing_images(*)")
+    .is("deleted_at", null)
     .or(`created_by_agent_id.eq.${id},created_by_name.eq."${agentNameEsc}"`)
     .order("updated_at", { ascending: false })
     .limit(200);

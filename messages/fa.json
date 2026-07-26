@@ -610,7 +610,9 @@
       "siteSettings": "تنظیمات سایت",
       "aiTraining": "آموزش هوش مصنوعی",
       "deedsDocuments": "سند تاپو و مدارک",
-      "listingTransfer": "انتقال آگهی"
+      "listingTransfer": "انتقال آگهی",
+      "listingTrash": "سطل زباله",
+      "bulkHistory": "تاریخچه عملیات گروهی"
     },
     "deedsDocuments": {
       "title": "سند تاپو و مدارک",
@@ -897,6 +899,127 @@
       "ownerStepIncomplete": "برای رفتن به مراحل بعد، نام، نام خانوادگی و تلفن مالک را تکمیل کنید.",
       "navPrev": "قبلی",
       "navNext": "بعدی"
+    },
+    "bulk": {
+      "title": "عملیات گروهی",
+      "selectPage": "انتخاب همه در این صفحه",
+      "selectedCount": "{count} آگهی انتخاب شد",
+      "selectAllMatching": "انتخاب همه {count} آگهی مطابق فیلتر",
+      "allMatchingActive": "همه آگهی‌های مطابق فیلتر انتخاب شده‌اند",
+      "clear": "پاک کردن انتخاب",
+      "openDrawer": "عملیات گروهی",
+      "scopeSelection": "{count} آگهی انتخاب‌شده",
+      "scopeFilter": "{count} آگهی مطابق فیلتر",
+      "close": "بستن",
+      "back": "بازگشت",
+      "run": "اعمال",
+      "running": "در حال اجرا…",
+      "cancel": "انصراف",
+      "confirmTypeCount": "برای تأیید {count} را وارد کنید",
+      "confirmPlaceholder": "تعداد آگهی",
+      "irreversible": "این عملیات قابل بازگشت نیست.",
+      "reversible": "آگهی‌های حذف‌شده به سطل زباله منتقل می‌شوند و قابل بازیابی هستند.",
+      "resultSuccess": "{count} آگهی به‌روزرسانی شد.",
+      "resultSkipped": "{count} آگهی نادیده گرفته شد.",
+      "resultError": "عملیات ناموفق بود.",
+      "noteNoPhoto": "آگهی‌های بدون عکس تأیید نشدند.",
+      "noteFeaturedLimit": "به دلیل پر بودن ویترین، برخی آگهی‌ها اضافه نشدند.",
+      "noteFeedFlagsReset": "پرچم‌های خروجی خاموش ماندند؛ در صورت نیاز دوباره فعال کنید.",
+      "groups": {
+        "status": "وضعیت انتشار",
+        "moderation": "بازبینی",
+        "assign": "واگذاری",
+        "content": "محتوا",
+        "feed": "خروجی پورتال‌ها",
+        "export": "خروجی گرفتن",
+        "danger": "حذف"
+      },
+      "actions": {
+        "set_status": {
+          "label": "تغییر وضعیت",
+          "description": "انتشار، پیش‌نویس کردن یا پنهان کردن آگهی‌های انتخاب‌شده."
+        },
+        "review": {
+          "label": "تأیید / رد",
+          "description": "تأیید یا رد گروهی آگهی‌های در انتظار."
+        },
+        "assign_agent": {
+          "label": "واگذاری به مشاور",
+          "description": "انتقال آگهی‌ها به مشاور دیگر."
+        },
+        "set_featured": {
+          "label": "ویترین",
+          "description": "روشن یا خاموش کردن گروهی نشان ویترین."
+        },
+        "update_price": {
+          "label": "به‌روزرسانی قیمت",
+          "description": "تغییر قیمت به‌صورت درصدی یا مبلغ ثابت."
+        },
+        "set_taxonomy": {
+          "label": "اصلاح دسته‌بندی",
+          "description": "اصلاح گروهی نوع معامله، نوع ملک، شهر یا منطقه."
+        },
+        "set_feed_flags": {
+          "label": "پرچم‌های خروجی",
+          "description": "فعال یا غیرفعال کردن خروجی 101evler و hangiev."
+        },
+        "csv": {
+          "label": "دانلود CSV",
+          "description": "دانلود آگهی‌های انتخاب‌شده به‌صورت فایل جدولی."
+        },
+        "soft_delete": {
+          "label": "حذف",
+          "description": "آگهی‌ها را به سطل زباله می‌برد و از سایت و پورتال‌ها حذف می‌کند."
+        },
+        "restore": {
+          "label": "بازیابی",
+          "description": "آگهی‌های سطل زباله را به وضعیت قبلی بازمی‌گرداند."
+        },
+        "purge": {
+          "label": "حذف دائمی",
+          "description": "آگهی‌ها و تصاویرشان را برای همیشه حذف می‌کند."
+        }
+      },
+      "fields": {
+        "status": "وضعیت جدید",
+        "decision": "تصمیم",
+        "approve": "تأیید",
+        "reject": "رد",
+        "agent": "مشاور جدید",
+        "featuredOn": "افزودن به ویترین",
+        "featuredOff": "حذف از ویترین",
+        "priceMode": "نوع تغییر",
+        "pricePercent": "درصد (%)",
+        "priceAmount": "مبلغ ثابت",
+        "priceValue": "مقدار",
+        "priceRounding": "گام گرد کردن",
+        "priceHint": "مقدار منفی تخفیف اعمال می‌کند. مثلاً -10 → ۱۰٪ تخفیف.",
+        "export101": "خروجی 101evler",
+        "exportHangiev": "خروجی hangiev",
+        "on": "روشن",
+        "off": "خاموش",
+        "unchanged": "بدون تغییر",
+        "kind": "نوع معامله",
+        "propertyType": "نوع ملک",
+        "city": "شهر",
+        "region": "منطقه",
+        "taxonomyHint": "فقط فیلدهایی که پر می‌کنید نوشته می‌شوند؛ فیلدهای خالی تغییر نمی‌کنند.",
+        "csvHint": "فایل در مرورگر شما دانلود می‌شود؛ هیچ آگهی تغییر نمی‌کند.",
+        "choose": "انتخاب کنید"
+      },
+      "errors": {
+        "no_targets": "آگهی‌ای برای این عملیات یافت نشد.",
+        "too_many": "تعداد آگهی‌ها برای یک عملیات بیش از حد است.",
+        "db_error": "خطای پایگاه داده.",
+        "unknown_action": "عملیات ناشناخته.",
+        "invalid_status": "وضعیت انتخابی نامعتبر است.",
+        "invalid_decision": "تصمیم نامعتبر است.",
+        "agent_not_found": "مشاور یافت نشد.",
+        "invalid_price_mode": "نوع تغییر قیمت را انتخاب کنید.",
+        "invalid_price_value": "مقدار قیمت معتبری وارد کنید.",
+        "invalid_kind": "نوع معامله نامعتبر است.",
+        "no_changes": "هیچ فیلدی برای تغییر انتخاب نشده است."
+      }
     }
   }
 }

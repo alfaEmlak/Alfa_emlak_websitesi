@@ -129,6 +129,7 @@ async function fetchAllListings(): Promise<{ rows: ListingRow[]; error: string |
     const { data, error } = await supabaseAdmin
       .from("listings")
       .select(columns)
+      .is("deleted_at", null)
       .range(offset, offset + pageSize - 1);
 
     if (error) {

@@ -620,7 +620,9 @@
       "aiTraining": "AI Eğitimi",
       "deedsDocuments": "Koçan ve belgeler",
       "feedStatus": "Feed durumu",
-      "listingTransfer": "İlan aktarımı"
+      "listingTransfer": "İlan aktarımı",
+      "listingTrash": "Çöp kutusu",
+      "bulkHistory": "Toplu işlem geçmişi"
     },
     "deedsDocuments": {
       "title": "Koçan ve belgeler",
@@ -908,6 +910,127 @@
       "ownerStepIncomplete": "Mal sahibi adımından sonra devam etmek için ad, soyad ve telefon numarasını doldurmalısınız.",
       "navPrev": "Önceki",
       "navNext": "Sonraki"
+    },
+    "bulk": {
+      "title": "Toplu işlemler",
+      "selectPage": "Sayfadaki tümünü seç",
+      "selectedCount": "{count} ilan seçildi",
+      "selectAllMatching": "Filtreye uyan {count} ilanın tümünü seç",
+      "allMatchingActive": "Filtreye uyan tüm ilanlar seçili",
+      "clear": "Seçimi temizle",
+      "openDrawer": "Toplu işlemler",
+      "scopeSelection": "Seçilen {count} ilan",
+      "scopeFilter": "Filtreye uyan {count} ilan",
+      "close": "Kapat",
+      "back": "Geri",
+      "run": "Uygula",
+      "running": "Çalışıyor…",
+      "cancel": "Vazgeç",
+      "confirmTypeCount": "Onaylamak için {count} yazın",
+      "confirmPlaceholder": "İlan sayısı",
+      "irreversible": "Bu işlem geri alınamaz.",
+      "reversible": "Silinen ilanlar çöp kutusuna taşınır, geri yüklenebilir.",
+      "resultSuccess": "{count} ilan güncellendi.",
+      "resultSkipped": "{count} ilan atlandı.",
+      "resultError": "İşlem başarısız oldu.",
+      "noteNoPhoto": "Fotoğrafı olmayan ilanlar onaylanmadı.",
+      "noteFeaturedLimit": "Vitrin sınırı dolduğu için bazı ilanlar eklenmedi.",
+      "noteFeedFlagsReset": "Feed bayrakları kapalı kaldı; gerekiyorsa yeniden açın.",
+      "groups": {
+        "status": "Yayın durumu",
+        "moderation": "Moderasyon",
+        "assign": "Atama",
+        "content": "İçerik",
+        "feed": "Portal aktarımı",
+        "export": "Dışa aktarma",
+        "danger": "Silme"
+      },
+      "actions": {
+        "set_status": {
+          "label": "Durum değiştir",
+          "description": "Seçili ilanları yayına al, taslağa çek veya gizle."
+        },
+        "review": {
+          "label": "Onayla / reddet",
+          "description": "Onay bekleyen ilanları toplu onaylayın veya reddedin."
+        },
+        "assign_agent": {
+          "label": "Danışman ata",
+          "description": "İlanları başka bir danışmana devredin."
+        },
+        "set_featured": {
+          "label": "Vitrin",
+          "description": "Vitrin işaretini toplu açın veya kapatın."
+        },
+        "update_price": {
+          "label": "Fiyat güncelle",
+          "description": "Yüzdesel veya sabit tutarlı fiyat değişikliği."
+        },
+        "set_taxonomy": {
+          "label": "Kategori düzelt",
+          "description": "Tür, emlak tipi, şehir veya bölgeyi toplu düzeltin."
+        },
+        "set_feed_flags": {
+          "label": "Feed bayrakları",
+          "description": "101evler ve hangiev aktarımını açın veya kapatın."
+        },
+        "csv": {
+          "label": "CSV indir",
+          "description": "Seçili ilanları tablo dosyası olarak indirin."
+        },
+        "soft_delete": {
+          "label": "Sil",
+          "description": "İlanları çöp kutusuna taşır; siteden ve portallardan kaldırır."
+        },
+        "restore": {
+          "label": "Geri yükle",
+          "description": "Çöp kutusundaki ilanları eski durumuna döndürür."
+        },
+        "purge": {
+          "label": "Kalıcı sil",
+          "description": "İlanları ve görsellerini kalıcı olarak siler."
+        }
+      },
+      "fields": {
+        "status": "Yeni durum",
+        "decision": "Karar",
+        "approve": "Onayla",
+        "reject": "Reddet",
+        "agent": "Yeni danışman",
+        "featuredOn": "Vitrine ekle",
+        "featuredOff": "Vitrinden çıkar",
+        "priceMode": "Değişim tipi",
+        "pricePercent": "Yüzde (%)",
+        "priceAmount": "Sabit tutar",
+        "priceValue": "Değer",
+        "priceRounding": "Yuvarlama adımı",
+        "priceHint": "Negatif değer indirim uygular. Örn. -10 → %10 indirim.",
+        "export101": "101evler aktarımı",
+        "exportHangiev": "hangiev aktarımı",
+        "on": "Açık",
+        "off": "Kapalı",
+        "unchanged": "Değiştirme",
+        "kind": "Tür",
+        "propertyType": "Emlak tipi",
+        "city": "Şehir",
+        "region": "Bölge",
+        "taxonomyHint": "Yalnızca doldurduğunuz alanlar yazılır, boş bırakılanlar değişmez.",
+        "csvHint": "Dosya tarayıcınıza indirilir; hiçbir ilan değiştirilmez.",
+        "choose": "Seçin"
+      },
+      "errors": {
+        "no_targets": "İşlem yapılacak ilan bulunamadı.",
+        "too_many": "Tek seferde işlenebilecek ilan sayısı aşıldı.",
+        "db_error": "Veritabanı hatası.",
+        "unknown_action": "Bilinmeyen işlem.",
+        "invalid_status": "Geçersiz durum seçimi.",
+        "invalid_decision": "Geçersiz karar.",
+        "agent_not_found": "Danışman bulunamadı.",
+        "invalid_price_mode": "Fiyat değişim tipini seçin.",
+        "invalid_price_value": "Geçerli bir fiyat değeri girin.",
+        "invalid_kind": "Geçersiz tür.",
+        "no_changes": "Değiştirilecek bir alan seçilmedi."
+      }
     }
   }
 }
