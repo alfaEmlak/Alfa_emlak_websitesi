@@ -350,7 +350,96 @@ export const AD_SPECS_FROM_FEATURES: Record<string, string> = {
   "vestiyer": "vestiyer",
   "duvar kağıdı": "wallpaper",
   "su pompası": "water_booster",
+  // PDF'te "Su Yalıtımı" yazıyor, 101evler panelinde "Su Altyapısı" görünüyor.
   "su yalıtımı": "water_infrastructure",
+  "su altyapısı": "water_infrastructure",
   "su deposu": "water_tank",
   "batı cephesi": "west_face",
 };
+
+/* ────────── Serbest metin özellik eşleşmesi ──────────
+ * `features` dizisi admin tarafında serbest yazılıyor ("Gölet ve Dağ Manzaralı",
+ * "Ana yol üzeri" …). Tam eşleşme bu metinleri yakalayamadığı için normalize
+ * edilmiş gövde (stem) araması yapıyoruz.
+ */
+
+/** Türkçe metni eşleşme için sadeleştirir: küçük harf, aksan yok, tek boşluk. */
+export function normalizeFeatureText(input: string): string {
+  return input
+    .toLocaleLowerCase("tr-TR")
+    .replace(/ı/g, "i")
+    .normalize("NFD")
+    .replace(new RegExp("[\\u0300-\\u036f]", "g"), "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** `stem` metnin içinde geçiyorsa tag işaretlenir; `not` varsa o geçtiğinde atlanır. */
+export const AD_SPEC_FEATURE_PATTERNS: Array<{ stem: string; tag: string; not?: string[] }> = [
+  // Manzara / konum
+  { stem: "dag manzara", tag: "mountain_view" },
+  { stem: "denize sifir", tag: "sea_front" },
+  { stem: "deniz manzara", tag: "sea_view" },
+  { stem: "sehir manzara", tag: "city_view" },
+  { stem: "doga manzara", tag: "nature_view" },
+  { stem: "yesillik manzara", tag: "nature_view" },
+  { stem: "yesil manzara", tag: "nature_view" },
+  { stem: "ana yol", tag: "road" },
+  { stem: "yol uzeri", tag: "road" },
+  { stem: "sehir merkez", tag: "in_city" },
+  { stem: "sehir ici", tag: "in_city" },
+  // Cephe
+  { stem: "kuzey cephe", tag: "north_face" },
+  { stem: "guney cephe", tag: "south_face" },
+  { stem: "dogu cephe", tag: "east_face" },
+  { stem: "bati cephe", tag: "west_face" },
+  // Altyapı
+  { stem: "elektrik altyapi", tag: "electrical_infrastructure" },
+  { stem: "su altyapi", tag: "water_infrastructure" },
+  { stem: "su yalitim", tag: "water_infrastructure" },
+  { stem: "isi yalitim", tag: "thermal_insulation" },
+  { stem: "su kuyusu", tag: "su_kuyusu" },
+  { stem: "su deposu", tag: "water_tank" },
+  { stem: "su pompa", tag: "water_booster" },
+  { stem: "jenerator", tag: "generator" },
+  { stem: "solar", tag: "solar_electric" },
+  { stem: "tv altyapi", tag: "tv_infrastructure" },
+  // Havuz (özel/ortak önce, genel "havuz" onlar yokken)
+  { stem: "ozel havuz", tag: "private_pool" },
+  { stem: "ortak havuz", tag: "public_pool" },
+  { stem: "havuz", tag: "park", not: ["ozel havuz", "ortak havuz"] },
+  // Diğer yaygın özellikler
+  { stem: "klima", tag: "ac" },
+  { stem: "asansor", tag: "lift" },
+  { stem: "somine", tag: "fireplace" },
+  { stem: "balkon", tag: "balcony" },
+  { stem: "teras", tag: "terrace" },
+  { stem: "bahce", tag: "garden" },
+  { stem: "garaj", tag: "garage" },
+  { stem: "kapali otopark", tag: "closed_park" },
+  { stem: "ankastre", tag: "builtin_kitchen" },
+  { stem: "camasir oda", tag: "laundry" },
+  { stem: "guvenlik kamera", tag: "security_cam" },
+  { stem: "cift cam", tag: "cift_cam" },
+  { stem: "celik kapi", tag: "steel_door" },
+  { stem: "sinir duvar", tag: "bounding_wall" },
+  { stem: "barbeku", tag: "barbeku" },
+  { stem: "gomme dolap", tag: "closet" },
+  { stem: "sari tas", tag: "sari_tas" },
+];
+
+/* ────────── Arsa konum etiketleri → <ad_specs> ──────────
+ * lib/land-parcel-detail.ts içindeki LAND_LOCATION_TAG_DEFS id'leri.
+ * "koy_merkezi" için 101evler tarafında karşılık yok.
+ */
+export const LAND_TAG_TO_AD_SPEC: Record<string, string> = {
+  dag_manzara: "mountain_view",
+  deniz_manzara: "sea_view",
+  sehir_merkezi: "in_city",
+  ana_yol: "road",
+};
+
+/* ────────── Arsa / arazi ilan tipleri <type_id> ──────────
+ * Bu tiplerde 101evler'in "Alan" alanı parsel büyüklüğüdür (kapalı alan değil).
+ */
+export const LAND_TYPE_IDS = new Set<number>([5, 6, 22, 23, 24, 25, 27]);

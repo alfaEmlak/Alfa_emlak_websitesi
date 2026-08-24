@@ -7,7 +7,15 @@
 
 import { normalizeListing } from "@/lib/listing-normalize";
 import {
+  parseLandFieldsFromDetailFields,
+  listingPropertyTypeIsArsa,
+} from "@/lib/land-parcel-detail";
+import {
   AD_SPECS_FROM_FEATURES,
+  AD_SPEC_FEATURE_PATTERNS,
+  LAND_TAG_TO_AD_SPEC,
+  LAND_TYPE_IDS,
+  normalizeFeatureText,
   CURRENCY_CODE_MAP,
   CURRENCY_NUMBER_TO_CODE,
   TYPE_ID_LABEL_MAP,
@@ -226,6 +234,7 @@ function getTranslation(
 
 function buildAdSpecs(
   features: unknown,
+  landTags: Record<string, boolean>,
   booleans: {
     hasPool?: boolean | null;
     hasGarden?: boolean | null;
@@ -252,12 +261,26 @@ function buildAdSpecs(
   if (booleans.hasTerrace) set.set("terrace", true);
   if (booleans.hasAirConditioning) set.set("ac", true);
 
-  // features (jsonb dizisi veya JSON string)
+  // Arsa/arazi ilanlarının "Konum / çevre" etiketleri (detail_fields)
+  for (const [tagId, on] of Object.entries(landTags)) {
+    if (!on) continue;
+    const tagName = LAND_TAG_TO_AD_SPEC[tagId];
+    if (tagName) set.set(tagName, true);
+  }
+
+  // features (jsonb dizisi veya JSON string) — önce tam eşleşme, sonra gövde araması
   const list = toStringArray(features);
   for (const raw of list) {
-    const key = raw.trim().toLowerCase();
-    const tagName = AD_SPECS_FROM_FEATURES[key];
-    if (tagName) set.set(tagName, true);
+    const exact = AD_SPECS_FROM_FEATURES[raw.trim().toLowerCase()];
+    if (exact) set.set(exact, true);
+
+    const text = normalizeFeatureText(raw);
+    if (!text) continue;
+    for (const { stem, tag: tagName, not } of AD_SPEC_FEATURE_PATTERNS) {
+      if (!text.includes(stem)) continue;
+      if (not?.some((n) => text.includes(n))) continue;
+      set.set(tagName, true);
+    }
   }
 
   if (!set.size) return "";
@@ -409,6 +432,18 @@ export function buildAdElement(
   const pricePeriodId = ext.price_period_id != null ? Number(ext.price_period_id) : 0;
   const firstRealtorId = resolveFirstRealtorId(rawListing, realtors, realtorMap);
 
+  // Arsa/arazi: alan ve imar bilgileri farklı kolonlardan gelir.
+  //  - 101evler'in "Alan" alanı parsel büyüklüğüdür (plot_area_m2),
+  //    bizdeki area_m2 ise "toplam imar alanı".
+  //  - İmar oranı / taban oranı / kat izni detail_fields JSON'unda tutulur.
+  const isLand =
+    LAND_TYPE_IDS.has(typeId) || listingPropertyTypeIsArsa(rawListing.property_type);
+  const land = parseLandFieldsFromDetailFields(rawListing.detail_fields);
+  const totalArea = isLand ? (l.plotAreaM2 ?? l.areaM2) : l.areaM2;
+  const floorRatio = ext.floor_ratio ?? (isLand ? land.toplamImarOrani : "") ?? "";
+  const landUse = ext.land_use ?? (isLand ? land.tabanOrani : "") ?? "";
+  const floorCount = ext.floor_count ?? (isLand ? land.maxKat : "") ?? "";
+
   const parts: string[] = [
     tag("lastupdate", fmtDate(l.updatedAt ?? l.createdAt)),
     tag("property_id", ext.property_id ?? l.listingId),
@@ -469,8 +504,8 @@ export function buildAdElement(
     tag("bedroom_count", l.bedrooms),
     tag("bathroom_count", l.bathrooms),
     tag("floor", l.floor),
-    tag("floor_count", ext.floor_count ?? 0),
-    tag("total_area", l.areaM2),
+    tag("floor_count", floorCount || 0),
+    tag("total_area", totalArea),
     buildAgeId ? tag("build_age_id", buildAgeId) : "",
     buildAgeId ? tag("build_age", BUILD_AGE_LABEL_MAP[buildAgeId] ?? "") : "",
     furnishingId ? tag("furnishing_id", furnishingId) : "",
@@ -479,8 +514,8 @@ export function buildAdElement(
     tag("donum", ext.donum ?? 0),
     tag("evlek", ext.evlek ?? 0),
     tag("ayakkare", ext.ayakkare ?? 0),
-    tag("land_use", ext.land_use ?? 0),
-    tag("floor_ratio", ext.floor_ratio ?? 0),
+    tag("land_use", landUse || 0),
+    tag("floor_ratio", floorRatio || 0),
     tag("flat_for_land", ext.flat_for_land ?? 0),
 
     tag("map_available", l.mapEnabled ? 1 : 0),
@@ -495,7 +530,7 @@ export function buildAdElement(
 
     cdataTag("ad_key", adKey),
 
-    buildAdSpecs(rawListing.features, {
+    buildAdSpecs(rawListing.features, land.tags, {
       hasPool: l.hasPool,
       hasGarden: l.hasGarden,
       hasFireplace: l.hasFireplace,
