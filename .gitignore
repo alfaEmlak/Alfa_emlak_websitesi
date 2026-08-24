@@ -49,3 +49,12 @@ next-env.d.ts
 
 # sqlite
 *.db-journal
+
+# Supabase → Dokploy taşıma yedekleri (repoya girmemeli)
+storage-backup/
+db-backup.dump
+db-backup.sql
+
+# calisma/hata ayiklama ciktilari
+scratch/
+.claude/worktrees/
