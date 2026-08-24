@@ -1,6 +1,6 @@
 "use client";
 
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, LayersControl, useMapEvents, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect, useState, useRef } from "react";
@@ -146,10 +146,30 @@ export default function LocationPicker({ onLocationSelect, initialLat, initialLn
           style={{ height: "400px", width: "100%" }}
         >
           <MapController center={focusLat && focusLng ? [focusLat, focusLng] : center} zoom={focusZoom} />
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
+          <LayersControl position="topright">
+            <LayersControl.BaseLayer checked name="Harita">
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+            </LayersControl.BaseLayer>
+            <LayersControl.BaseLayer name="Uydu">
+              {/* Esri World Imagery: anahtar gerektirmez, KKTC dahil yüksek çözünürlük. */}
+              <TileLayer
+                attribution="Kaynak: Esri, Maxar, Earthstar Geographics"
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                maxZoom={19}
+              />
+            </LayersControl.BaseLayer>
+            <LayersControl.Overlay name="Uydu üzerinde sokak adları">
+              {/* Uydu görünümünde yol ve yer adlarını okunur tutmak için şeffaf etiket katmanı. */}
+              <TileLayer
+                attribution="Kaynak: Esri"
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+                maxZoom={19}
+              />
+            </LayersControl.Overlay>
+          </LayersControl>
           <MapClickHandler onLocationSelect={handleLocationSelect} />
           {markerPosition && (
             <DraggableMarker position={markerPosition} onDragEnd={handleLocationSelect} />
@@ -184,7 +204,8 @@ export default function LocationPicker({ onLocationSelect, initialLat, initialLn
       )}
 
       <p className="text-xs text-zinc-500">
-        💡 Haritada bir noktaya tıklayın veya pin sürükleyerek konumu değiştirin
+        💡 Haritada bir noktaya tıklayın veya pin sürükleyerek konumu değiştirin. Sağ üstteki katman
+        düğmesinden <strong className="font-semibold text-zinc-600">Uydu</strong> görünümüne geçebilirsiniz.
       </p>
     </div>
   );

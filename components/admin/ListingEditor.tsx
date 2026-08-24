@@ -532,6 +532,7 @@ export function ListingEditor({
   const [galleryDraggingIdx, setGalleryDraggingIdx] = useState<number | null>(null);
   const [galleryDragOverIdx, setGalleryDragOverIdx] = useState<number | null>(null);
   const [uploadBusy, setUploadBusy] = useState(false);
+  const [galleryDropActive, setGalleryDropActive] = useState(false);
   const [aiShortBusy, setAiShortBusy] = useState(false);
   const [aiLongBusy, setAiLongBusy] = useState(false);
 
@@ -1087,6 +1088,11 @@ export function ListingEditor({
     const input = e.target;
     const picked = input.files?.length ? Array.from(input.files) : [];
     input.value = "";
+    await uploadGalleryFiles(picked);
+  }
+
+  /** Dosya seçici ve sürükle-bırak aynı yükleme yolunu kullanır. */
+  async function uploadGalleryFiles(picked: File[]) {
     if (!picked.length) return;
     const list = picked.filter(isSelectableImageFile);
     if (!list.length) {
@@ -2515,10 +2521,40 @@ export function ListingEditor({
                   <strong className="text-zinc-800">1.</strong>, <strong className="text-zinc-800">2.</strong>,{" "}
                   <strong className="text-zinc-800">3.</strong> … resim olarak gösterilir.
                 </p>
-                <label className={`mt-4 inline-flex cursor-pointer items-center justify-center rounded-lg border-2 border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 hover:bg-zinc-50 ${uploadBusy ? "pointer-events-none opacity-50" : ""}`}>
-                  <input type="file" accept="image/*,.heic,.heif,.avif" multiple className="sr-only" onChange={onGalleryFilesChange} disabled={uploadBusy} />
-                  {uploadBusy ? "Yükleniyor..." : "Fotoğraf yükle (birden çok seçilebilir)"}
-                </label>
+                <div
+                  onDragOver={(e) => {
+                    // Yalnızca dosya sürüklemesi; galerideki sıra değiştirme sürüklemesi tetiklemesin.
+                    if (uploadBusy || !e.dataTransfer.types.includes("Files")) return;
+                    e.preventDefault();
+                    setGalleryDropActive(true);
+                  }}
+                  onDragLeave={(e) => {
+                    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+                    setGalleryDropActive(false);
+                  }}
+                  onDrop={(e) => {
+                    if (uploadBusy || !e.dataTransfer.types.includes("Files")) return;
+                    e.preventDefault();
+                    setGalleryDropActive(false);
+                    void uploadGalleryFiles(Array.from(e.dataTransfer.files));
+                  }}
+                  className={`mt-4 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-8 text-center transition-colors ${
+                    galleryDropActive
+                      ? "border-emerald-500 bg-emerald-50"
+                      : "border-zinc-300 bg-zinc-50/60"
+                  } ${uploadBusy ? "opacity-50" : ""}`}
+                >
+                  <p className="text-sm font-semibold text-zinc-700">
+                    {galleryDropActive
+                      ? "Bırakın, yüklenecek"
+                      : "Fotoğrafları buraya sürükleyip bırakın"}
+                  </p>
+                  <p className="text-xs text-zinc-500">veya</p>
+                  <label className={`inline-flex cursor-pointer items-center justify-center rounded-lg border-2 border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 hover:bg-zinc-50 ${uploadBusy ? "pointer-events-none" : ""}`}>
+                    <input type="file" accept="image/*,.heic,.heif,.avif" multiple className="sr-only" onChange={onGalleryFilesChange} disabled={uploadBusy} />
+                    {uploadBusy ? "Yükleniyor..." : "Fotoğraf yükle (birden çok seçilebilir)"}
+                  </label>
+                </div>
                 <p className="mt-2 text-xs text-zinc-500">
                   Sırayı değiştirmek için küçük tutamacı (<GripVertical size={14} strokeWidth={2} className="inline-block align-middle text-zinc-400" />) tutup başka bir fotoğraf kutusunun üzerine bırakın.
                 </p>
