@@ -258,7 +258,8 @@
       "plotAreaM2": "متراژ زمین (مترمربع)",
       "floor": "طبقه",
       "buildingAge": "سن بنا",
-      "livingRooms": "پذیرایی"
+      "livingRooms": "پذیرایی",
+      "deliveryDate": "تاریخ تحویل"
     },
     "consultantLabels": {
       "consultantName": "نام مشاور",
@@ -735,7 +736,29 @@
       "actionUnpublish": "لغو انتشار",
       "filterAgentAll": "مشاور (همه)",
       "countTotal": "مجموعاً {total} آگهی",
-      "countFiltered": "مجموعاً {total} آگهی · {filtered} فیلتر شد"
+      "countFiltered": "مجموعاً {total} آگهی · {filtered} فیلتر شد",
+      "searchPh": "جستجوی شناسه یا عنوان آگهی…",
+      "filterRegionAll": "منطقه (همه)",
+      "filterRegionPickCity": "ابتدا شهر را انتخاب کنید",
+      "priceRange": "محدوده قیمت",
+      "priceMin": "حداقل",
+      "priceMax": "حداکثر",
+      "resetFilters": "پاک کردن فیلترها",
+      "viewTable": "جدول",
+      "viewGrid": "کارت",
+      "sortUpdated": "آخرین به‌روزرسانی",
+      "sortNewest": "جدیدترین",
+      "sortPriceAsc": "قیمت: کم به زیاد",
+      "sortPriceDesc": "قیمت: زیاد به کم",
+      "tabAll": "همه",
+      "statTotal": "کل آگهی‌ها",
+      "statPublished": "منتشر شده",
+      "statDraft": "پیش‌نویس",
+      "statPending": "در انتظار تأیید",
+      "resultCount": "{count} آگهی",
+      "emptyFiltered": "آگهی مطابق فیلترها یافت نشد",
+      "emptyFilteredHint": "فیلترها را تغییر دهید.",
+      "updating": "در حال به‌روزرسانی…"
     },
     "approval": {
       "titleAdmin": "در انتظار تأیید",

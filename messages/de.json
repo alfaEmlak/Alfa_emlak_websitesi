@@ -258,7 +258,8 @@
       "plotAreaM2": "Grundstücksfläche (m²)",
       "floor": "Etage",
       "buildingAge": "Gebäudealter",
-      "livingRooms": "Wohnzimmer"
+      "livingRooms": "Wohnzimmer",
+      "deliveryDate": "Fertigstellung"
     },
     "consultantLabels": {
       "consultantName": "Name des Beraters",
@@ -735,7 +736,29 @@
       "actionUnpublish": "Zurückziehen",
       "filterAgentAll": "Berater (alle)",
       "countTotal": "Insgesamt {total} Anzeigen",
-      "countFiltered": "Insgesamt {total} Anzeigen · {filtered} gefiltert"
+      "countFiltered": "Insgesamt {total} Anzeigen · {filtered} gefiltert",
+      "searchPh": "Anzeigen-ID oder Titel suchen…",
+      "filterRegionAll": "Region (alle)",
+      "filterRegionPickCity": "Zuerst Stadt wählen",
+      "priceRange": "Preisspanne",
+      "priceMin": "Min",
+      "priceMax": "Max",
+      "resetFilters": "Filter zurücksetzen",
+      "viewTable": "Tabelle",
+      "viewGrid": "Karten",
+      "sortUpdated": "Zuletzt aktualisiert",
+      "sortNewest": "Neueste zuerst",
+      "sortPriceAsc": "Preis: aufsteigend",
+      "sortPriceDesc": "Preis: absteigend",
+      "tabAll": "Alle",
+      "statTotal": "Anzeigen gesamt",
+      "statPublished": "Veröffentlicht",
+      "statDraft": "Entwurf",
+      "statPending": "Wartet auf Freigabe",
+      "resultCount": "{count} Anzeigen",
+      "emptyFiltered": "Keine passenden Anzeigen",
+      "emptyFilteredHint": "Ändern Sie die Filter.",
+      "updating": "Wird aktualisiert…"
     },
     "approval": {
       "titleAdmin": "Ausstehende Freigaben",

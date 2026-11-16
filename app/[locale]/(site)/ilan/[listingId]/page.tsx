@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import { formatDeliveryDate, parseDeliveryDateFromDetailFields } from "@/lib/project-delivery";
 import { Link } from "@/i18n/routing";
 import { getTranslatedListing, getTranslatedSiteSettings } from "@/lib/i18n-utils";
 import { listingPropertyTypeDisplayLabel } from "@/lib/listing-property-taxonomy";
@@ -130,6 +131,11 @@ export default async function ListingDetailPage({ params }: Props) {
   const floorDisplay = normalizeFloorFromListing((listing as any).floor);
   pushRow("floor", tw("propertyLabels.floor"), floorDisplay);
   pushRow("buildingAge", tw("propertyLabels.buildingAge"), buildingAgeDisplay);
+  pushRow(
+    "deliveryDate",
+    tw("propertyLabels.deliveryDate"),
+    formatDeliveryDate(parseDeliveryDateFromDetailFields(listing.detailFields), locale),
+  );
 
   const allDetailRows = [...structuredRows, ...detailRows];
   const features = mergeListingHighlightLines(listing as Record<string, unknown>);

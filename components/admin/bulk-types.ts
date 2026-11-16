@@ -7,6 +7,8 @@
  */
 
 export type AdminListingFilter = {
+  /** İlan ID veya başlıkta arama (tek kutu). */
+  q?: string;
   listingId?: string;
   title?: string;
   city?: string;
@@ -14,6 +16,10 @@ export type AdminListingFilter = {
   propertyType?: string;
   status?: string;
   agent?: string;
+  region?: string;
+  /** Sayısal metin; ilanın kendi para birimindeki fiyatla karşılaştırılır. */
+  minPrice?: string;
+  maxPrice?: string;
 };
 
 export type BulkTarget =

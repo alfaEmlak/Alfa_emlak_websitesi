@@ -259,7 +259,8 @@
       "plotAreaM2": "Plot Area (m²)",
       "floor": "Floor",
       "buildingAge": "Building Age",
-      "livingRooms": "Living Rooms"
+      "livingRooms": "Living Rooms",
+      "deliveryDate": "Delivery Date"
     },
     "consultantLabels": {
       "consultantName": "Consultant Name",
@@ -737,7 +738,29 @@
       "actionUnpublish": "Unpublish",
       "filterAgentAll": "Consultant (all)",
       "countTotal": "{total} listings in total",
-      "countFiltered": "{total} listings in total · {filtered} filtered"
+      "countFiltered": "{total} listings in total · {filtered} filtered",
+      "searchPh": "Search listing ID or title…",
+      "filterRegionAll": "Region (all)",
+      "filterRegionPickCity": "Select a city first",
+      "priceRange": "Price range",
+      "priceMin": "Min",
+      "priceMax": "Max",
+      "resetFilters": "Reset filters",
+      "viewTable": "Table",
+      "viewGrid": "Cards",
+      "sortUpdated": "Recently updated",
+      "sortNewest": "Newest added",
+      "sortPriceAsc": "Price: low to high",
+      "sortPriceDesc": "Price: high to low",
+      "tabAll": "All",
+      "statTotal": "Total listings",
+      "statPublished": "Published",
+      "statDraft": "Draft",
+      "statPending": "Pending approval",
+      "resultCount": "Showing {count} listings",
+      "emptyFiltered": "No listings match the filters",
+      "emptyFilteredHint": "Try changing the filters.",
+      "updating": "Updating…"
     },
     "approval": {
       "titleAdmin": "Pending approvals",

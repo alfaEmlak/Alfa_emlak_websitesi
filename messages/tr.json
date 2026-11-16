@@ -259,7 +259,8 @@
       "plotAreaM2": "Arsa Alanı (m²)",
       "floor": "Kat",
       "buildingAge": "Bina Yaşı",
-      "livingRooms": "Salon"
+      "livingRooms": "Salon",
+      "deliveryDate": "Teslim Tarihi"
     },
     "consultantLabels": {
       "consultantName": "Danışman Adı",
@@ -746,7 +747,29 @@
       "actionUnpublish": "Yayından Kaldır",
       "filterAgentAll": "Danışman (tümü)",
       "countTotal": "Toplam {total} ilan",
-      "countFiltered": "Toplam {total} ilan · {filtered} tanesi filtrelendi"
+      "countFiltered": "Toplam {total} ilan · {filtered} tanesi filtrelendi",
+      "searchPh": "İlan ID veya başlık ara…",
+      "filterRegionAll": "Bölge (tümü)",
+      "filterRegionPickCity": "Önce şehir seçin",
+      "priceRange": "Fiyat aralığı",
+      "priceMin": "Min",
+      "priceMax": "Maks",
+      "resetFilters": "Filtreleri sıfırla",
+      "viewTable": "Tablo",
+      "viewGrid": "Kartlar",
+      "sortUpdated": "Son güncellenen",
+      "sortNewest": "En yeni eklenen",
+      "sortPriceAsc": "Fiyat: düşükten yükseğe",
+      "sortPriceDesc": "Fiyat: yüksekten düşüğe",
+      "tabAll": "Tümü",
+      "statTotal": "Toplam ilan",
+      "statPublished": "Yayında",
+      "statDraft": "Taslak",
+      "statPending": "Onay bekleyen",
+      "resultCount": "{count} ilan listeleniyor",
+      "emptyFiltered": "Kriterlere uygun ilan bulunamadı",
+      "emptyFilteredHint": "Filtreleri değiştirerek tekrar deneyin.",
+      "updating": "Güncelleniyor…"
     },
     "approval": {
       "titleAdmin": "Onay bekleyenler",

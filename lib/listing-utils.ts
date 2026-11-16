@@ -123,6 +123,8 @@ export function visibleDetailRows(raw: string | null | undefined) {
         !key.startsWith("ticari") &&
         !YURT_TAG_DETAIL_KEYS.includes(key) &&
         key !== "ownedFloorsFloorCount" &&
+        // Teslim tarihi ilan sayfasında yerelleştirilmiş ayrı bir satır olarak basılır.
+        key !== "deliveryDate" &&
         typeof v === "object" &&
         v !== null &&
         "visible" in v &&

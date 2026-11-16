@@ -1,4 +1,4 @@
-import { normalizeListingCitySlug } from "@/lib/listing-city";
+import { displayListingRegionOrNeighborhood, normalizeListingCitySlug } from "@/lib/listing-city";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import {
   parseListingPropertyType,
@@ -55,6 +55,7 @@ function first(value: string | string[] | undefined) {
 
 export function parseAdminListingFilter(sp: SearchParams): AdminListingFilter {
   return {
+    q: first(sp.q)?.trim() || undefined,
     listingId: first(sp.listingId)?.trim() || undefined,
     title: first(sp.title)?.trim() || undefined,
     city: first(sp.city)?.trim() || undefined,
@@ -62,7 +63,21 @@ export function parseAdminListingFilter(sp: SearchParams): AdminListingFilter {
     propertyType: first(sp.propertyType)?.trim() || undefined,
     status: first(sp.status)?.trim() || undefined,
     agent: first(sp.agent)?.trim() || undefined,
+    region: first(sp.region)?.trim() || undefined,
+    minPrice: first(sp.minPrice)?.trim() || undefined,
+    maxPrice: first(sp.maxPrice)?.trim() || undefined,
   };
+}
+
+/** PostgREST or() ifadesini bozabilecek karakterleri ayıklar. */
+function cleanSearchTerm(raw: string): string {
+  return raw.replace(/[,()"\\%*]/g, " ").replace(/\s+/g, " ").trim().slice(0, 100);
+}
+
+function cleanPrice(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  const n = Number(raw.replace(/[^\d.]/g, ""));
+  return Number.isFinite(n) && n > 0 ? String(n) : undefined;
 }
 
 /** Ham girdiyi bilinen seçeneklere göre doğrular; geçersiz değerler düşer. */
@@ -71,6 +86,10 @@ export function sanitizeAdminListingFilter(
   ctx: AdminListingFilterContext,
 ): AdminListingFilter {
   const out: AdminListingFilter = {};
+  if (filter.q) {
+    const q = cleanSearchTerm(filter.q);
+    if (q) out.q = q;
+  }
   if (filter.listingId) out.listingId = filter.listingId;
   if (filter.title) out.title = filter.title;
   if (filter.city && ctx.cityOptions.includes(filter.city)) out.city = filter.city;
@@ -82,6 +101,12 @@ export function sanitizeAdminListingFilter(
     out.status = filter.status;
   }
   if (filter.agent && ctx.agentOptions.some((a) => a.id === filter.agent)) out.agent = filter.agent;
+  // Bölge yalnızca şehirle birlikte anlamlı (açılır liste şehre bağlı).
+  if (out.city && filter.region) out.region = filter.region.slice(0, 600);
+  const minPrice = cleanPrice(filter.minPrice);
+  const maxPrice = cleanPrice(filter.maxPrice);
+  if (minPrice) out.minPrice = minPrice;
+  if (maxPrice) out.maxPrice = maxPrice;
   return out;
 }
 
@@ -111,10 +136,18 @@ export function applyAdminListingFilter<T>(
   q = q.is("deleted_at", null);
 
   if (ctx.scopeAgentId) q = q.eq("created_by_agent_id", ctx.scopeAgentId);
+  if (f.q) q = q.or(`listing_id.ilike."%${f.q}%",title.ilike."%${f.q}%"`);
   if (f.listingId) q = q.ilike("listing_id", `%${f.listingId}%`);
   if (f.title) q = q.ilike("title", `%${f.title}%`);
   if (f.city) q = q.eq("city", f.city);
+  if (f.region) {
+    const values = f.region.split(REGION_VALUE_SEPARATOR).map((v) => v.trim()).filter(Boolean).slice(0, 20);
+    if (values.length === 1) q = q.eq("region", values[0]);
+    else if (values.length > 1) q = q.in("region", values);
+  }
   if (f.kind) q = q.eq("kind", f.kind);
+  if (f.minPrice) q = q.gte("price", Number(f.minPrice));
+  if (f.maxPrice) q = q.lte("price", Number(f.maxPrice));
 
   if (f.propertyType) {
     const option = ctx.propertyTypeOptions.find((o) => o.rawValueKey === f.propertyType);
@@ -137,6 +170,8 @@ export function applyAdminListingFilter<T>(
 type AdminListingQuery = {
   is(column: string, value: null): AdminListingQuery;
   eq(column: string, value: string): AdminListingQuery;
+  gte(column: string, value: number): AdminListingQuery;
+  lte(column: string, value: number): AdminListingQuery;
   ilike(column: string, pattern: string): AdminListingQuery;
   in(column: string, values: readonly string[]): AdminListingQuery;
   or(filters: string): AdminListingQuery;
@@ -150,6 +185,7 @@ export function hasAnyAdminListingFilter(filter: AdminListingFilter): boolean {
 /** Filtreyi querystring'e çevirir (sayfalama bağlantıları ve returnTo için). */
 export function adminListingFilterToParams(filter: AdminListingFilter): URLSearchParams {
   const params = new URLSearchParams();
+  if (filter.q) params.set("q", filter.q);
   if (filter.listingId) params.set("listingId", filter.listingId);
   if (filter.title) params.set("title", filter.title);
   if (filter.city) params.set("city", filter.city);
@@ -157,6 +193,9 @@ export function adminListingFilterToParams(filter: AdminListingFilter): URLSearc
   if (filter.propertyType) params.set("propertyType", filter.propertyType);
   if (filter.status) params.set("status", filter.status);
   if (filter.agent) params.set("agent", filter.agent);
+  if (filter.region) params.set("region", filter.region);
+  if (filter.minPrice) params.set("minPrice", filter.minPrice);
+  if (filter.maxPrice) params.set("maxPrice", filter.maxPrice);
   return params;
 }
 
@@ -204,6 +243,62 @@ export async function fetchDistinctListingPropertyTypes(
       return { displayLabel, dbValues: sorted, rawValueKey: sorted.join(",") };
     })
     .sort((a, b) => a.displayLabel.localeCompare(b.displayLabel, "tr"));
+}
+
+export type RegionOption = { value: string; label: string };
+
+/** Bölge seçeneğinde aynı yerin farklı yazımları (ör. "alaykoy" / "Alayköy") bu ayraçla birleşir. */
+export const REGION_VALUE_SEPARATOR = "|";
+
+function regionFoldKey(raw: string): string {
+  return displayListingRegionOrNeighborhood(raw)
+    .toLocaleLowerCase("tr-TR")
+    .replace(/ı/g, "i")
+    .replace(/ş/g, "s")
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ö/g, "o")
+    .replace(/ç/g, "c")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Şehir → bölge listesi (bölge açılır listesi şehre göre dolar).
+ * Aynı bölgenin farklı yazımları tek seçenekte toplanır; seçenek değeri
+ * veritabanındaki tüm ham değerleri taşır ki filtre hepsini yakalasın.
+ */
+export async function fetchDistinctListingRegionsByCity(
+  consultantAgentId?: string | null,
+): Promise<Record<string, RegionOption[]>> {
+  const map = new Map<string, Map<string, Set<string>>>();
+  for await (const rows of iterateListingColumn<{ city: unknown; region: unknown }>("city,region", consultantAgentId)) {
+    for (const row of rows) {
+      // Şehir seçenekleriyle aynı kanonik anahtar.
+      const city = normalizeListingCitySlug(typeof row.city === "string" ? row.city.trim() : "");
+      const region = typeof row.region === "string" ? row.region.trim() : "";
+      if (!city || !region || region.includes(REGION_VALUE_SEPARATOR)) continue;
+      const groups = map.get(city) ?? new Map<string, Set<string>>();
+      const key = regionFoldKey(region);
+      const set = groups.get(key) ?? new Set<string>();
+      set.add(region);
+      groups.set(key, set);
+      map.set(city, groups);
+    }
+  }
+  const out: Record<string, RegionOption[]> = {};
+  for (const [city, groups] of map) {
+    out[city] = [...groups.values()]
+      .map((set) => {
+        const raws = [...set].sort();
+        const labels = raws.map(displayListingRegionOrNeighborhood);
+        // Türkçe karakter içeren yazımı etiket olarak tercih et.
+        const label = labels.find((l) => /[çğıöşüÇĞİÖŞÜ]/.test(l)) ?? labels[0];
+        return { value: raws.join(REGION_VALUE_SEPARATOR), label };
+      })
+      .sort((x, y) => x.label.localeCompare(y.label, "tr"));
+  }
+  return out;
 }
 
 async function* iterateListingColumn<T>(column: string, consultantAgentId?: string | null) {

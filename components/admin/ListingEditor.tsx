@@ -70,6 +70,7 @@ import dynamic from "next/dynamic";
 import { GripVertical } from "lucide-react";
 import { nanoid } from "nanoid";
 import { useTranslations } from "next-intl";
+import { mergeDeliveryDateDetailFields, parseDeliveryDateFromDetailFields } from "@/lib/project-delivery";
 
 const LocationPicker = dynamic(() => import("@/components/admin/LocationPicker"), { ssr: false });
 
@@ -627,6 +628,7 @@ export function ListingEditor({
   const initialYurtTags = parseYurtTagsFromDetailFields(listing?.detailFields);
   const initialYurtFields = parseYurtFieldsFromDetailFields(listing?.detailFields);
   const initialOwnedFloors = parseOwnedFloorsFromDetailFields(listing?.detailFields);
+  const initialDeliveryDate = parseDeliveryDateFromDetailFields(listing?.detailFields);
 
   // roomType: detailFields'dan oku, yoksa bedrooms+livingRooms'tan infer et
   const initialRoomType = (() => {
@@ -704,6 +706,7 @@ export function ListingEditor({
     ownedFloorsScope: initialOwnedFloors.ownedFloorsScope,
     ownedFloorsLayout: initialOwnedFloors.ownedFloorsLayout,
     ownedFloorsFloorCount: initialOwnedFloors.ownedFloorsFloorCount,
+    deliveryDate: initialDeliveryDate,
     featuresText: parseStringArray(listing?.features ?? null).join("\n"),
     coordinates:
       listing?.lat != null && listing?.lng != null ? `${listing.lat},${listing.lng}` : "",
@@ -1354,9 +1357,14 @@ export function ListingEditor({
     );
 
     // roomType'ı detailFields'a ekle / temizle
+    const detailAfterDelivery = mergeDeliveryDateDetailFields(
+      detailFieldsForSave,
+      f.kind === "PROJE" || f.propertyCategory === "proje",
+      f.deliveryDate,
+    );
     const detailFieldsFinal = (() => {
       let obj: Record<string, unknown> = {};
-      try { if (detailFieldsForSave.trim()) obj = JSON.parse(detailFieldsForSave) as Record<string, unknown>; } catch { /* ignore */ }
+      try { if (detailAfterDelivery.trim()) obj = JSON.parse(detailAfterDelivery) as Record<string, unknown>; } catch { /* ignore */ }
       if (!isArsaSave && f.roomType.trim()) {
         obj.roomType = { value: f.roomType.trim(), visible: true };
       } else {
@@ -1550,6 +1558,7 @@ export function ListingEditor({
   const isArsa = form.propertyCategory === "arsa";
   const isTicari = form.propertyCategory === "ticari" && !isArsa;
   const isYurt = form.propertyCategory === "yurt";
+  const isProject = form.kind === "PROJE" || form.propertyCategory === "proje";
 
   const adminNeedsConsultantSelection =
     viewerRole === "ADMIN" &&
@@ -1774,6 +1783,18 @@ export function ListingEditor({
                 <span className="mt-1 block text-xs text-zinc-400">Arsa/arazi ilanlarında oda tipi girilmez</span>
               )}
             </label>
+            {isProject ? (
+              <label className="block text-sm font-medium text-zinc-700">
+                Teslim Tarihi
+                <input
+                  type="month"
+                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                  value={form.deliveryDate}
+                  onChange={(e) => set("deliveryDate", e.target.value)}
+                />
+                <span className="mt-1 block text-xs text-zinc-400">İsteğe bağlı — girilirse ilan sayfasında görünür</span>
+              </label>
+            ) : null}
 
           </div>
         </section>

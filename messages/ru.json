@@ -258,7 +258,8 @@
       "plotAreaM2": "Площадь участка (м²)",
       "floor": "Этаж",
       "buildingAge": "Возраст здания",
-      "livingRooms": "Гостиные"
+      "livingRooms": "Гостиные",
+      "deliveryDate": "Срок сдачи"
     },
     "consultantLabels": {
       "consultantName": "Имя консультанта",
@@ -735,7 +736,29 @@
       "actionUnpublish": "Снять с публикации",
       "filterAgentAll": "Консультант (все)",
       "countTotal": "Всего {total} объектов",
-      "countFiltered": "Всего {total} объектов · отфильтровано {filtered}"
+      "countFiltered": "Всего {total} объектов · отфильтровано {filtered}",
+      "searchPh": "Поиск по ID или заголовку…",
+      "filterRegionAll": "Район (все)",
+      "filterRegionPickCity": "Сначала выберите город",
+      "priceRange": "Диапазон цен",
+      "priceMin": "Мин",
+      "priceMax": "Макс",
+      "resetFilters": "Сбросить фильтры",
+      "viewTable": "Таблица",
+      "viewGrid": "Карточки",
+      "sortUpdated": "Недавно обновлённые",
+      "sortNewest": "Новые",
+      "sortPriceAsc": "Цена: по возрастанию",
+      "sortPriceDesc": "Цена: по убыванию",
+      "tabAll": "Все",
+      "statTotal": "Всего объектов",
+      "statPublished": "Опубликовано",
+      "statDraft": "Черновик",
+      "statPending": "На модерации",
+      "resultCount": "Показано объектов: {count}",
+      "emptyFiltered": "Нет объектов по фильтрам",
+      "emptyFilteredHint": "Измените фильтры.",
+      "updating": "Обновление…"
     },
     "approval": {
       "titleAdmin": "На модерации",
