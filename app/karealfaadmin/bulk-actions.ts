@@ -43,7 +43,7 @@ const VALID_KINDS = ["SATILIK", "KIRALIK", "GUNLUK_KIRALIK", "PROJE"] as const;
 
 /** Toplu işlemler yalnızca ADMIN'e açık olduğu için kapsam daraltması yok. */
 async function buildFilterContext(): Promise<AdminListingFilterContext> {
-  const [cityOptions, propertyTypeOptions, agentsRes] = await Promise.all([
+  const [cities, propertyTypeOptions, agentsRes] = await Promise.all([
     fetchDistinctListingCities(null),
     fetchDistinctListingPropertyTypes(null),
     supabaseAdmin.from("agents").select("id,name").order("name", { ascending: true }),
@@ -53,7 +53,13 @@ async function buildFilterContext(): Promise<AdminListingFilterContext> {
     (a): a is { id: string; name: string } => !!a?.id && typeof a.name === "string",
   );
 
-  return { cityOptions, propertyTypeOptions, agentOptions, scopeAgentId: null };
+  return {
+    cityOptions: cities.options,
+    cityDbValues: cities.dbValues,
+    propertyTypeOptions,
+    agentOptions,
+    scopeAgentId: null,
+  };
 }
 
 /**

@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { displayListingCity, displayListingRegionOrNeighborhood, excludeFromAdminListingCityFilter } from "@/lib/listing-city";
+import { kktcCities } from "@/lib/kktc-regions";
+import { displayListingCity, displayListingRegionOrNeighborhood } from "@/lib/listing-city";
 import { getPanelLocale } from "@/lib/panel-locale";
 import { getPanelTranslations } from "@/lib/panel-translations";
 import { requirePanelUser } from "@/lib/panel-auth";
@@ -122,7 +123,7 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
   const view = first(sp.view) === "grid" ? "grid" : "table";
 
   const consultantAgentId = user.role === "CONSULTANT" && user.agentId ? user.agentId : null;
-  const [cityOptionsRaw, propertyTypeOptions, regionsByCity, agentsRes] = await Promise.all([
+  const [cities, propertyTypeOptions, regionsByCity, agentsRes] = await Promise.all([
     fetchDistinctListingCities(consultantAgentId),
     fetchDistinctListingPropertyTypes(consultantAgentId),
     fetchDistinctListingRegionsByCity(consultantAgentId),
@@ -130,14 +131,14 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
       ? supabaseAdmin.from("agents").select("id,name").order("name", { ascending: true })
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
   ]);
-  const cityOptions = cityOptionsRaw
-    .filter((c) => !excludeFromAdminListingCityFilter(c))
-    .sort((a, b) => displayListingCity(a).localeCompare(displayListingCity(b), "tr"));
+  const cityOptions = cities.options;
+  const cityLabel = (c: string) => displayListingCity(c);
   const agentOptions = (agentsRes.data ?? []).filter((a): a is { id: string; name: string } => !!a?.id);
 
   const scopeAgentId = user.role !== "ADMIN" && user.agentId ? user.agentId : null;
   const filterCtx: AdminListingFilterContext = {
     cityOptions,
+    cityDbValues: cities.dbValues,
     propertyTypeOptions,
     agentOptions,
     scopeAgentId,
@@ -254,7 +255,8 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
   const bulkOptions: BulkDrawerOptions | null = bulkEnabled
     ? {
         agents: agentOptions,
-        cities: cityOptions.map((c) => ({ value: c, label: displayListingCity(c) })),
+        // Toplu şehir düzeltmesi yalnızca gerçek 6 şehirden birini yazabilir.
+        cities: kktcCities.filter((c) => c.v).map((c) => ({ value: c.v, label: c.l })),
         // Toplu düzeltmede tek bir db değeri yazılabilir; birleşik gruplar dışarıda kalır.
         propertyTypes: propertyTypeOptions
           .filter((o) => o.dbValues.length === 1)
@@ -339,7 +341,7 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
           sort,
           view: view === "grid" ? "grid" : "",
         }}
-        cityOptions={cityOptions.map((c) => ({ value: c, label: displayListingCity(c) }))}
+        cityOptions={cityOptions.map((c) => ({ value: c, label: cityLabel(c) }))}
         regionsByCity={regionsByCity}
         kindOptions={LISTING_KINDS.map((k) => ({ value: k, label: t(`kindLabels.${k}`) }))}
         propertyTypeOptions={propertyTypeOptions.map((o) => ({ value: o.rawValueKey, label: o.displayLabel }))}

@@ -1,4 +1,5 @@
-import { displayListingRegionOrNeighborhood, normalizeListingCitySlug } from "@/lib/listing-city";
+import { displayListingRegionOrNeighborhood, expandListingCityFilterValues, resolveListingParentCitySlug } from "@/lib/listing-city";
+import { kktcCities } from "@/lib/kktc-regions";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import {
   parseListingPropertyType,
@@ -40,7 +41,10 @@ export type AgentOption = { id: string; name: string };
 
 /** Filtrenin uygulanabilmesi için gereken, sayfada zaten üretilen seçenek listeleri. */
 export type AdminListingFilterContext = {
+  /** Şehir slug'ları: yalnızca KKTC'nin 6 büyük şehri. */
   cityOptions: string[];
+  /** Şehir seçeneği → veritabanındaki tüm ham `city` değerleri (köy/mahalle yazımları dahil). */
+  cityDbValues?: Record<string, string[]>;
   propertyTypeOptions: PropertyTypeOption[];
   agentOptions: AgentOption[];
   /** ADMIN olmayan kullanıcıyı kendi ilanlarına kilitler. */
@@ -139,7 +143,10 @@ export function applyAdminListingFilter<T>(
   if (f.q) q = q.or(`listing_id.ilike."%${f.q}%",title.ilike."%${f.q}%"`);
   if (f.listingId) q = q.ilike("listing_id", `%${f.listingId}%`);
   if (f.title) q = q.ilike("title", `%${f.title}%`);
-  if (f.city) q = q.eq("city", f.city);
+  if (f.city) {
+    const values = ctx.cityDbValues?.[f.city] ?? expandListingCityFilterValues(f.city);
+    q = values.length === 1 ? q.eq("city", values[0]) : q.in("city", values);
+  }
   if (f.region) {
     const values = f.region.split(REGION_VALUE_SEPARATOR).map((v) => v.trim()).filter(Boolean).slice(0, 20);
     if (values.length === 1) q = q.eq("region", values[0]);
@@ -206,16 +213,39 @@ export function displayListingPropertyType(stored: string): string {
   return subLabel ? `${catLabel} · ${subLabel}` : catLabel;
 }
 
+/** Ham şehir değeri → bağlı olduğu KKTC şehri (eşleşmezse null; filtrede yer almaz). */
+function cityOptionKey(raw: string): string | null {
+  return resolveListingParentCitySlug(raw);
+}
+
+export type DistinctListingCities = {
+  /** Yalnızca KKTC'nin 6 büyük şehri, sabit sırayla. */
+  options: string[];
+  /** Seçenek → veritabanındaki ham değerler (filtre .in() ile hepsini yakalar). */
+  dbValues: Record<string, string[]>;
+};
+
 /** Filtre açılırlarını besleyen ayrık değer taramaları (çöp kutusu hariç). */
-export async function fetchDistinctListingCities(consultantAgentId?: string | null): Promise<string[]> {
-  const seen = new Set<string>();
+export async function fetchDistinctListingCities(consultantAgentId?: string | null): Promise<DistinctListingCities> {
+  const groups = new Map<string, Set<string>>();
   for await (const rows of iterateListingColumn<{ city: unknown }>("city", consultantAgentId)) {
     for (const row of rows) {
-      const canon = normalizeListingCitySlug(typeof row.city === "string" ? row.city.trim() : "");
-      if (canon) seen.add(canon);
+      const raw = typeof row.city === "string" ? row.city : "";
+      if (!raw.trim()) continue;
+      const key = cityOptionKey(raw);
+      if (!key) continue;
+      const set = groups.get(key) ?? new Set<string>();
+      set.add(raw);
+      groups.set(key, set);
     }
   }
-  return [...seen];
+  const options = kktcCities.map((c) => c.v).filter(Boolean);
+  const dbValues: Record<string, string[]> = {};
+  for (const k of options) {
+    // İlanı olmayan şehir de listede kalır; filtre bilinen yazımlarla yine çalışır.
+    dbValues[k] = groups.has(k) ? [...groups.get(k)!].sort() : expandListingCityFilterValues(k);
+  }
+  return { options, dbValues };
 }
 
 export async function fetchDistinctListingPropertyTypes(
@@ -275,7 +305,8 @@ export async function fetchDistinctListingRegionsByCity(
   for await (const rows of iterateListingColumn<{ city: unknown; region: unknown }>("city,region", consultantAgentId)) {
     for (const row of rows) {
       // Şehir seçenekleriyle aynı kanonik anahtar.
-      const city = normalizeListingCitySlug(typeof row.city === "string" ? row.city.trim() : "");
+      const rawCity = typeof row.city === "string" ? row.city.trim() : "";
+      const city = rawCity ? (cityOptionKey(rawCity) ?? "") : "";
       const region = typeof row.region === "string" ? row.region.trim() : "";
       if (!city || !region || region.includes(REGION_VALUE_SEPARATOR)) continue;
       const groups = map.get(city) ?? new Map<string, Set<string>>();

@@ -49,6 +49,36 @@ export function normalizeListingCitySlug(raw: string | null | undefined): string
   return v;
 }
 
+/** Şehirlerin yaygın alternatif yazımları (compactAlphanum anahtarıyla). */
+const CITY_ALIASES: Record<string, string> = {
+  magusa: "gazimagusa",
+  famagusta: "gazimagusa",
+  kyrenia: "girne",
+  morphou: "guzelyurt",
+  trikomo: "iskele",
+  lefka: "lefke",
+};
+
+/**
+ * Ham şehir değerini 6 KKTC şehrinden birine bağlar. Şehir alanına köy/mahalle
+ * yazılmışsa (ör. "Çatalköy", "Gönyeli") bölge listesinden bağlı olduğu şehir
+ * bulunur. Eşleşmezse null döner.
+ */
+export function resolveListingParentCitySlug(raw: string | null | undefined): string | null {
+  const v = raw?.trim() ?? "";
+  if (!v) return null;
+  const slug = normalizeListingCitySlug(v);
+  if (kktcCities.some((c) => c.v && c.v === slug)) return slug;
+
+  const folded = compactAlphanum(v);
+  const alias = CITY_ALIASES[folded];
+  if (alias) return alias;
+  for (const [city, regions] of Object.entries(kktcRegions)) {
+    if (regions.some((r) => compactAlphanum(r.l) === folded || compactAlphanum(r.v) === folded)) return city;
+  }
+  return null;
+}
+
 /** Supabase `.in('city', …)` — DB'deki eski yazımları da yakalar. */
 export function expandListingCityFilterValues(slugOrRaw: string): string[] {
   const canonical = normalizeListingCitySlug(slugOrRaw);
