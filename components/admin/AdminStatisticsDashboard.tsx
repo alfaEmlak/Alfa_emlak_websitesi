@@ -82,6 +82,7 @@ export function AdminStatisticsDashboard({ data }: { data: AdminStatistics }) {
   const genLabel = new Date(generatedAt).toLocaleString(locale, {
     dateStyle: "short",
     timeStyle: "short",
+    timeZone: "Europe/Istanbul",
   });
 
   return (

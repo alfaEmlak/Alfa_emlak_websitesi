@@ -44,7 +44,7 @@ export default async function ContactPage({ params, searchParams }: Props) {
     listingBanner != null ? `/${locale}/ilan/${encodeURIComponent(listingBanner.listingId)}` : null;
 
   return (
-    <main className="mx-auto max-w-[1440px] flex-1 bg-surface px-6 py-16 md:px-8 md:py-24">
+    <main className="mx-auto w-full min-w-0 max-w-[1440px] flex-1 bg-surface px-6 py-16 md:px-8 md:py-24">
       <nav className="font-headline text-xs uppercase tracking-widest text-on-surface/45">
         <Link href="/" className="hover:text-secondary">
           {tc("home")}

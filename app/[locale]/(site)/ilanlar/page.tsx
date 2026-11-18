@@ -169,7 +169,7 @@ export default async function ListingsPage({ params, searchParams }: Props) {
   })();
 
   return (
-    <main className="mx-auto max-w-[1440px] flex-1 bg-surface px-6 py-12 md:px-8 md:py-16">
+    <main className="mx-auto w-full min-w-0 max-w-[1440px] flex-1 bg-surface px-6 py-12 md:px-8 md:py-16">
       <nav className="font-headline text-xs uppercase tracking-widest text-on-surface/45">
         <Link href="/" className="transition-colors hover:text-secondary">
           {tc("home")}

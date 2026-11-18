@@ -43,6 +43,7 @@ export function SundovizRatesStrip({ initialData }: Props) {
     ? new Date(data.updateTime.replace(" ", "T") + "+03:00").toLocaleTimeString("tr-TR", {
         hour: "2-digit",
         minute: "2-digit",
+        timeZone: "Europe/Istanbul",
       })
     : null;
 

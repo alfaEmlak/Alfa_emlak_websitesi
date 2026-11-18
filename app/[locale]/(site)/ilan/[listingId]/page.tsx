@@ -179,7 +179,7 @@ export default async function ListingDetailPage({ params }: Props) {
   const kindLabel = tc(`listingKinds.${listing.kind}`);
 
   return (
-    <main className="mx-auto max-w-[1440px] flex-1 bg-surface px-6 py-10 md:px-8 lg:py-14">
+    <main className="mx-auto w-full min-w-0 max-w-[1440px] flex-1 bg-surface px-6 py-10 md:px-8 lg:py-14">
       {listing.publishStatus !== "PUBLISHED" && access.mode !== "none" ? (
         <div className="mb-4 rounded-lg bg-amber-100 px-4 py-2 text-sm text-amber-900">
           {listing.publishStatus === "DRAFT"
@@ -210,7 +210,7 @@ export default async function ListingDetailPage({ params }: Props) {
             <span>/</span>
           </>
         ) : null}
-        <span className="font-semibold text-primary">{listing.title}</span>
+        <span className="min-w-0 break-words font-semibold text-primary">{listing.title}</span>
         <span className="text-on-surface/30">/ {listing.listingId}</span>
       </nav>
 
@@ -325,8 +325,12 @@ export default async function ListingDetailPage({ params }: Props) {
                 {listingPropertyTypeDisplayLabel(String(listing.propertyType ?? ""))} {t("description")}
               </h2>
               <div
-                className="mt-4 max-w-none text-base leading-relaxed text-primary [&_p]:mt-3 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mt-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mt-1 [&_strong]:font-bold [&_em]:italic [&_u]:underline"
-                dangerouslySetInnerHTML={{ __html: listing.longDescription }}
+                className="mt-4 max-w-none break-words text-base leading-relaxed text-primary [&_p]:mt-3 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mt-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mt-1 [&_strong]:font-bold [&_em]:italic [&_u]:underline"
+                // Pasted descriptions often use &nbsp; between every word, which prevents
+                // line wrapping and pushes the page wider than the phone screen.
+                dangerouslySetInnerHTML={{
+                  __html: String(listing.longDescription).replace(/&nbsp;|&#160;| /g, " "),
+                }}
               />
             </div>
           ) : null}

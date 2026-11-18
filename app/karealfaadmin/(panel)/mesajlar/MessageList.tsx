@@ -111,7 +111,7 @@ export function MessageList({ messages: initial }: { messages: Message[] }) {
                   <span className="text-xs font-medium text-(--on-surface)/70">{m.subject}</span>
                 )}
                 <span className="ml-auto text-[10px] tabular-nums text-(--on-surface)/40">
-                  {new Date(m.createdAt).toLocaleDateString("tr-TR")}
+                  {new Date(m.createdAt).toLocaleDateString("tr-TR", { timeZone: "Europe/Istanbul" })}
                 </span>
               </div>
               <span className="line-clamp-1 text-xs text-(--on-surface)/50">{m.message}</span>
@@ -165,7 +165,7 @@ export function MessageList({ messages: initial }: { messages: Message[] }) {
               </span>
             )}
             <span className="ml-auto text-[10px] tabular-nums text-(--on-surface)/35">
-              {new Date(active.createdAt).toLocaleString("tr-TR")}
+              {new Date(active.createdAt).toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" })}
             </span>
           </div>
 

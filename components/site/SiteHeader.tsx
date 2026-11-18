@@ -3,10 +3,11 @@
 import Image from "next/image";
 import { Link, usePathname } from "@/i18n/routing";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useRef, useState } from "react";
+import { Suspense, useCallback, useRef, useState } from "react";
 import type { MenuTopItem } from "@/lib/default-menu";
 import { LanguageSwitcher } from "@/components/site/LanguageSwitcher";
 import { CareerModal } from "@/components/site/CareerModal";
+import { MobileNavDrawer } from "@/components/site/MobileNavDrawer";
 import { useTranslations } from "next-intl";
 import alfaLogo from "@/alfaemlaklogov1-removebg-preview.png";
 
@@ -84,6 +85,7 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
   const tur = searchParams.get("tur");
   const active = computeActive(pathname, tur);
   const [open, setOpen] = useState(false);
+  const closeDrawer = useCallback(() => setOpen(false), []);
   const [careerOpen, setCareerOpen] = useState(false);
   const [desktopOpenId, setDesktopOpenId] = useState<string | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -222,125 +224,27 @@ function SiteHeaderInner({ menu, siteName }: { menu: MenuTopItem[]; siteName: st
           </div>
         </nav>
 
-        {open ? (
-          <div className="fixed inset-0 z-[300] flex justify-end md:hidden">
-            <div className="absolute inset-0 bg-primary/40 backdrop-blur-sm transition-opacity" onClick={() => setOpen(false)} aria-hidden />
-            <div className="relative flex h-full w-[85vw] max-w-sm flex-col overflow-y-auto bg-white shadow-2xl animate-in slide-in-from-right">
-              <div className="flex items-center justify-between border-b border-slate-100 p-5">
-                <span className="font-headline text-lg font-extrabold text-primary">{t("menu")}</span>
-                <button type="button" onClick={() => setOpen(false)} className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-primary transition hover:bg-slate-200">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-              </div>
-              <div className="flex-1 p-5">
-                <ul className="space-y-3 text-sm font-semibold">
-              <li>
-                <Link
-                  href="/ilanlar?tur=satilik"
-                  className="flex items-center justify-between rounded-xl border border-transparent px-3 py-3 text-primary transition hover:border-slate-200 hover:bg-slate-50"
-                  onClick={() => setOpen(false)}
-                >
-                  <span>{t("forSale")}</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/ilanlar?tur=proje"
-                  className="flex items-center justify-between rounded-xl border border-transparent px-3 py-3 text-primary transition hover:border-slate-200 hover:bg-slate-50"
-                  onClick={() => setOpen(false)}
-                >
-                  <span>{t("project")}</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/ilanlar?tur=kiralik"
-                  className="flex items-center justify-between rounded-xl border border-transparent px-3 py-3 text-primary transition hover:border-slate-200 hover:bg-slate-50"
-                  onClick={() => setOpen(false)}
-                >
-                  <span>{t("forRent")}</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/ilanlar?tur=gunluk"
-                  className="flex items-center justify-between rounded-xl border border-transparent px-3 py-3 text-primary transition hover:border-slate-200 hover:bg-slate-50"
-                  onClick={() => setOpen(false)}
-                >
-                  <span>{t("dailyRent")}</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/ilanlar"
-                  className="flex items-center justify-between rounded-xl border border-transparent px-3 py-3 text-primary transition hover:border-slate-200 hover:bg-slate-50"
-                  onClick={() => setOpen(false)}
-                >
-                  <span>{t("allListings")}</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/hakkimizda"
-                  className="flex items-center justify-between rounded-xl border border-transparent px-3 py-3 text-primary transition hover:border-slate-200 hover:bg-slate-50"
-                  onClick={() => setOpen(false)}
-                >
-                  <span>{t("aboutUs")}</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
-                </Link>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between rounded-xl border border-transparent px-3 py-3 text-left text-primary transition hover:border-slate-200 hover:bg-slate-50"
-                  onClick={() => {
-                    setOpen(false);
-                    setCareerOpen(true);
-                  }}
-                >
-                  <span>{t("career")}</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
-                </button>
-              </li>
-              <li>
-                <Link
-                  href="/iletisim"
-                  className="mt-1 block rounded-xl bg-secondary px-4 py-3 text-center font-headline text-xs font-extrabold uppercase tracking-[0.16em] text-white shadow-lg shadow-secondary/25"
-                  onClick={() => setOpen(false)}
-                >
-                  {t("listProperty")}
-                </Link>
-              </li>
-              {menu.map((item) => (
-                <li key={item.id}>
-                  <p className="px-1 pt-4 pb-2 font-headline text-[10px] font-bold uppercase tracking-widest text-on-surface/45">{item.label}</p>
-                  <ul className="space-y-1 rounded-xl border border-slate-100 bg-slate-50/45 p-2">
-                    {item.columns.flatMap((c) =>
-                      c.links.map((l) => (
-                        <li key={l.href}>
-                          <Link
-                            href={l.href}
-                            className="block rounded-lg px-2 py-2 text-primary/80 transition hover:bg-white hover:text-primary"
-                            onClick={() => setOpen(false)}
-                          >
-                            {l.label}
-                          </Link>
-                        </li>
-                      )),
-                    )}
-                  </ul>
-                </li>
-              ))}
-              </ul>
-              </div>
-            </div>
-          </div>
-        ) : null}
+        <MobileNavDrawer
+          open={open}
+          onClose={closeDrawer}
+          menu={menu}
+          onCareer={() => setCareerOpen(true)}
+          labels={{
+            menu: t("menu"),
+            close: t("close"),
+            allListings: t("allListings"),
+            aboutUs: t("aboutUs"),
+            career: t("career"),
+            listProperty: t("listProperty"),
+            topLabels: {
+              satilik: t("forSale"),
+              projeler: t("project"),
+              kiralik: t("forRent"),
+              gunluk: t("dailyRent"),
+              "daha-fazla": t("more"),
+            },
+          }}
+        />
       </header>
       {!isHome ? <div className="h-[var(--header-offset)] shrink-0" aria-hidden /> : null}
       <CareerModal open={careerOpen} onClose={() => setCareerOpen(false)} />
@@ -352,6 +256,7 @@ function SiteHeaderFallback({ menu, siteName }: { menu: MenuTopItem[]; siteName:
   const pathname = usePathname();
   const isHome = pathname === "/";
   const [open, setOpen] = useState(false);
+  const closeDrawer = useCallback(() => setOpen(false), []);
   const [desktopOpenId, setDesktopOpenId] = useState<string | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -474,92 +379,20 @@ function SiteHeaderFallback({ menu, siteName }: { menu: MenuTopItem[]; siteName:
             </button>
           </div>
         </nav>
-        {open ? (
-          <div className="fixed inset-0 z-[300] flex justify-end md:hidden">
-            <div className="absolute inset-0 bg-primary/40 backdrop-blur-sm transition-opacity" onClick={() => setOpen(false)} aria-hidden />
-            <div className="relative flex h-full w-[85vw] max-w-sm flex-col overflow-y-auto bg-white shadow-2xl animate-in slide-in-from-right">
-              <div className="flex items-center justify-between border-b border-slate-100 p-5">
-                <span className="font-headline text-lg font-extrabold text-primary">Menü</span>
-                <button type="button" onClick={() => setOpen(false)} className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-primary transition hover:bg-slate-200">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-              </div>
-              <div className="flex-1 p-5">
-                <ul className="space-y-3 text-sm font-semibold">
-              <li>
-                <Link
-                  href="/ilanlar?tur=satilik"
-                  className="flex items-center justify-between rounded-xl border border-transparent px-3 py-3 text-primary transition hover:border-slate-200 hover:bg-slate-50"
-                  onClick={() => setOpen(false)}
-                >
-                  <span>Satılık</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/ilanlar?tur=proje"
-                  className="flex items-center justify-between rounded-xl border border-transparent px-3 py-3 text-primary transition hover:border-slate-200 hover:bg-slate-50"
-                  onClick={() => setOpen(false)}
-                >
-                  <span>Projeler</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/ilanlar?tur=kiralik"
-                  className="flex items-center justify-between rounded-xl border border-transparent px-3 py-3 text-primary transition hover:border-slate-200 hover:bg-slate-50"
-                  onClick={() => setOpen(false)}
-                >
-                  <span>Kiralık</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/ilanlar?tur=gunluk"
-                  className="flex items-center justify-between rounded-xl border border-transparent px-3 py-3 text-primary transition hover:border-slate-200 hover:bg-slate-50"
-                  onClick={() => setOpen(false)}
-                >
-                  <span>Günlük Kiralık</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/ilanlar"
-                  className="flex items-center justify-between rounded-xl border border-transparent px-3 py-3 text-primary transition hover:border-slate-200 hover:bg-slate-50"
-                  onClick={() => setOpen(false)}
-                >
-                  <span>Tüm İlanlar</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/hakkimizda"
-                  className="flex items-center justify-between rounded-xl border border-transparent px-3 py-3 text-primary transition hover:border-slate-200 hover:bg-slate-50"
-                  onClick={() => setOpen(false)}
-                >
-                  <span>Hakkımızda</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary/35" aria-hidden><polyline points="9 18 15 12 9 6"/></svg>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/iletisim"
-                  className="mt-1 block rounded-xl bg-secondary px-4 py-3 text-center font-headline text-xs font-extrabold uppercase tracking-[0.16em] text-white shadow-lg shadow-secondary/25"
-                  onClick={() => setOpen(false)}
-                >
-                  İlan Ver
-                </Link>
-              </li>
-              </ul>
-              </div>
-            </div>
-          </div>
-        ) : null}
+        <MobileNavDrawer
+          open={open}
+          onClose={closeDrawer}
+          menu={menu}
+          labels={{
+            menu: "Menü",
+            close: "Kapat",
+            allListings: "Tüm İlanlar",
+            aboutUs: "Hakkımızda",
+            career: "Kariyer",
+            listProperty: "İlan Ver",
+            topLabels: {},
+          }}
+        />
       </header>
       {!isHome ? <div className="h-[var(--header-offset)] shrink-0" aria-hidden /> : null}
     </>

@@ -48,7 +48,7 @@ export function UserFormsTable({ rows }: { rows: UserFormRow[] }) {
               >
                 <td className="px-4 py-3 whitespace-nowrap text-xs text-(--on-surface)/50">
                   <span className="inline-flex flex-col gap-1">
-                    <span>{new Date(item.createdAt).toLocaleString("tr-TR")}</span>
+                    <span>{new Date(item.createdAt).toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" })}</span>
                     {item.isNew ? (
                       <span className="inline-flex w-fit rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
                         Yeni
